@@ -1,0 +1,7 @@
+#workflow modules should take inputs as hdf5 paths
+workflow_modules:
+    - name: PCA
+      description: Principal Component Analysis
+      args: 
+        in_path: path
+        out_path: path

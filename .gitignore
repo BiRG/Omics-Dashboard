@@ -1,0 +1,4 @@
+environment.test.sh
+environment.prod.sh
+.project*
+.settings*

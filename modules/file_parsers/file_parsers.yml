@@ -1,0 +1,18 @@
+#each entry should contain name, description and script.
+#script is a path to a python3 script relative to this directory
+#the script should take input file(s) as arguments
+#the last argument of the script should be output arguments
+#all other arguments should take flags and will be listed in the flags entry
+#flags can be used to set paths inside hdf5 files
+#
+#every parser has a parseFile() function, which takes two file names, in and out
+#as arguments
+parsers:
+    - name: txtXY
+      description: .txtXY whitespace-delimited paired data with simple header
+      script: parsetxtxy
+      flags: #This method does not take flag arguments
+    - name: csv
+      description: comma separated variables
+      script: parsecsv
+      flags: #This method does not take flags

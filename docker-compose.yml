@@ -1,0 +1,52 @@
+version: '3' 
+
+services:
+    # redirects RESTful requests (/api) to api and web requests to front-end    
+    proxy:
+        build: proxy
+        ports: 
+            - ${HOSTPORT}:80
+        depends_on:
+            - api
+            - frontend
+
+    frontend:
+        build: frontend
+#provides RESTful(ish) services for frontend and matlab client 
+    api: 
+        build: api 
+        ports:
+            - 3000:3000
+        environment:
+            - SECRET
+            - SSHPASS
+        volumes:
+            - ${DATADIR}:/data
+            #- ${SSH_AUTH_SOCK}:/ssh-agent
+        depends_on:
+            - compute
+            - file-tools
+  
+#handles data processing and analysis
+    compute:
+        build:
+            context: compute
+            dockerfile: Dockerfile.cpu
+            args:
+                ROOTPASS: ${SSHPASS}
+        volumes:
+            - ${DATADIR}:/data
+        #- ${SSH_AUTH_SOCK}:/ssh-agent
+        environment:
+            - SSHPASS
+
+#handles collection metadata
+    file-tools:
+        build: 
+            context: file-tools
+            args:
+                ROOTPASS: ${SSHPASS}
+        volumes:
+            - ${DATADIR}:/data
+        environment:
+            - SSHPASS

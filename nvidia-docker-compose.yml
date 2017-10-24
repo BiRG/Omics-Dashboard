@@ -1,0 +1,45 @@
+version: '2' 
+
+
+services:
+  proxy:
+    build: proxy
+    ports: 
+      - 80
+    depends_on:
+        - api
+        - frontend
+  
+  frontend: 
+    build: frontend 
+    ports: 
+      - 4200
+    depends_on:
+      - api
+    environment:
+      - SSL_CERT
+      - SSL_PRIVATEKEY
+ 
+  api: 
+    build: api 
+    ports: 
+      - 3000
+    environment:
+      - DBPASS
+      - JWT_SECRET
+      - SSL_CERT
+      - SSL_PRIVATEKEY
+    volumes:
+      - ${DATADIR}:/data
+  
+  compute:
+    build:
+      context: compute
+      dockerfile: Dockerfile.gpu
+    volumes:
+      - ${DATADIR}:/data
+
+  file-tools:
+    build: file-tools   
+    volumes:
+      - ${DATADIR}:/data
