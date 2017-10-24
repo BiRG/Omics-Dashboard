@@ -1,6 +1,5 @@
 FROM ubuntu:xenial
 MAINTAINER Daniel P. Foose <dpfoose@gmail.com>
-ARG ROOTPASS
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential 
@@ -13,7 +12,11 @@ RUN pip3 install --upgrade pip
 
 ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial/
 RUN pip3 install --upgrade -r /src/requirements.txt
-RUN mkdir /db
+
+RUN mkdir -p /data/log
+RUN mkdir -p /data/samples
+RUN mkdir -p /data/collections
+
 
 EXPOSE 8080 
 ENTRYPOINT ["python3"]
