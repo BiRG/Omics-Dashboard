@@ -1,13 +1,11 @@
-# To Maintainer: You can make fun of me for not using SQLAlchemy!
-
-
-from flask import Flask, redirect, request, jsonify, g, send_file, session, render_template, url_for
+from flask import Flask, redirect, request, jsonify, g, send_file, session, render_template, url_for, make_response, send_from_directory
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 import datamanip
 import bcrypt
 import os
 from flask_cors import CORS
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -48,12 +46,25 @@ class LoginError(Exception):
 
 
 # handle any exception thrown by a datamanip function
+# this is used for the restful api only
 def handle_exception(e):
     if e is datamanip.AuthException:
         return jsonify({'message': str(e)}), 403
     if e is LoginError:
         return jsonify({'message': str(e)}), 401
     return jsonify({'message': str(e)}), 500
+
+
+def handle_exception_browser(e):
+    if e is datamanip.AuthException:
+        error_msg = str(e)
+        error_title = "403 Forbidden"
+        return render_template('error.html', glyphicon_type='glyphicon-ban-circle', error_msg=error_msg, error_title=error_title), 403
+    if e is LoginError:
+        return redirect(url_for('login'))
+    error_msg = str(e)
+    error_title = '500 Internal Server Error'
+    return render_template('error.html', glyphicon_type='glyphicon-alert', error_msg=error_msg, error_title=error_title), 500
 
 
 def validate_login(email, password):
@@ -76,6 +87,33 @@ def get_user_id():
     raise LoginError('Not logged in')
 
 
+def get_user_name(user_id):
+    return datamanip.get_user(user_id)['name']
+
+
+def get_item_link(record_type, item):
+    if record_type.lower() == 'collections' or record_type.lower() == 'collection':
+        return url_for('render_collection', collection_id=item['id'])
+    elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
+        return url_for('render_sample', sample_id=item['id'])
+    elif record_type.lower() == 'users' or record_type.lower() == 'user':
+        return url_for('render_user_profile', user_id=item['rowid'])
+    elif record_type.lower() == 'analyses' or record_type.lower() == 'analysis':
+        return url_for('render_analysis', analysis_id=item['rowid'])
+    elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
+        return url_for('render_workflow', workflow_id=item['rowid'])
+    elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
+        return url_for('render_job', job_id=item['rowid'])
+    return '#'
+
+USERKEYS = ['createdBy', 'owner', 'userId']
+
+app.jinja_env.globals.update(USERKEYS=USERKEYS)
+app.jinja_env.globals.update(get_user_name=get_user_name)
+app.jinja_env.globals.update(datetime=datetime)
+app.jinja_env.globals.update(get_item_link=get_item_link)
+
+
 # close db connection at app close
 @app.teardown_appcontext
 def close_connection(exception):
@@ -85,6 +123,11 @@ def close_connection(exception):
 
 
 #  ROUTES FOR BROWSERS
+@app.route('/omics')
+def render_root():
+    return redirect(url_for('render_dashboard'))
+
+
 @app.route('/omics/login', methods=['GET', 'POST'])
 def browser_login():
     error = None
@@ -96,7 +139,7 @@ def browser_login():
             session['logged_in'] = True
             return redirect(url_for('render_dashboard'))
         error = 'Invalid email/password'
-    return render_template('login.html')
+    return render_template('login.html', error=error)
 
 
 @app.route('/omics/logout', methods=['GET'])
@@ -104,14 +147,168 @@ def browser_logout():
     if session.get('logged_in'):
         session['logged_in'] = False
         session['user'] = None
-    return redirect('/omics/login')
+    return redirect(url_for('login'))
 
 
 @app.route('/omics/dashboard', methods=['GET'])
 def render_dashboard():
-    if session.get('logged_in'):
+    try:
         return render_template('dashboard.html')
-    return redirect('/omics/login')
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/samples', methods=['GET', 'POST'])
+def render_sample_list():
+    try:
+        data = datamanip.get_all_sample_metadata(get_user_id())
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        return render_template('list.html', type='Sample', data=data, headings=headings)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/samples/<sample_id>', methods=['GET', 'POST', 'DELETE'])
+def render_sample(sample_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            data = datamanip.get_sample_metadata(get_user_id(), sample_id)
+            datasets = datamanip.list_sample_paths(user_id, sample_id)
+            return render_template('entry.html', type='Sample', data=data, datasets=datasets)
+        if request.method == 'DELETE':
+            datamanip.delete_collection(get_user_id(), sample_id)
+            return redirect(url_for('render_sample_list'))
+        if request.method == 'POST':
+            datamanip.update_sample(get_user_id(), sample_id, request.form)
+            data = datamanip.get_sample_metadata(get_user_id(), sample_id)
+            datasets = datamanip.list_sample_paths(user_id, sample_id)
+            return render_template('entry.html', type='Sample', data=data, datasets=datasets)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/samples/create')
+def render_upload_sample():
+    try:
+        return jsonify({'not': 'implemented'})
+    except Exception as e:
+        handle_exception_browser(e)
+
+
+@app.route('/omics/collections', methods=['GET', 'POST'])
+def render_collection_list():
+    try:
+        data = datamanip.get_all_collection_metadata(get_user_id())
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        return render_template('list.html', type='Collections', headings=headings, data=data)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/collections/<collection_id>', methods=['GET', 'POST', 'DELETE'])
+def render_collection(collection_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            data = datamanip.get_collection_metadata(get_user_id(), collection_id)
+            datasets = datamanip.list_collection_paths(user_id, collection_id)
+            return render_template('entry.html', type='Collection', data=data, datasets=datasets)
+        if request.method == 'DELETE':
+            datamanip.delete_collection(get_user_id(), collection_id)
+            return redirect(url_for('render_sample_list'))
+        if request.method == 'POST':
+            datamanip.update_collection(get_user_id(), collection_id, request.form)
+            data = datamanip.get_collection_metadata(get_user_id(), collection_id)
+            datasets = datamanip.list_collection_paths(user_id, collection_id)
+            return render_template('entry.html', type='Collection', data=data, datasets=datasets)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/collections/create', methods=['GET', 'POST'])
+def render_create_collection():
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/analyses', methods=['GET', 'POST'])
+def render_analysis_list():
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/analyses/create', methods=['GET', 'POST'])
+def render_create_analysis():
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
+def render_analysis(analysis_id=None):
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/workflows', methods=['GET', 'POST'])
+def render_workflow_list():
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+def render_workflow(workflow_id=None):
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/workflows/create', methods=['GET', 'POST', 'DELETE'])
+def render_create_workflow():
+    try:
+        return jsonify({'not': 'implemented'}), 501
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/settings', methods=['GET', 'POST'])
+def render_settings():
+    try:
+        return render_template('settings.html')
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/users', methods=['GET'])
+def render_user_list():
+    try:
+        get_user_id()
+        users = datamanip.get_users()
+        headings = {'rowid': 'ID', 'name': 'Name', 'admin': 'Admin'}
+        return render_template('list.html', type='Users', headings=headings, data=users)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/users/<user_id>', methods=['GET'])
+def render_user_profile(user_id=None):
+    try:
+        get_user_id()
+        user = datamanip.get_user(user_id)
+        return render_template('entry.html', type='User', data=user)
+    except Exception as e:
+        return handle_exception_browser(e)
 
 
 #  ROUTES FOR NON-BROWSER Clients
@@ -201,16 +398,26 @@ def get_collection(collection_id=None):
 def download_collection(collection_id=None):
     try:
         user_id = get_user_id()
+        if request.args.get('path', ''):
+            path = request.args.get('path', '')
+            print(path)
+            out = datamanip.download_collection_dataset(user_id, collection_id, path)
+            response = make_response(out['csv'])
+            response.headers['Content-Disposition'] = out['cd']
+            response.mimetype='text/csv'
+            return response
         out = datamanip.download_collection(user_id, collection_id)
-        return send_file(out['path'])
+        return send_from_directory('%s/collections' % DATADIR, out['filename'], as_attachment=True)
     except Exception as e:
         return handle_exception(e)
 
 
 @app.route('/omics/api/collections/upload/', methods=['POST'])
-def upload_collection(collection_id=None):
+def upload_collection():
     try:
+        print('upload!')
         user_id = get_user_id()
+        print('upload stuff!')
         new_data = request.get_json()
         if 'file' not in request.files:
             raise ValueError('No file uploaded')
@@ -255,8 +462,16 @@ def get_sample(sample_id=None):
 def download_sample(sample_id=None):
     try:
         user_id = get_user_id()
+        if request.args.get('path', ''):
+            path = request.args.get('path', '')
+            out = datamanip.download_sample_dataset(user_id, sample_id, path)
+            response = make_response(out['csv'])
+            response.headers['Content-Disposition'] = out['cd']
+            response.mimetype='text/csv'
+            return response
         out = datamanip.download_sample(user_id, sample_id)
-        return send_file(out['path'])
+        print(out['filename'])
+        return send_from_directory('%s/samples' % DATADIR, out['filename'], as_attachment=True)
     except Exception as e:
         return handle_exception(e)
 

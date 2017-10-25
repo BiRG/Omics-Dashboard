@@ -25,8 +25,8 @@
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
              aria-haspopup="true" aria-expanded="false">Samples <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="/omics/samples">List</a></li>
-            <li><a href="/omics/samples/parse">Upload</a></li>
+            <li><a href="{{ url_for('render_sample_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
+            <li><a href="{{ url_for('render_upload_sample') }}"><span class="glyphicon glyphicon-upload"></span> Upload</a></li>
           </ul>
         </li>
 
@@ -34,8 +34,8 @@
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
              aria-haspopup="true" aria-expanded="false">Collections <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="/omics/collections">List</a></li>
-            <li><a href="/omics/collections/create">Create</a></li>
+            <li><a href="{{ url_for('render_collection_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
+            <li><a href="{{ url_for('render_create_collection') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
           </ul>
         </li>
 
@@ -43,8 +43,8 @@
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
              aria-haspopup="true" aria-expanded="false">Analyses <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="/omics/analyes">List</a></li>
-            <li><a href="/omics/analyses/create">Create</a></li>
+            <li><a href="{{ url_for('render_analysis_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
+            <li><a href="{{ url_for('render_create_analysis') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
           </ul>
         </li>
 
@@ -52,19 +52,21 @@
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
              aria-haspopup="true" aria-expanded="false">Workflows <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="/omics/workflows">List</a></li>
-            <li><a href="/omics/workflows/create">Create</a></li>
+            <li><a href="{{ url_for('render_workflow_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
+            <li><a href="{{ url_for('render_create_workflow') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
           </ul>
         </li>
 
+        <li><a href="{{ url_for('render_user_list') }}">Users</a></li>
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
              aria-haspopup="true" aria-expanded="false">{{ session['user']['name'] }} <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="/omics/settings">Settings</a></li>
-            <li><a href="/omics/logout">Logout</a></li>
+            <li><a href="{{ url_for('render_settings') }}"><span class="glyphicon glyphicon-cog"></span> Settings</a></li>
+            <li><a href="{{ url_for('browser_logout') }}"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
           </ul>
         </li>
+
 
       </ul>
     </div>

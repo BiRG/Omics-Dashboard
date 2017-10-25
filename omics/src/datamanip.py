@@ -57,10 +57,9 @@ def get_next_id(path):
     ids = [int(os.path.splitext(file)[0]) for file in os.listdir(path)]
     return 0 if ids is None else max(ids) + 1
 
+
 # Create, Read, Update, Delete from db or files
 # Users
-
-
 def get_users():
     return db.query_db('select rowid, name, email, admin from Users;')
 
@@ -75,6 +74,7 @@ def get_user_by_email(email):
 
 def get_user_password_hash(email):
     return db.query_db('select password from Users where email=?;', [str(email)], True)
+
 
 def create_user(current_user_id, data):
     if is_admin(current_user_id):
@@ -94,15 +94,9 @@ def update_user(current_user_id, target_user_id, new_data):
         if 'password' in new_data:
             new_data.password = bcrypt.hashpw(new_data.password, bcrypt.gensalt())
         valid_keys = ['name', 'email', 'admin', 'password']
-        new_data = {key: value for key, value in new_data.items() if key in valid_keys}
-
-        query = 'update Users set '
+        query = 'update Users set' + ','.join([ '? = ?' for key in new_data.keys() if key in valid_keys]) + ' where rowid=?;'
         params = []
-        for key, value in new_data.items():
-            query += '? = ?, '
-            params.append(str(key))
-            params.append(str(value))
-        query = query[:len(query) - 2] + ' where rowid=?;'
+        [params.extend([str(key), str(value)]) for key, value in new_data.keys() if key in valid_keys]
         params.append(target_user_id)
         db.query_db(query, params)
         return db.query_db('select rowid, name, email, admin from Users where rowid=?;', [str(target_user_id)], True)
@@ -124,17 +118,17 @@ def delete_user(current_user_id, target_user_id):
         samples = get_all_samples()
         collections = get_all_collections()
         filenames = ['%s/samples/%s.h5' % (DATADIR, str(sample['id'])) for sample in samples if str(sample['owner']) == str(target_user_id)]
-        filenames.append(['%s/collections/%s.h5' % (DATADIR, str(collection['id'])) for collection in collections if str(collection['owner']) == str(target_user_id)])
+        filenames.extend(['%s/collections/%s.h5' % (DATADIR, str(collection['id'])) for collection in collections if str(collection['owner']) == str(target_user_id)])
         [mdt.update_metadata(filename, {'owner': -1}) for filename in filenames]
         filenames = ['%s/samples/%s.h5' % (DATADIR, str(sample['id'])) for sample in samples if str(sample['createdBy']) == str(target_user_id)]
-        filenames.append(['%s/collections/%s.h5' % (DATADIR, str(collection['id'])) for collection in collections if str(collection['createdBy']) == str(target_user_id)])
+        filenames.extend(['%s/collections/%s.h5' % (DATADIR, str(collection['id'])) for collection in collections if str(collection['createdBy']) == str(target_user_id)])
         [mdt.update_metadata(filename, {'createdBy': -1}) for filename in filenames]
 
         return {'message': 'user %s deleted' % str(target_user_id)}
     raise AuthException('User %s does not have permissions to delete user %s' % (str(current_user_id), str(target_user_id)))
 
-# samples
 
+# samples
 def get_all_samples():
     paths = [DATADIR + '/samples/' + file for file in os.listdir(DATADIR + '/samples')]
     return [mdt.get_collection_info(path) for path in paths]
@@ -146,6 +140,19 @@ def get_samples(user_id):
     return get_read_permitted_records(user_id, collection_info)
 
 
+def get_all_sample_metadata(user_id):
+    paths = [DATADIR + '/samples/' + file for file in os.listdir(DATADIR + '/samples')]
+    collection_info = [mdt.get_collection_metadata(path) for path in paths]
+    return get_read_permitted_records(user_id, collection_info)
+
+
+def get_sample_metadata(user_id, sample_id):
+    collection_info = mdt.get_collection_metadata(DATADIR + '/samples/' + str(sample_id) + '.h5')
+    if is_read_permitted(user_id, collection_info):
+        return collection_info
+    raise AuthException('User %s is not authorized to view sample %s' % (str(user_id), str(sample_id)))
+
+
 def get_sample(user_id, sample_id):
     sample_info = mdt.get_collection_info(DATADIR + '/samples/' + str(sample_id) + '.h5')
     if is_read_permitted(user_id, sample_info):
@@ -153,8 +160,33 @@ def get_sample(user_id, sample_id):
     raise AuthException('User %s is not permitted to access sample %s' % (str(user_id), str(sample_id)))
 
 
+def download_sample_dataset(user_id, sample_id, path):
+    filename = '%s/samples/%s.h5' % (DATADIR, str(sample_id))
+    collection = mdt.get_collection_metadata(filename)
+    csv_filename = os.path.basename(os.path.normpath(path))
+    if is_read_permitted(user_id, collection):
+        return {'csv': mdt.get_csv(filename, path), 'cd': 'attachment; filename=%s.csv' % csv_filename}
+    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(sample_id)))
+
+
+def download_sample(user_id, sample_id):
+    filename = '%s/samples/%s.h5' % (DATADIR, str(sample_id))
+    sample = mdt.get_collection_metadata(filename)
+    if is_read_permitted(user_id, sample):
+        return {'filename': '%s.h5' % str(sample_id)}
+    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(sample_id)))
+
+
+def list_sample_paths(user_id, sample_id):
+    filename = '%s/samples/%s.h5' % (DATADIR, str(sample_id))
+    sample = mdt.get_collection_metadata(filename)
+    if is_read_permitted(user_id, sample):
+        return mdt.get_dataset_paths(filename)
+    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(sample_id)))
+
+
 def update_sample(user_id, sample_id, new_data):
-    sample_info = mdt.get_collection_info(DATADIR + '/samples/' + str(sample_id) + '.h5')
+    sample_info = mdt.get_collection_metadata(DATADIR + '/samples/' + str(sample_id) + '.h5')
     if is_write_permitted(user_id, sample_info):
         return mdt.update_metadata('%s/samples/%s.h5' % (str(DATADIR), str(sample_id)), new_data)
     raise AuthException('User %s does not have permission to edit sample %s' % (str(user_id), str(sample_id)))
@@ -178,7 +210,7 @@ def parse_sample(user_id, infilename, parser_name):
 
 
 def delete_sample(user_id, sample_id):
-    sample_info = mdt.get_collection_info(DATADIR + '/samples/' + str(sample_id) + '.h5')
+    sample_info = mdt.get_collection_metadata(DATADIR + '/samples/' + str(sample_id) + '.h5')
     if is_write_permitted(user_id, sample_info):
         os.remove(DATADIR + '/samples/' + str(sample_id) + '.h5')
         return {'message': 'sample ' + str(sample_id) + ' removed'}
@@ -197,9 +229,24 @@ def get_collections(user_id):
     return get_read_permitted_records(user_id, collection_info)
 
 
+def get_all_collection_metadata(user_id):
+    paths = [DATADIR + '/collections/' + file for file in os.listdir(DATADIR + '/collections/')]
+    collection_info = [mdt.get_collection_metadata(path) for path in paths]
+    return get_read_permitted_records(user_id, collection_info)
+
+
+def get_collection_metadata(user_id, collection_id):
+    collection_info = mdt.get_collection_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5')
+    if is_read_permitted(user_id, collection_info):
+        return collection_info
+    raise AuthException('User %s is not authorized to view collection %s' % (str(user_id), str(collection_id)))
+
+
 def get_collection(user_id, collection_id):
     collection_info = mdt.get_collection_info(DATADIR + '/collections/' + str(collection_id) + '.h5')
-    return collection_info if is_read_permitted(user_id, collection_info) else {'message': 'not authorized'}
+    if is_read_permitted(user_id, collection_info):
+        return collection_info
+    raise AuthException('User %s is not authorized to view collection %s' % (str(user_id), str(collection_id)))
 
 
 def update_collection(user_id, collection_id, new_data):
@@ -222,16 +269,33 @@ def upload_collection(user_id, filename, new_data):
         new_data['owner'] = user_id
         mdt.update_metadata(filename, new_data)
         os.rename(filename, new_filename)
-        return mdt.get_collection_info(new_filename)
+        return mdt.get_collection_metadata(new_filename)
     raise Exception('file not valid')
 
 
 # verifies permissions of user to download a collection, returns a filename or a message
 def download_collection(user_id, collection_id):
-    filename = DATADIR + '/collections/' + str(collection_id) + '.h5'
-    collection = mdt.get_collection_info(filename)
+    filename = '%s/collections/%s.h5' % (DATADIR, str(collection_id))
+    collection = mdt.get_collection_metadata(filename)
     if is_read_permitted(user_id, collection):
-        return {'path': filename}
+        return {'filename': '%s.h5' % str(collection_id)}
+    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(collection_id)))
+
+
+def download_collection_dataset(user_id, collection_id, path):
+    filename = '%s/collections/%s.h5' % (DATADIR, str(collection_id))
+    collection = mdt.get_collection_metadata(filename)
+    csv_filename = os.path.basename(os.path.normpath(path))
+    if is_read_permitted(user_id, collection):
+        return {'csv': mdt.get_csv(filename, path), 'cd': 'attachment; filename=%s.csv' % csv_filename}
+    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(collection_id)))
+
+
+def list_collection_paths(user_id, collection_id):
+    filename = '%s/collections/%s.h5' % (DATADIR, str(collection_id))
+    collection = mdt.get_collection_metadata(filename)
+    if is_read_permitted(user_id, collection):
+        return mdt.get_dataset_paths(filename)
     raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(collection_id)))
 
 
@@ -239,14 +303,14 @@ def create_collection(user_id, sample_ids, new_data):
     outfilename = DATADIR + '/collections/' + str(get_next_id('/data/collections')) + '.h5'
     filenames = [DATADIR + '/samples/' + str(sample_id) for sample_id in sample_ids]
     for filename in filenames:
-        if not is_read_permitted(user_id, mdt.get_collection_info(filename)):
+        if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
             raise AuthException('User %s is not permitted to access file %s' % (str(user_id), str(filename)))
     h5merge.h5_merge(filenames, outfilename)
     return mdt.update_metadata(outfilename, new_data)
 
 
 def delete_collection(user_id, collection_id):
-    collection_info = mdt.get_collection_info(DATADIR + '/collections/' + str(collection_id) + '.h5')
+    collection_info = mdt.get_collection_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5')
     if is_write_permitted(user_id, collection_info):
         os.remove(DATADIR + '/collections/' + str(collection_id) + '.h5')
         return {'message': 'collection ' + str(collection_id) + ' removed'}
@@ -294,13 +358,9 @@ def update_analysis(user_id, analysis_id, new_data):
     valid_keys = ['name', 'description', 'createdBy', 'groupPermissions', 'allPermissions', 'userGroup']
     new_data = {key: value for key, value in new_data.items() if key in valid_keys}
     if is_write_permitted(user_id, analysis):
-        query = 'update Analyses set '
+        query = 'update Analyses set ' + ','.join(['? = ?' for _ in range(len(new_data))]) + ' where rowid=?;'
         params = []  # TODO: validate params against schema
-        for key, value in new_data.items():
-            query += '? = ?, '
-            params.append(str(key))
-            params.append(str(value))
-        query = query[:len(query) - 2] + ' where rowid=?;'
+        [ params.extend([str(key), str(value)]) for key, value in new_data.items() ]
         params.append(str(analysis_id))
         db.query_db(query, params)
         return db.query_db('select * from Analyses where rowid=?;', [str(analysis_id)], True)
@@ -327,7 +387,7 @@ def delete_analysis(user_id, analysis_id):
 def attach_collection(user_id, analysis_id, collection_id):
     # check read permissions on analysis and collection
     analysis = db.query_db('select * from Analyses where rowid=?;', str(analysis_id), True)
-    collection = mdt.get_collection_info(DATADIR + 'collections/' + str(collection_id) + '.h5')
+    collection = mdt.get_collection_metadata(DATADIR + 'collections/' + str(collection_id) + '.h5')
     if is_write_permitted(user_id, collection) and is_write_permitted(user_id, analysis):
         # see if attached
         if db.query_db('select * from CollectionMemberships where analysisId=? and collectionId=?;',
@@ -368,14 +428,10 @@ def create_user_group(user_id, data):
 
 def update_user_group(user_id, group_id, new_data):
     if is_group_admin(user_id, group_id):
-        query = 'update UserGroups set '
+        valid_keys = ['name', 'description']
+        query = 'update UserGroups set' + ','.join([' ? = ?' for key in new_data.keys if key in valid_keys]) + ' where rowid=?;'
         params = []
-        for key, value in new_data.items():
-            if key in ['name', 'description']:
-                query += '? = ?, '
-                params.append(str(key))
-                params.append(str(value))
-        query = query[:len(query) - 2] + 'where rowid=?;'
+        [ params.extend([str(key), str(value)]) for key, value in new_data.items() if key in valid_keys ]
         params.append(str(group_id))
         db.query_db(query, params)
         return db.query_db('select * from UserGroups where rowid=?;', [str(group_id)], True)

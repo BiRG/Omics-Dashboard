@@ -1,0 +1,10 @@
+{# The dashboard puts resources belonging to the user front and center#}
+{% extends "base.html" %}
+{% block content %}
+    <div class="container">
+      <div class="alert alert-danger">
+        <h2><span class="glyphicon {{ glyphicon_type }}"></span> {{ error_title }} <span class="glyphicon {{ glyphicon_type }}"></span></h2>
+        <p><strong>Message:</strong> {{ error_msg }}</p>
+      </div>
+    </div>
+{% endblock %}

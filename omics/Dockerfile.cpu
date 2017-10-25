@@ -8,10 +8,12 @@ RUN apt-get -y --no-install-recommends install libhdf5-dev
 RUN apt-get -y --no-install-recommends install sqlite3 libsqlite3-dev
 
 ADD src /src
+RUN mkdir -p /src/static/js
 RUN pip3 install --upgrade pip
 
 ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial/
 RUN pip3 install --upgrade -r /src/requirements.txt
+
 
 RUN mkdir -p /data/log
 RUN mkdir -p /data/samples

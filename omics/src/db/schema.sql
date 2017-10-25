@@ -55,6 +55,11 @@ create table if not exists Workflows(
     description text
 );
 
+
+create table if not exists Invitations(
+    createdBy integer,
+    value text
+);
 /*
  This table contains a mapping of user ids to groups
  */
