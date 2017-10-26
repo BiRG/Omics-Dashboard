@@ -2,7 +2,7 @@ from flask import Flask, redirect, request, jsonify, g, send_file, session, rend
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 import datamanip
-import bcrypt
+from passlib.hash import pbkdf2_sha256
 import os
 from flask_cors import CORS
 from datetime import datetime
@@ -61,23 +61,19 @@ def handle_exception_browser(e):
         error_title = "403 Forbidden"
         return render_template('error.html', glyphicon_type='glyphicon-ban-circle', error_msg=error_msg, error_title=error_title), 403
     if e is LoginError:
-        return redirect(url_for('login'))
+        return redirect(url_for('browser_login'))
     error_msg = str(e)
+    if error_msg.lower() == 'not logged in':
+        return redirect(url_for('browser_login'))
     error_title = '500 Internal Server Error'
     return render_template('error.html', glyphicon_type='glyphicon-alert', error_msg=error_msg, error_title=error_title), 500
 
 
 def validate_login(email, password):
-    data = datamanip.get_user_password_hash(email)
-
-    if data is None:
-        raise ValueError('Username does not exist')
-    # the bcrypt library only works with python2 'bytes' strings
-    # but SQLite3 string types are UTF-8
-    if bcrypt.checkpw(bytes(password, 'utf8'), bytes(data['password'], 'utf8')):
-        return True
-    else:
-        raise ValueError('Password incorrect')
+    pwhash = datamanip.get_user_password_hash(email)['password']
+    if pwhash is None or not pbkdf2_sha256.verify(password, pwhash):
+        raise ValueError('Invalid username/password')
+    return True
 
 
 # get user id, if user not logged in, raise an exception. Exception handler will send 401
@@ -112,6 +108,7 @@ app.jinja_env.globals.update(USERKEYS=USERKEYS)
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
+app.jinja_env.globals.update(int=int)
 
 
 # close db connection at app close
@@ -123,23 +120,45 @@ def close_connection(exception):
 
 
 #  ROUTES FOR BROWSERS
-@app.route('/omics')
+@app.route('/omics/')
 def render_root():
     return redirect(url_for('render_dashboard'))
 
 
+@app.route('/omics/register', methods=['GET', 'POST'])
+def render_registration():
+    try:
+        invitation = request.args.get('invitation')
+        if invitation is None:
+            return render_template('register.html', error='You do not have a valid registration link.\n'
+                                                          'Please contact an administrator')
+        if request.method == 'GET':
+            return render_template('register.html', invitation=invitation)
+        if request.method == 'POST':
+            data = {key: value[0] for key, value in dict(request.form).items()}
+            change_password = not (data['password1'] == '' and data['password2'] == '')
+            valid_passwords = data['password1'] == data['password2'] if change_password else False
+            if not valid_passwords:
+                return render_template('register.html', invitation=invitation, error='Passwords do not match')
+            new_data = {'email': data['email'], 'password': data['password1'], 'name': data['name']}
+            datamanip.register_user(invitation, new_data)
+            return redirect(url_for('browser_login'))
+    except Exception as e:
+        return render_template('register.html', error=str(e))
+
+
 @app.route('/omics/login', methods=['GET', 'POST'])
-def browser_login():
-    error = None
-    if request.method == 'POST':
-        print('method == POST')
-        print('email: %s, password: %s' % (request.form['email'], request.form['password']))
-        if validate_login(request.form['email'], request.form['password']):
-            session['user'] = datamanip.get_user_by_email(request.form['email'])
-            session['logged_in'] = True
-            return redirect(url_for('render_dashboard'))
-        error = 'Invalid email/password'
-    return render_template('login.html', error=error)
+def browser_login(msg=None, error=None, next_template='render_dashboard'):
+    try:
+        if request.method == 'POST':
+            if validate_login(request.form['email'], request.form['password']):
+                session['user'] = datamanip.get_user_by_email(request.form['email'])
+                session['logged_in'] = True
+                return redirect(url_for(next_template))
+            error = 'Invalid email/password'
+    except ValueError as e:
+        return render_template('login.html', error=str(e))
+    return render_template('login.html', msg=msg, error=error)
 
 
 @app.route('/omics/logout', methods=['GET'])
@@ -147,12 +166,13 @@ def browser_logout():
     if session.get('logged_in'):
         session['logged_in'] = False
         session['user'] = None
-    return redirect(url_for('login'))
+    return redirect(url_for('browser_login'))
 
 
 @app.route('/omics/dashboard', methods=['GET'])
 def render_dashboard():
     try:
+        get_user_id()
         return render_template('dashboard.html')
     except Exception as e:
         return handle_exception_browser(e)
@@ -161,6 +181,7 @@ def render_dashboard():
 @app.route('/omics/samples', methods=['GET', 'POST'])
 def render_sample_list():
     try:
+        get_user_id()
         data = datamanip.get_all_sample_metadata(get_user_id())
         headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
         return render_template('list.html', type='Sample', data=data, headings=headings)
@@ -285,7 +306,28 @@ def render_create_workflow():
 @app.route('/omics/settings', methods=['GET', 'POST'])
 def render_settings():
     try:
-        return render_template('settings.html')
+        if request.method == 'GET':
+            return render_template('settings.html')
+        if request.method == 'POST':
+            data = {key: value[0] for key, value in dict(request.form).items()}
+            change_password = not (data['password1'] == '' and data['password2'] == '')
+            valid_passwords = data['password1'] == data['password2'] if change_password else False
+            new_data = {key: value for key, value in data.items() if key in ['email', 'name'] and not value == ''}
+            valid_keys = ['name', 'email', 'password']
+            if change_password:
+                if not valid_passwords:
+                    return render_template('settings.html', error='passwords do not match')
+                new_data['password'] = data['password1']
+            msg = '\n'.join(['Changed password' if key == 'password' else 'Changed %s to %s.' % (key, value)
+                             for key, value in new_data.items() if key in valid_keys])
+            datamanip.update_user(get_user_id(), get_user_id(), new_data)
+            # update session with new data
+            if 'password' in new_data:
+                # invalidate session on password change
+                browser_logout()
+                return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
+            session['user'] = datamanip.get_user(get_user_id())
+            return render_template('settings.html', msg=msg)
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -347,6 +389,9 @@ def send_ok():
 def list_users():
     try:
         user_id = get_user_id()
+        if request.method == 'POST':
+            data = request.get_json(force=True)
+            return jsonify(datamanip.create_user(user_id, data))
         return jsonify(datamanip.get_users())
     except Exception as e:
         return handle_exception(e)
@@ -400,7 +445,6 @@ def download_collection(collection_id=None):
         user_id = get_user_id()
         if request.args.get('path', ''):
             path = request.args.get('path', '')
-            print(path)
             out = datamanip.download_collection_dataset(user_id, collection_id, path)
             response = make_response(out['csv'])
             response.headers['Content-Disposition'] = out['cd']
@@ -415,9 +459,7 @@ def download_collection(collection_id=None):
 @app.route('/omics/api/collections/upload/', methods=['POST'])
 def upload_collection():
     try:
-        print('upload!')
         user_id = get_user_id()
-        print('upload stuff!')
         new_data = request.get_json()
         if 'file' not in request.files:
             raise ValueError('No file uploaded')
@@ -470,7 +512,6 @@ def download_sample(sample_id=None):
             response.mimetype='text/csv'
             return response
         out = datamanip.download_sample(user_id, sample_id)
-        print(out['filename'])
         return send_from_directory('%s/samples' % DATADIR, out['filename'], as_attachment=True)
     except Exception as e:
         return handle_exception(e)
@@ -535,6 +576,14 @@ def edit_usergroup(group_id=None):
         return handle_exception(e)
 
 
+@app.route('/omics/api/invite', methods=['GET'])
+def get_invitation():
+    try:
+        user_id = get_user_id()
+        return jsonify(datamanip.create_invitation(user_id))
+    except Exception as e:
+        return handle_exception(e)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
-

@@ -6,3 +6,4 @@ PyYAML==3.12
 Flask-Cors==3.0.3
 Flask-Bootstrap==3.3.7.1
 uwsgi==2.0.15
+passlib==1.7.1

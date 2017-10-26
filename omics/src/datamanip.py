@@ -1,4 +1,4 @@
-import bcrypt
+from passlib.hash import pbkdf2_sha256
 import importlib
 import yaml
 import os
@@ -6,6 +6,7 @@ from file_tools import metadatatools as mdt
 from file_tools import h5merge
 from db import db
 import h5py
+from xkcdpass import xkcd_password as xp
 
 DATADIR = os.environ['DATADIR']
 
@@ -39,14 +40,14 @@ def is_group_admin(user_id, group_id):
 
 def is_read_permitted(user_id, record):
     return is_admin(user_id) \
-        or record.allPermissions == 'readonly' \
-        or record.allPermissions == 'full' \
-        or ((record.groupPermissions == 'readonly' or record.allPermissions == 'full') and user_in_group(record.userGroup))
+        or record['allPermissions'] == 'readonly' \
+        or record['allPermissions'] == 'full' \
+        or ((record['groupPermissions'] == 'readonly' or record['allPermissions'] == 'full') and user_in_group(record['userGroup']))
 
 
 def is_write_permitted(user_id, record):
-    return is_admin(user_id) or record.allPermissions == 'full' \
-           or (record.allPermissions == 'full' and user_in_group(user_id, record.userGroup))
+    return is_admin(user_id) or record['allPermissions'] == 'full' \
+           or (record['allPermissions'] == 'full' and user_in_group(user_id, record['userGroup']))
 
 
 def get_read_permitted_records(user_id, records):
@@ -79,25 +80,44 @@ def get_user_password_hash(email):
 def create_user(current_user_id, data):
     if is_admin(current_user_id):
         # check email
-        emails = db.query_db('select email from Users;')
-        if data.email in emails:
-            return {'message': 'user with this email already exists'}
-
+        if len(db.query_db('select * from Users where email=?', [data['email']])):
+            raise ValueError('This email is already in use!')
         db.query_db('insert into Users (name, email, admin, password) values (?, ?, ?, ?);',
-                 [str(data.name), str(data.email), str(data.admin), bcrypt.hashpw(str(data.password).encode('utf8'), bcrypt.gensalt())])
+                    [str(data['name']), str(data['email']), str(data['admin']), pbkdf2_sha256.hash(data['password'])])
+        return db.query_db('select rowid, name, email, admin from Users where rowid=last_insert_rowid()', (), True)
     raise AuthException('must be admin to create user')
+
+
+def register_user(invitation_string, data):
+    # check email
+    if len(db.query_db('select * from Users where email=?;', [data['email']])):
+        raise ValueError('This email is already in use!')
+    if len(db.query_db('select * from Invitations where value=?;', [invitation_string], True)):
+        db.query_db('insert into Users (name, email, admin, password) values (?, ?, ?, ?)',
+                    [str(data['name']), str(data['email']), '0', pbkdf2_sha256.hash(data['password'])])
+        db.query_db('delete from Invitations where value=?;', [invitation_string])
+        return db.query_db('select rowid, name, email, admin from Users where rowid=last_insert_rowid()', (), True)
+    raise ValueError('Incorrect invitation')
 
 
 def update_user(current_user_id, target_user_id, new_data):
     if (current_user_id == target_user_id) or is_admin(current_user_id):
         # if new password provided, hash it
         if 'password' in new_data:
-            new_data.password = bcrypt.hashpw(new_data.password, bcrypt.gensalt())
+            new_data['password'] = pbkdf2_sha256.hash(new_data['password'])
+            print(new_data)
+        if 'email' in new_data:
+            emails = db.query_db('select * from Users where email=?', [new_data['email']])
+            if len(emails):
+                raise ValueError('This email is already in use!')
         valid_keys = ['name', 'email', 'admin', 'password']
-        query = 'update Users set' + ','.join([ '? = ?' for key in new_data.keys() if key in valid_keys]) + ' where rowid=?;'
+        query = 'update Users set' + ','.join([' %s = ?' % key for key in new_data.keys() if key in valid_keys]) \
+                + ' where rowid=?;'
+        print('query: %s' % query)
         params = []
-        [params.extend([str(key), str(value)]) for key, value in new_data.keys() if key in valid_keys]
+        [params.append(str(value)) for key, value in new_data.items() if key in valid_keys]
         params.append(target_user_id)
+        print('params: %s' % str(params))
         db.query_db(query, params)
         return db.query_db('select rowid, name, email, admin from Users where rowid=?;', [str(target_user_id)], True)
 
@@ -111,7 +131,7 @@ def delete_user(current_user_id, target_user_id):
         db.query_db('update GroupMemberships set userId=null where userId=?;', [str(target_user_id)])
         db.query_db('update UserGroups set createdBy=null where createdBy=?;', [str(target_user_id)])
         db.query_db('update UserGroups set createdBy=null where createdBy=?;', [str(target_user_id)])
-        db.query_db('update Analysis set owner=null where owner=?;', [str(target_user_id)])
+        db.query_db('update Analyses set owner=null where owner=?;', [str(target_user_id)])
 
         # set all createdBy and owner to null in samples and collections
         # notice how much easier it was in SQL? Maybe storing metadata in hdf5 files is a bad idea
@@ -356,11 +376,12 @@ def get_analysis(user_id, analysis_id):
 def update_analysis(user_id, analysis_id, new_data):
     analysis = db.query_db('select * from Analyses where rowid=?;', str(analysis_id), True)
     valid_keys = ['name', 'description', 'createdBy', 'groupPermissions', 'allPermissions', 'userGroup']
-    new_data = {key: value for key, value in new_data.items() if key in valid_keys}
     if is_write_permitted(user_id, analysis):
-        query = 'update Analyses set ' + ','.join(['? = ?' for _ in range(len(new_data))]) + ' where rowid=?;'
+        query = 'update Analyses set ' \
+                + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
+                + ' where rowid=?;'
         params = []  # TODO: validate params against schema
-        [ params.extend([str(key), str(value)]) for key, value in new_data.items() ]
+        [params.append(str(value)) for value in new_data.values()]
         params.append(str(analysis_id))
         db.query_db(query, params)
         return db.query_db('select * from Analyses where rowid=?;', [str(analysis_id)], True)
@@ -368,12 +389,12 @@ def update_analysis(user_id, analysis_id, new_data):
 
 
 def create_analysis(user_id, data):
-    query = ('insert into Analyses (name, description, createdBy, groupPermissions, allPermissions, userGroup) '
-             + 'values (?, ?, ?, ?, ?, ?);',
-             [str(data.name), str(data.description), str(user_id), str(data.groupPermissions),
-              str(data.allPermissions), str(data.userGroup)],
-             True)
-    return db.query_db(query)
+    db.query_db('insert into Analyses (name, description, createdBy, groupPermissions, allPermissions, userGroup) '
+                + 'values (?, ?, ?, ?, ?, ?);',
+                [str(data['name']), str(data['description']), str(user_id), str(data['groupPermissions']),
+                 str(data['allPermissions']), str(data['userGroup'])],
+                True)
+    return db.query_db('select rowid, * from Analyses where rowid=last_insert_rowid()', (), True)
 
 
 def delete_analysis(user_id, analysis_id):
@@ -391,9 +412,9 @@ def attach_collection(user_id, analysis_id, collection_id):
     if is_write_permitted(user_id, collection) and is_write_permitted(user_id, analysis):
         # see if attached
         if db.query_db('select * from CollectionMemberships where analysisId=? and collectionId=?;',
-                    [str(analysis_id), str(collection_id)]) is None:
+                       [str(analysis_id), str(collection_id)]) is None:
             db.query_db('insert into CollectionMemberships (collectionId, analysisId) values (?,?);',
-                     [str(analysis_id), str(collection_id)])
+                        [str(analysis_id), str(collection_id)])
         return {'message': 'collection ' + str(collection_id) + ' attached to analysis ' + str(analysis_id)}
     raise AuthException('User %s is not permitted to attach collection %s to analysis %s' % (str(user_id), str(collection_id), str(analysis_id)))
 
@@ -447,6 +468,7 @@ def attach_user(current_user_id, target_user_id, group_id):
         return {'message': 'user ' + target_user_id + ' attached to group ' + str(group_id)}
     raise AuthException('User %s is not authorized to attach user %s to group %s' % (str(current_user_id), str(target_user_id), str(group_id)))
 
+
 def elevate_user(current_user_id, target_user_id, group_id):
     if is_group_admin(current_user_id, group_id):
         db.query_db('update GroupMemberships set groupAdmin=1 where rowid=?;', [str(target_user_id)])
@@ -468,3 +490,9 @@ def delete_user_group(user_id, group_id):
         return {'message': 'user group ' + str(group_id) + ' deleted'}
     raise AuthException('User %s not permitted to modify group %s' % (str(user_id), str(group_id)))
 
+
+def create_invitation(user_id):
+    if is_admin(user_id):
+        invite_string = xp.generate_xkcdpassword(xp.generate_wordlist(valid_chars='[a-z]'), numwords=3, delimiter='_')
+        db.query_db('insert into Invitations (createdBy, value) values (?,?);', [str(user_id), invite_string])
+        return db.query_db('select rowid, * from Invitations where rowid=last_insert_rowid();', (), True)

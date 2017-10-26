@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sqlite3
 import sys
-import bcrypt
+from passlib.hash import pbkdf2_sha256
 # ensure data base has required tables (note if database already has tables with correct names,
 # but improper schema, this will not fix them
 db = sqlite3.connect(sys.argv[1])
@@ -16,8 +16,9 @@ cur.close()
 
 if len(val) is 0:
     cur = db.execute('insert into Users (email, name, password, admin) values (?, ?, ?, ?)',
-                     ['admin@admin.admin', 'Al Adminsen',
-                      str(bcrypt.hashpw(bytes('password', 'utf8'), bcrypt.gensalt()), 'utf8'), '1'])
+                     ['admin@admin.admin', 'Addison Minh',
+                      pbkdf2_sha256.hash('password'),
+                      '1'])
     cur.fetchall()
     cur.close()
     db.commit()
