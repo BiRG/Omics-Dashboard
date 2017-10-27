@@ -50,9 +50,13 @@ create table if not exists UserGroups(
  just used to keep track of them
  */
 create table if not exists Workflows(
-    createdBy integer,
     name text,
-    description text
+    description text,
+    owner text,
+    createdBy integer,
+    userGroup integer,
+    groupPermissions text,
+    allPermissions text
 );
 
 

@@ -1,75 +1,120 @@
-{%- extends "bootstrap/base.html" %}
-{# default title #}
-{% block title %}Omics Dashboard{% endblock %}
-{% block head %}
-{{super()}}
-{%- endblock %}
-{# we will put custom stylesheets here later #}
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>
+    {% block title %}
+      Omics Dashboard
+    {%- endblock %}
+    </title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial_scale=1, shrink-to-fit=no">
+
+    {% block head %}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {%- endblock %}
+    {% block styles %}
+      <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/2.0.0-beta1/css/bootstrap-select.css" integrity="sha256-C5wA3Nw3mtnSopVnnB7e8dYCvU2pwToJ6c7o1uOt/hA=" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/css/dataTables.bootstrap4.min.css" integrity="sha256-LpykTdjMm+jVLpDWiYOkH8bYiithb4gajMYnIngj128=" crossorigin="anonymous">
+      <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+      <style>
+      body{
+        padding-top: 5%
+      }
+      </style>
+    {%- endblock %}
+  </head>
+  <body>
 {% block navbar %}
-<nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
-              data-target="#bs-navbar-collapse-1" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+      <a class="navbar-brand" href="{{ url_for('render_dashboard') }}">Omics Dashboard</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
       </button>
-      <a class="navbar-brand" href="/omics/dashboard">Omics Dashboard</a>
-    </div>
-    <div class="collapse navbar-collapse" id="bs-navbar-collapse-1">
-      <ul class="nav navbar-nav navbar-right">
 
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-             aria-haspopup="true" aria-expanded="false">Samples <span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="{{ url_for('render_sample_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
-            <li><a href="{{ url_for('render_upload_sample') }}"><span class="glyphicon glyphicon-upload"></span> Upload</a></li>
-          </ul>
-        </li>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav d-flex mx-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="sampleDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Samples
+            </a>
+            <div class="dropdown-menu" aria-labelledby="sampleDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_sample_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
+              <a class="dropdown-item" href="{{ url_for('render_upload_sample') }}"><i class="fa fa-upload" aria-hidden="true"></i> Upload</a>
+            </div>
+          </li>
 
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-             aria-haspopup="true" aria-expanded="false">Collections <span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="{{ url_for('render_collection_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
-            <li><a href="{{ url_for('render_create_collection') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
-          </ul>
-        </li>
-
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-             aria-haspopup="true" aria-expanded="false">Analyses <span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="{{ url_for('render_analysis_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
-            <li><a href="{{ url_for('render_create_analysis') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
-          </ul>
-        </li>
-
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-             aria-haspopup="true" aria-expanded="false">Workflows <span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="{{ url_for('render_workflow_list') }}"><span class="glyphicon glyphicon-th-list"></span> List</a></li>
-            <li><a href="{{ url_for('render_create_workflow') }}"><span class="glyphicon glyphicon-plus-sign"></span> Create</a></li>
-          </ul>
-        </li>
-
-        <li><a href="{{ url_for('render_user_list') }}">Users</a></li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-             aria-haspopup="true" aria-expanded="false">{{ session['user']['name'] }} <span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="{{ url_for('render_settings') }}"><span class="glyphicon glyphicon-cog"></span> Settings</a></li>
-            <li><a href="{{ url_for('browser_logout') }}"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
-          </ul>
-        </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="collectionDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Collections
+            </a>
+            <div class="dropdown-menu" aria-labelledby="collectionDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_collection_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_collection') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Create</a>
+            </div>
+          </li>
 
 
-      </ul>
-    </div>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="analysisDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Analyses
+            </a>
+            <div class="dropdown-menu" aria-labelledby="analysisDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_analysis_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_analysis') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Create</a>
+            </div>
+          </li>
+
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="workflowDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Workflows
+            </a>
+            <div class="dropdown-menu" aria-labelledby="workflowDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_workflow_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_workflow') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Upload</a>
+              <a class="dropdown-item" href="{{ url_for('render_workflow_modules') }}"><i class="fa fa-plug" aria-hidden="true"></i> Modules</a>
+            </div>
+          </li>
+
+
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('render_job_list') }}">Jobs</a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('render_user_list') }}">Users</a>
+          </li>
+
+        </ul>
+        <ul class="navbar-nav d-flex mr-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              {{ session['user']['name'] }}
+            </a>
+            <div class="dropdown-menu" aria-labelledby="profileDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_settings') }}"><i class="fa fa-cog" aria-hidden="true"></i> Settings</a>
+              <a class="dropdown-item" href="{{ url_for('browser_logout') }}"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  {%- endblock %}
+  <div id="content" class="container-fluid" >
+    {% block content %}
+    {% endblock %}
   </div>
-</nav>
-{% endblock %}
+  {% block scripts %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/jquery.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/dataTables.bootstrap4.min.js"></script>
+  {%- endblock %}
+  </body>
+</html>

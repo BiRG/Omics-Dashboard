@@ -338,36 +338,62 @@ def delete_collection(user_id, collection_id):
 
 
 # TODO: workflows
-# workflows are defined in YAML files in DATADIR +workflows
-# these yaml files define inputs and outputs
+# workflows are defined in YAML files in DATADIR/workflows
+# basic metadata is stored in the DB
+# these yaml files define inputs and outputs and module coordination
+
 def get_workflows(user_id):
-    return []
+    results = db.query_db('select rowid, * from Workflows;')
+    return [result for result in results if is_read_permitted(user_id, result)]
 
 
 def get_workflow(user_id, workflow_id):
-    return {}
+    result = db.query_db('select rowid, * from Workflows where rowid=?;', [str(workflow_id)], True)
+    if is_read_permitted(user_id, result):
+        return result
+    raise AuthException('User %s is not permitted to access analysis %s' % (str(user_id), str(workflow_id)))
 
 
-def update_workflow(user_id, workflow_id, new_data):
-    return {}
+def update_workflows(user_id, workflow_id, new_data):
+    analysis = db.query_db('select * from Workflows where rowid=?;', str(workflow_id), True)
+    valid_keys = ['name', 'description', 'groupPermissions', 'allPermissions', 'userGroup']
+    if is_write_permitted(user_id, analysis):
+        query = 'update Analyses set ' \
+                + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
+                + ' where rowid=?;'
+        params = []
+        [params.append(str(value)) for key, value in new_data.values() if key in valid_keys]
+        params.append(str(workflow_id))
+        db.query_db(query, params)
+        return db.query_db('select * from Workflows where rowid=?;', [str(workflow_id)], True)
+    raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
+
+
+def create_workflows(user_id, data):
+    db.query_db('insert into Workflows (name, description, createdBy, groupPermissions, allPermissions, userGroup) '
+                + 'values (?, ?, ?, ?, ?, ?);',
+                [str(data['name']), str(data['description']), str(user_id), str(data['groupPermissions']),
+                 str(data['allPermissions']), str(data['userGroup'])],
+                True)
+    return db.query_db('select rowid, * from Workflows where rowid=last_insert_rowid()', (), True)
 
 
 def delete_workflow(user_id, workflow_id):
-    return {}
-
-
-def create_workflow(user_id, data):
-    return {}
+    analysis = db.query_db('select * from Workflows where rowid=?;', str(workflow_id), True)
+    if is_write_permitted(user_id, analysis):
+        db.query_db('delete from Workflows where rowid=?;', [str(workflow_id)])
+        return {'message': 'analysis ' + str(workflow_id) + ' deleted'}
+    raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
 # analyses
 def get_analyses(user_id):
-    results = db.query_db('select * from Analyses;')
+    results = db.query_db('select rowid, * from Analyses;')
     return [result for result in results if is_read_permitted(user_id, result)]
 
 
 def get_analysis(user_id, analysis_id):
-    result = db.query_db('select * from Analyses where rowid=?;', [str(analysis_id)], True)
+    result = db.query_db('select rowid, * from Analyses where rowid=?;', [str(analysis_id)], True)
     if is_read_permitted(user_id, result):
         return result
     raise AuthException('User %s is not permitted to access analysis %s' % (str(user_id), str(analysis_id)))

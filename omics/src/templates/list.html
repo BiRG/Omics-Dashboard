@@ -1,20 +1,18 @@
 {# A list of things #}
 {% extends "base.html" %}
-{% block styles %}
-  {{ super() }}
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/dataTables.bootstrap.min.css') }}">
-{% endblock %}
 {% block content %}
+  <div class="page-header">
+  <h2 class="display-4">
+    {{ type }}
+  </h2>
+  </div>
   <div class="container-fluid">
-  <h2>{{ type }}</h2>
-  <div class="table-fluid">
     <table id="entries" class="table table-striped table-bordered" cellspacing="0" width="auto">
       <thead>
         <tr>
           {% for heading in headings.values() %}
             <th>{{ heading }}</th>
           {% endfor %}
-        <th>More Info</th>
         </tr>
       </thead>
       <tbody>
@@ -22,31 +20,27 @@
           <tr>
           {% for key in headings.keys() %}
             <td>
-            {% if key in USERKEYS %}
-              <a href="{{ url_for('render_user_profile', user_id=item[key]) }}">{{ get_user_name(item[key]) }}</a>
-            {% elif key=='name' and type.lower()=='users' %}
-              <a href="{{ url_for('render_user_profile', user_id=item['rowid']) }}">{{ item[key] }}</a>
+            {% if key == 'name' %}
+              <a href="{{ get_item_link(type, item) }}">{{ item[key] }}</a>
+            {% elif key in USERKEYS %}
+              <a href="{{ get_profile_link(item[key]) }}">{{ get_user_name(item[key]) }}</a>
             {% elif key=='dateModified' %}
               {{ datetime.utcfromtimestamp(int(item[key])).strftime('%Y-%m-%dT%H:%M:%SZ') }}
             {% elif key == 'admin' %}
-              <span class="{{ 'glyphicon glyphicon-check' if int(item[key]) else 'glyphicon glyphicon-unchecked' }}"><p hidden>{{ item[key] }}</p></span>
+              <i class="{{ 'fa fa-check-square-o' if int(item[key]) else 'fa fa-square-o' }}"></i><p hidden>{{ item[key] }}</p>
             {% else %}
               {{ item[key] }}
             {% endif %}
             </td>
           {% endfor %}
-            <td><a href="{{ get_item_link(type, item) }}" class="btn btn-default btn-sm">Info <span class="glyphicon glyphicon-info-sign"></span></a></td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  </div>
 {% endblock %}
 {% block scripts %}
   {{ super() }}
-  <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script>
-  <script type="text/javascript" src="{{ url_for('static', filename='js/dataTables.bootstrap.min.js') }}"></script>
   <script type="text/javascript">
       $(document).ready(function() {
           $('#entries').DataTable();

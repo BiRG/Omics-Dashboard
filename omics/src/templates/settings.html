@@ -2,10 +2,17 @@
 {% block title %}Settings{% endblock %}
 {% block content %}
   <!-- Profile update-->
+<div class="page-header">
+  <h1 class="display-4">
+    Settings
+  </h1>
+</div>
   <div class="row">
-    <div class="col-sm-4 col-sm-offset-1">
-      <div class="panel panel-default">
-        <div class="panel-heading"><h3 class="panel-title">Update Profile</h3></div>
+    <div class="container-fluid">
+
+      <div class="col-sm-4 col-md-offset-1">
+      <div class="card card-default">
+        <div class="card-header"><h3 class="card-title">Update Profile</h3></div>
         <br>
         <p>Enter new values (leave empty to keep the same)</p>
         <form action="{{ url_for('render_settings') }}" method="post">
@@ -43,14 +50,15 @@
         {% endif %}
       </div>
     </div>
+    </div>
   </div>
   {% if session['user']['admin'] %}
+    <div class="container-fluid">
   <div class="row">
     <div class="col-md-6 col-md-offset-1">
-      <div class="panel panel-default">
-        <div class="panel-heading"><h3 class="panel-title">Generate Invitation Link</h3></div>
+      <div class="card card-default">
+        <div class="card-header"><h3 class="card-title">Generate Invitation Link</h3></div>
         <form>
-          <br>
           <div class="form-group">
             <label for="invitation">Invite URL</label>
             <input type="text" name="invitation" id="invitation" class="form-control" value="" readonly>
@@ -61,6 +69,7 @@
         </form>
       </div>
     </div>
+  </div>
   </div>
   {% endif %}
 {% endblock %}
