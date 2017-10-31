@@ -1,4 +1,4 @@
-FROM nvidia:cuda:8.0-devel
+FROM nvida/cuda:9.0-devel-ubuntu16.04
 MAINTAINER Daniel P. Foose <dpfoose@gmail.com>
 ENV DEBIAN_FRONTEND noninteractrive
 RUN apt-get update

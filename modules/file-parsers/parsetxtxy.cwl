@@ -1,2 +1,4 @@
 #!/usr/bin/env cwl-runner
-description: | Parse .txtXY spectrum files
+cwlVersion: v1.0
+class: CommandLinetool
+baseCommand

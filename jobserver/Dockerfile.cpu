@@ -1,0 +1,3 @@
+FROM golang:latest
+MAINTAINER Daniel P. Foose <dpfoose@gmail.com">
+RUN go get github.com/ohsu-comp-bio/funnel
