@@ -1,0 +1,28 @@
+FROM nvidia:cuda:8.0-devel
+MAINTAINER Daniel P. Foose <dpfoose@gmail.com>
+ENV DEBIAN_FRONTEND noninteractrive
+RUN apt-get update
+RUN apt-get -y --no-install-recommends install build-essential
+RUN apt-get -y --no-install-recommends install python3-dev python3-pip python3-setuptools
+RUN apt-get -y --no-install-recommends install libhdf5-dev
+RUN apt-get -y --no-install-recommends install liblapack-dev libopenblas-dev
+
+
+# set environment to load GPU-accelerated BLAS first
+# modify this file to compile OpenBLAS for your specific GPU for more gains
+RUN echo "NVBLAS_CPU_BLAS_LIB /usr/lib/libopenblas.so" >> /usr/local/cuda/nvblas.conf
+RUN echo "/usr/local/cuda/lib64 /usr/local/cuda/lib" >> /etc/ld.so.conf.d/cuda.conf
+RUN echo "/usr/local/cuda/lib64/libnvblas.so /usr/lib/libopenblas.so" >> /etc/ld.so.preload
+RUN echo "NVBLAS_CONFIG_FILE=/usr/local/cuda/nvblas.conf" >> /etc/profile.d/nvblas.sh
+
+
+ADD src /src
+RUN pip3 install --upgrade pip
+ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial/
+RUN pip3 install --upgrade -r /src/requirements.txt
+
+# the entry point will always be python3 followed by the script to run
+
+
+
+
