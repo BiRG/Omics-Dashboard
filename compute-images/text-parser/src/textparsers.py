@@ -30,6 +30,8 @@ def parseTxtXY(filename):
 #will save a sample file, assuming that the first row is x and subsequent rows are Y
 #numData is numpy array, metadata is dictionary
 def saveSampleFile(filename, numData, metadata):
+    #clean metadata of empty entries:
+    metadata = {key: value for key, value in metadata.items() if value != ''}
     with h5py.File(filename, "w", driver="core", libver="latest") as outfile:
         outfile.create_dataset('x', data=numData[:,0].astype(np.double))
         outfile.create_dataset('Y', data=numData[:,1:].astype(np.double))
