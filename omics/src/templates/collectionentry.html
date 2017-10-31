@@ -1,12 +1,10 @@
-{% extends 'entry.html' %}
+{% extends 'entrybase.html' %}
 {% block content %}
 
   {{ super() }}
-
-  <div class="container-fluid">
-    <div class="row">
-      <div class="panel panel-primary">
-        <div class="panel-heading"><h3>Contents</h3></div>
+      <div class="card mb-3">
+      <h4 class="card-header text-white bg-dark">Contents</h4>
+      <div class="card-body">
         <table id="datasets" class="table table-striped table-bordered" cellspacing="0" width="100%">
           <thead>
           <tr>
@@ -44,6 +42,17 @@
           </tbody>
         </table>
       </div>
-    </div>
-    </div>
+      </div>
+
+  {% if is_write_permitted(get_user_id(), data) %}
+    {% include 'dangerzone.html' %}
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+      var table = $('#datasets').DataTable();
+    });
+  </script>
 {% endblock %}

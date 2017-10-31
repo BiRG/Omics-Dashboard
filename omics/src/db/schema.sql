@@ -14,6 +14,7 @@
  TODO: date modified in schema with triggers
  */
 create table if not exists Users (
+    id integer primary key,
     email text not null unique,
     name text,
     password text not null,
@@ -27,6 +28,7 @@ create table if not exists Users (
  and poorly-implemented homebrew document-oriented db
  */
 create table if not exists Analyses (
+    id integer primary key,
     name text,
     description text,
     createdBy integer,
@@ -40,6 +42,7 @@ create table if not exists Analyses (
  This table contains group id's and metadata 
  */
 create table if not exists UserGroups(
+    id integer primary key,
     createdBy integer, /* keep in mind that any group admin can delete group */
     name text,
     description text
@@ -50,6 +53,7 @@ create table if not exists UserGroups(
  just used to keep track of them
  */
 create table if not exists Workflows(
+    id integer primary key,
     name text,
     description text,
     owner text,
@@ -61,6 +65,7 @@ create table if not exists Workflows(
 
 
 create table if not exists Invitations(
+    id integer primary key,
     createdBy integer,
     value text
 );
@@ -69,7 +74,7 @@ create table if not exists Invitations(
  */
 create table if not exists GroupMemberships(
     userId integer,
-    groupMembership integer,
+    groupId integer,
     groupAdmin integer /* Whether user is admin of this group */
 );
 

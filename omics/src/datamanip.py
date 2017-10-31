@@ -24,12 +24,16 @@ def validate_file(path):
 
 
 def is_admin(user_id):
-    return db.query_db('select * from Users where rowid=? and admin=1;', [str(user_id)], True) is not None
+    return db.query_db('select * from Users where id=? and admin=1;', [str(user_id)], True) is not None
 
 
 def user_in_group(user_id, group_id):
     return (db.query_db('select * from GroupMemberships where userId=? and groupId=?;', [str(user_id), str(group_id)], True)
             is not None)
+
+
+
+
 
 
 def is_group_admin(user_id, group_id):
@@ -62,15 +66,15 @@ def get_next_id(path):
 # Create, Read, Update, Delete from db or files
 # Users
 def get_users():
-    return db.query_db('select rowid, name, email, admin from Users;')
+    return db.query_db('select id, name, email, admin from Users;')
 
 
 def get_user(user_id):
-    return db.query_db('select rowid, name, email, admin from Users where rowid=?;', [str(user_id)], True)
+    return db.query_db('select id, name, email, admin from Users where rowid=?;', [str(user_id)], True)
 
 
 def get_user_by_email(email):
-    return db.query_db('select rowid, name, email, admin from Users where email=?;', [str(email)], True)
+    return db.query_db('select id, name, email, admin from Users where email=?;', [str(email)], True)
 
 
 def get_user_password_hash(email):
@@ -84,7 +88,7 @@ def create_user(current_user_id, data):
             raise ValueError('This email is already in use!')
         db.query_db('insert into Users (name, email, admin, password) values (?, ?, ?, ?);',
                     [str(data['name']), str(data['email']), str(data['admin']), pbkdf2_sha256.hash(data['password'])])
-        return db.query_db('select rowid, name, email, admin from Users where rowid=last_insert_rowid()', (), True)
+        return db.query_db('select id, name, email, admin from Users where id=last_insert_rowid()', (), True)
     raise AuthException('must be admin to create user')
 
 
@@ -96,7 +100,7 @@ def register_user(invitation_string, data):
         db.query_db('insert into Users (name, email, admin, password) values (?, ?, ?, ?)',
                     [str(data['name']), str(data['email']), '0', pbkdf2_sha256.hash(data['password'])])
         db.query_db('delete from Invitations where value=?;', [invitation_string])
-        return db.query_db('select rowid, name, email, admin from Users where rowid=last_insert_rowid()', (), True)
+        return db.query_db('select id, name, email, admin from Users where id=last_insert_rowid()', (), True)
     raise ValueError('Incorrect invitation')
 
 
@@ -112,14 +116,14 @@ def update_user(current_user_id, target_user_id, new_data):
                 raise ValueError('This email is already in use!')
         valid_keys = ['name', 'email', 'admin', 'password']
         query = 'update Users set' + ','.join([' %s = ?' % key for key in new_data.keys() if key in valid_keys]) \
-                + ' where rowid=?;'
+                + ' where id=?;'
         print('query: %s' % query)
         params = []
         [params.append(str(value)) for key, value in new_data.items() if key in valid_keys]
         params.append(target_user_id)
         print('params: %s' % str(params))
         db.query_db(query, params)
-        return db.query_db('select rowid, name, email, admin from Users where rowid=?;', [str(target_user_id)], True)
+        return db.query_db('select id, name, email, admin from Users where id=?;', [str(target_user_id)], True)
 
     raise AuthException('User %s does not have permissions to edit user %s' % (str(current_user_id), str(target_user_id)))
 
@@ -127,10 +131,10 @@ def update_user(current_user_id, target_user_id, new_data):
 def delete_user(current_user_id, target_user_id):
     if (current_user_id == target_user_id) or is_admin(current_user_id):
         # delete user from users table and nullify all the ids set based on this user
-        db.query_db('delete from Users where rowid=?;', str(target_user_id))
+        db.query_db('delete from Users where id=?;', str(target_user_id))
         db.query_db('update GroupMemberships set userId=null where userId=?;', [str(target_user_id)])
         db.query_db('update UserGroups set createdBy=null where createdBy=?;', [str(target_user_id)])
-        db.query_db('update UserGroups set createdBy=null where createdBy=?;', [str(target_user_id)])
+        db.query_db('update UserGroups set groupAdmin=null where groupAdmin=?;', [str(target_user_id)])
         db.query_db('update Analyses set owner=null where owner=?;', [str(target_user_id)])
 
         # set all createdBy and owner to null in samples and collections
@@ -206,13 +210,16 @@ def list_sample_paths(user_id, sample_id):
 
 
 def update_sample(user_id, sample_id, new_data):
+    print(new_data)
     sample_info = mdt.get_collection_metadata(DATADIR + '/samples/' + str(sample_id) + '.h5')
+    print(sample_info)
     if is_write_permitted(user_id, sample_info):
         return mdt.update_metadata('%s/samples/%s.h5' % (str(DATADIR), str(sample_id)), new_data)
     raise AuthException('User %s does not have permission to edit sample %s' % (str(user_id), str(sample_id)))
 
 
 def parse_sample(user_id, infilename, parser_name):
+    # TODO: this will send something off to the job server
     # find acceptable out file name
     sample_id = get_next_id(DATADIR + '/samples')
     outfilename = DATADIR + '/samples/' + str(sample_id) + '.h5'
@@ -320,6 +327,7 @@ def list_collection_paths(user_id, collection_id):
 
 
 def create_collection(user_id, sample_ids, new_data):
+    new_data['owner'] = user_id
     outfilename = DATADIR + '/collections/' + str(get_next_id('/data/collections')) + '.h5'
     filenames = [DATADIR + '/samples/' + str(sample_id) for sample_id in sample_ids]
     for filename in filenames:
@@ -343,97 +351,102 @@ def delete_collection(user_id, collection_id):
 # these yaml files define inputs and outputs and module coordination
 
 def get_workflows(user_id):
-    results = db.query_db('select rowid, * from Workflows;')
+    results = db.query_db('select * from Workflows;')
     return [result for result in results if is_read_permitted(user_id, result)]
 
 
 def get_workflow(user_id, workflow_id):
-    result = db.query_db('select rowid, * from Workflows where rowid=?;', [str(workflow_id)], True)
+    result = db.query_db('select * from Workflows where id=?;', [str(workflow_id)], True)
     if is_read_permitted(user_id, result):
         return result
     raise AuthException('User %s is not permitted to access analysis %s' % (str(user_id), str(workflow_id)))
 
 
-def update_workflows(user_id, workflow_id, new_data):
-    analysis = db.query_db('select * from Workflows where rowid=?;', str(workflow_id), True)
+def update_workflow(user_id, workflow_id, new_data):
+    analysis = db.query_db('select * from Workflows where id=?;', str(workflow_id), True)
     valid_keys = ['name', 'description', 'groupPermissions', 'allPermissions', 'userGroup']
     if is_write_permitted(user_id, analysis):
         query = 'update Analyses set ' \
                 + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
-                + ' where rowid=?;'
+                + ' where id=?;'
         params = []
         [params.append(str(value)) for key, value in new_data.values() if key in valid_keys]
         params.append(str(workflow_id))
         db.query_db(query, params)
-        return db.query_db('select * from Workflows where rowid=?;', [str(workflow_id)], True)
+        return db.query_db('select * from Workflows where id=?;', [str(workflow_id)], True)
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
-def create_workflows(user_id, data):
-    db.query_db('insert into Workflows (name, description, createdBy, groupPermissions, allPermissions, userGroup) '
-                + 'values (?, ?, ?, ?, ?, ?);',
-                [str(data['name']), str(data['description']), str(user_id), str(data['groupPermissions']),
+def create_workflow(user_id, data):
+    db.query_db('insert into Workflows (name, description, createdBy, owner, groupPermissions, allPermissions, userGroup) '
+                + 'values (?, ?, ?, ?, ?, ?, ?);',
+                [str(data['name']), str(data['description']), str(user_id), str(user_id), str(data['groupPermissions']),
                  str(data['allPermissions']), str(data['userGroup'])],
                 True)
-    return db.query_db('select rowid, * from Workflows where rowid=last_insert_rowid()', (), True)
+    workflow = db.query_db('select * from Workflows where id=last_insert_rowid()', (), True)
+    # TODO: Create a workflow file
+    # TODO: write the basic workflow definition to the file
+    return workflow
 
 
 def delete_workflow(user_id, workflow_id):
-    analysis = db.query_db('select * from Workflows where rowid=?;', str(workflow_id), True)
+    analysis = db.query_db('select * from Workflows where id=?;', str(workflow_id), True)
     if is_write_permitted(user_id, analysis):
-        db.query_db('delete from Workflows where rowid=?;', [str(workflow_id)])
+        db.query_db('delete from Workflows where id=?;', [str(workflow_id)])
         return {'message': 'analysis ' + str(workflow_id) + ' deleted'}
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
 # analyses
 def get_analyses(user_id):
-    results = db.query_db('select rowid, * from Analyses;')
+    results = db.query_db('select * from Analyses;')
     return [result for result in results if is_read_permitted(user_id, result)]
 
 
 def get_analysis(user_id, analysis_id):
-    result = db.query_db('select rowid, * from Analyses where rowid=?;', [str(analysis_id)], True)
+    result = db.query_db('select id, * from Analyses where rowid=?;', [str(analysis_id)], True)
     if is_read_permitted(user_id, result):
         return result
     raise AuthException('User %s is not permitted to access analysis %s' % (str(user_id), str(analysis_id)))
 
 
 def update_analysis(user_id, analysis_id, new_data):
-    analysis = db.query_db('select * from Analyses where rowid=?;', str(analysis_id), True)
-    valid_keys = ['name', 'description', 'createdBy', 'groupPermissions', 'allPermissions', 'userGroup']
+    print('new_data:' + str(new_data))
+    analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
+    valid_keys = ['name', 'description', 'owner', 'groupPermissions', 'allPermissions', 'userGroup']
     if is_write_permitted(user_id, analysis):
         query = 'update Analyses set ' \
                 + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
-                + ' where rowid=?;'
+                + ' where id=?;'
         params = []  # TODO: validate params against schema
         [params.append(str(value)) for value in new_data.values()]
         params.append(str(analysis_id))
         db.query_db(query, params)
-        return db.query_db('select * from Analyses where rowid=?;', [str(analysis_id)], True)
+        return db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(analysis_id)))
 
 
 def create_analysis(user_id, data):
-    db.query_db('insert into Analyses (name, description, createdBy, groupPermissions, allPermissions, userGroup) '
-                + 'values (?, ?, ?, ?, ?, ?);',
-                [str(data['name']), str(data['description']), str(user_id), str(data['groupPermissions']),
+    print(data)
+    db.query_db('insert into Analyses (name, description, createdBy, owner, groupPermissions, allPermissions, userGroup) '
+                + 'values (?, ?, ?, ?, ?, ?, ?);',
+                [str(data['name']), str(data['description']), str(user_id), str(user_id), str(data['groupPermissions']),
                  str(data['allPermissions']), str(data['userGroup'])],
                 True)
-    return db.query_db('select rowid, * from Analyses where rowid=last_insert_rowid()', (), True)
+    return db.query_db('select id, * from Analyses where id=last_insert_rowid()', (), True)
 
 
 def delete_analysis(user_id, analysis_id):
-    analysis = db.query_db('select * from Analysis where rowid=?;', str(analysis_id), True)
+    analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     if is_write_permitted(user_id, analysis):
-        db.query_db('delete from Analysis where rowid=?;', [str(analysis_id)])
+        db.query_db('delete from Analyses where id=?;', [str(analysis_id)])
         return {'message': 'analysis ' + str(analysis_id) + ' deleted'}
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(analysis_id)))
 
 
 def attach_collection(user_id, analysis_id, collection_id):
     # check read permissions on analysis and collection
-    analysis = db.query_db('select * from Analyses where rowid=?;', str(analysis_id), True)
+    analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     collection = mdt.get_collection_metadata(DATADIR + 'collections/' + str(collection_id) + '.h5')
     if is_write_permitted(user_id, collection) and is_write_permitted(user_id, analysis):
         # see if attached
@@ -446,10 +459,10 @@ def attach_collection(user_id, analysis_id, collection_id):
 
 
 def detach_collection(user_id, analysis_id, collection_id):
-    analysis = db.query_db('select * from Analyses where rowid=?;', str(analysis_id), True)
+    analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     if is_write_permitted(user_id, analysis):
         db.query_db('delete from CollectionMemberships where collectionId=? and analysisId=?;',
-                 [str(collection_id), str(analysis_id)])
+                    [str(collection_id), str(analysis_id)])
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(analysis_id)))
 
 
@@ -460,44 +473,44 @@ def get_user_groups():
 
 
 def get_user_group(group_id):
-    return db.query_db('select * from UserGroups where rowid=?;', [str(group_id)], True)
+    return db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
 
 
 def create_user_group(user_id, data):
-    db.query_db('insert into UserGroups (createBy, name, description) values (?, ?, ?);',
+    db.query_db('insert into UserGroups (createdBy, name, description) values (?, ?, ?);',
              [str(user_id), str(data.name), str(data.description)],
              True)
-    new_group = db.query_db('select * from UserGroups order by rowid desc limit 1;', (), True)
-    db.query_db('insert into GroupMemberships (userId, groupMembership, admin) values(?, ?, ?);',
-             [str(user_id), str(new_group.rowid), '1'])
+    new_group = db.query_db('select * from UserGroups order by id desc limit 1;', (), True)
+    db.query_db('insert into GroupMemberships (userId, groupId, groupAdmin) values(?, ?, ?);',
+             [str(user_id), str(new_group.id), '1'])
     return new_group
 
 
 def update_user_group(user_id, group_id, new_data):
     if is_group_admin(user_id, group_id):
         valid_keys = ['name', 'description']
-        query = 'update UserGroups set' + ','.join([' ? = ?' for key in new_data.keys if key in valid_keys]) + ' where rowid=?;'
+        query = 'update UserGroups set' + ','.join([' ? = ?' for key in new_data.keys if key in valid_keys]) + ' where id=?;'
         params = []
         [ params.extend([str(key), str(value)]) for key, value in new_data.items() if key in valid_keys ]
         params.append(str(group_id))
         db.query_db(query, params)
-        return db.query_db('select * from UserGroups where rowid=?;', [str(group_id)], True)
+        return db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
     raise AuthException('User %s is not authorized to modify user group %s' % (str(user_id), str(group_id)))
 
 
 def attach_user(current_user_id, target_user_id, group_id):
     if is_group_admin(current_user_id, group_id):
         if not user_in_group(target_user_id, group_id):
-            db.query_db('insert into GroupMemberships (userId, groupMembership, admin) values (?, ?, ?);',
+            db.query_db('insert into GroupMemberships (userId, groupId, admin) values (?, ?, ?);',
                      [str(target_user_id), str(group_id), '0'])
-            return db.query_db('select * from UserGroups order by rowid desc limit 1;', (), True)
+            return db.query_db('select * from UserGroups order by id desc limit 1;', (), True)
         return {'message': 'user ' + target_user_id + ' attached to group ' + str(group_id)}
     raise AuthException('User %s is not authorized to attach user %s to group %s' % (str(current_user_id), str(target_user_id), str(group_id)))
 
 
 def elevate_user(current_user_id, target_user_id, group_id):
     if is_group_admin(current_user_id, group_id):
-        db.query_db('update GroupMemberships set groupAdmin=1 where rowid=?;', [str(target_user_id)])
+        db.query_db('update GroupMemberships set groupAdmin=1 where id=?;', [str(target_user_id)])
         return {'message': 'User %s elevated to admin of group %s' % (str(target_user_id), str(group_id))}
     raise AuthException('User %s not authorized to modify group %s' % (str(current_user_id), str(group_id)))
 
@@ -512,13 +525,28 @@ def detach_user(current_user_id, target_user_id, group_id):
 
 def delete_user_group(user_id, group_id):
     if is_group_admin(user_id, group_id):
-        db.query_db('delete from UserGroups where rowid=?;', [str(group_id)])
+        db.query_db('delete from UserGroups where id=?;', [str(group_id)])
         return {'message': 'user group ' + str(group_id) + ' deleted'}
     raise AuthException('User %s not permitted to modify group %s' % (str(user_id), str(group_id)))
+
+
+# returns list of dicts with keys ['id', 'name', 'groupAdmin']
+def get_included_groups(user_id):
+    query = 'select UserGroups.id, UserGroups.name, GroupMemberships.groupAdmin from GroupMemberships inner join UserGroups on UserGroups.id=GroupMemberships.groupId where GroupMemberships.userId=?'
+    return db.query_db(query, [user_id])
+
+
+# returns dict with keys ['id', 'name', 'groupAdmin']
+def get_group_members(group_id):
+    query = 'select Users.id, Users.name, GroupMemberships.groupAdmin' \
+            'from Users' \
+            'inner join GroupMemberships on GroupMemberships.userId=Users.id' \
+            'where GroupMemberships.groupId=?'
+    return db.query_db(query, [group_id])
 
 
 def create_invitation(user_id):
     if is_admin(user_id):
         invite_string = xp.generate_xkcdpassword(xp.generate_wordlist(valid_chars='[a-z]'), numwords=3, delimiter='_')
         db.query_db('insert into Invitations (createdBy, value) values (?,?);', [str(user_id), invite_string])
-        return db.query_db('select rowid, * from Invitations where rowid=last_insert_rowid();', (), True)
+        return db.query_db('select * from Invitations where id=last_insert_rowid();', (), True)

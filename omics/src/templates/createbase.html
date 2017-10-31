@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Create {{ type }}{% endblock %}
 {% block content %}
-  <div class="row">
-    <div class="col-sm-3 col-sm-offset-4">
-      <div class="panel panel-default">
-        <div class="panel-heading"><h3 class="panel-title">{{ type }} Metadata</h3></div>
-        <form id="metadata" action="{{ url_for(endpoint, invitation=invitation) }}" method="post">
+
+  <div class="card mx-auto my-auto d-block" style="max-width: 25rem;">
+    <h4 class="card-header">{{ type }} Metadata</h4>
+    <div class="card-body">
+        <form id="metadata" action="{{ url_for(endpoint) }}" method="post">
           <div class="form-group">
             <label for="nameInput">Name</label>
             <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Enter name">
@@ -16,7 +16,7 @@
           </div>
           <div class="form-group">
             <label for="userGroup">User Group</label>
-            <select id="userGroup" class="form-control">
+            <select id="userGroup" name="userGroup" class="form-control">
               <option value="-1">None</option>
               {% for group in groups %}
               <option value="{{ group['rowid'] }}">{{ group['name'] }}</option>
@@ -25,24 +25,26 @@
           </div>
           <div class="form-group">
             <label for="groupPermissions">Group Permissions</label>
-            <select id="groupPermissions" class="form-control">
+            <select id="groupPermissions" name="groupPermissions" class="form-control">
               <option value="full">Read/Write</option>
               <option value="readonly">Read Only</option>
             </select>
           </div>
           <div class="form-group">
             <label for="allPermissions">Global Permissions</label>
-            <select id="allPermissions" class="form-control">
+            <select id="allPermissions" name="allPermissions" class="form-control">
               <option value="full">Read/Write</option>
               <option value="readonly">Read Only</option>
               <option value="none">Hidden</option>
             </select>
           </div>
-        {% if type == 'Analysis' %}
-          {% with select_id="collectionSelect" %}
-            {% include 'collectionselector.html' %}
-          {% endwith %}
-        {% endif %}
+
+          {#  if type == 'Analysis' #}
+          {# with select_id="collectionSelect" #}
+            {# include 'collectionselector.html' #}
+          {# endwith #}
+        {# endif #}
+
           <div class="form-group">
             <input class="btn btn-primary form-control" type="submit" value="Create">
           </div>

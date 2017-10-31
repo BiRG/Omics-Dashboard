@@ -1,39 +1,43 @@
-{% extends "bootstrap/base.html" %}
+{% extends "base.html" %}
 {% block title %}Register{% endblock %}
+{% block navbar %}
+  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <div class="navbar-brand">Omics Dashboard</div>
+  </nav>
+{% endblock %}
 {% block content %}
   <!-- Profile update-->
-  <div class="row">
-    <div class="col-sm-3 col-sm-offset-4">
-      <div class="panel panel-default">
-        <div class="panel-heading"><h3 class="panel-title">Create Profile</h3></div>
-        <form action="{{ url_for('render_registration', invitation=invitation) }}" method="post">
-          <div class="form-group">
-            <label for="emailInput">Email address</label>
-            <input type="email" name="email" required="true" id="emailInput" class="form-control" placeholder="example@test.net">
-          </div>
-          <div class="form-group">
-            <label for="nameInput">Name</label>
-            <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Test Testerson">
-          </div>
-          <div class="form-group">
-            <label for="passwordInput1">New Password</label>
-            <input type="password" required="true" name="password1" id="passwordInput1" class="form-control" placeholder="Password">
-          </div>
-          <div class="form-group">
-            <label for="passwordInput2">Repeat New Password</label>
-            <input type="password" required="true" name="password2" id="passwordInput2" class="form-control" placeholder="Password">
-          </div>
-          <div class="form-group">
-            <input class="btn btn-primary form-control" type="submit" value="Register">
-          </div>
-        </form>
-        {% if error %}
-          <div class="alert alert-danger alert-dismissable" role="alert">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="glyphicon glyphicon-remove-circle"></span></span></button>
-            <strong>Error:</strong> {{ error }}
-          </div>
-        {% endif %}
+      <div class="card mx-auto my-auto d-block" style="max-width: 25rem;">
+        <h4 class="card-header">Welcome to Omics Dashboard</h4>
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Create new user account:</h6>
+          <form action="{{ url_for('render_registration', invitation=invitation) }}" method="post">
+            <div class="form-group">
+              <label for="emailInput">Email address</label>
+              <input type="email" name="email" required="true" id="emailInput" class="form-control" placeholder="example@test.net">
+            </div>
+            <div class="form-group">
+              <label for="nameInput">Name</label>
+              <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Test Testerson">
+            </div>
+            <div class="form-group">
+              <label for="passwordInput1">New Password</label>
+              <input type="password" required="true" name="password1" id="passwordInput1" class="form-control" placeholder="Password">
+            </div>
+            <div class="form-group">
+              <label for="passwordInput2">Repeat New Password</label>
+              <input type="password" required="true" name="password2" id="passwordInput2" class="form-control" placeholder="Password">
+            </div>
+            <div class="form-group">
+              <input class="btn btn-primary form-control" type="submit" value="Register">
+            </div>
+          </form>
+          {% if error %}
+            <div class="alert alert-danger alert-dismissable" role="alert">
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="glyphicon glyphicon-remove-circle"></span></span></button>
+              <strong>Error:</strong> {{ error }}
+            </div>
+          {% endif %}
+        </div>
       </div>
-    </div>
-  </div>
 {% endblock %}

@@ -6,20 +6,29 @@
       Omics Dashboard
     {%- endblock %}
     </title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial_scale=1, shrink-to-fit=no">
 
     {% block head %}
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {%- endblock %}
     {% block styles %}
       <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/2.0.0-beta1/css/bootstrap-select.css" integrity="sha256-C5wA3Nw3mtnSopVnnB7e8dYCvU2pwToJ6c7o1uOt/hA=" crossorigin="anonymous">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/css/dataTables.bootstrap4.min.css" integrity="sha256-LpykTdjMm+jVLpDWiYOkH8bYiithb4gajMYnIngj128=" crossorigin="anonymous">
       <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
       <style>
       body{
-        padding-top: 5%
+        padding-top: 6%;
+        margin-bottom: 100px;
+      }
+      .footer {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        /* Set the fixed height of the footer here */
+        height: 100px;
+        line-height: 100px; /* Vertically center the text there */
+        background-color: #f5f5f5;
       }
       </style>
     {%- endblock %}
@@ -27,7 +36,9 @@
   <body>
 {% block navbar %}
     <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-      <a class="navbar-brand" href="{{ url_for('render_dashboard') }}">Omics Dashboard</a>
+      <a class="navbar-brand" href="{{ url_for('render_dashboard') }}">
+        Omics Dashboard
+      </a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -40,8 +51,8 @@
               Samples
             </a>
             <div class="dropdown-menu" aria-labelledby="sampleDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_sample_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('render_upload_sample') }}"><i class="fa fa-upload" aria-hidden="true"></i> Upload</a>
+              <a class="dropdown-item" href="{{ url_for('render_sample_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_upload_sample') }}"><i class="fa fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
             </div>
           </li>
 
@@ -51,8 +62,8 @@
               Collections
             </a>
             <div class="dropdown-menu" aria-labelledby="collectionDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_collection_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_collection') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_collection_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_collection') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
             </div>
           </li>
 
@@ -63,8 +74,8 @@
               Analyses
             </a>
             <div class="dropdown-menu" aria-labelledby="analysisDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_analysis_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_analysis') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_analysis_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_analysis') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
             </div>
           </li>
 
@@ -76,19 +87,26 @@
             </a>
             <div class="dropdown-menu" aria-labelledby="workflowDropdown">
               <a class="dropdown-item" href="{{ url_for('render_workflow_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_workflow') }}"><i class="fa fa-plus-square" aria-hidden="true"></i> Upload</a>
-              <a class="dropdown-item" href="{{ url_for('render_workflow_modules') }}"><i class="fa fa-plug" aria-hidden="true"></i> Modules</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_workflow') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_workflow_modules') }}"><i class="fa fa-plug fa-fw" aria-hidden="true"></i>Modules</a>
+              <a class="dropdown-item" href="{{ url_for('render_job_list') }}"><i class="fa fa-tasks fa-fw" area-hidden="true"></i>Jobs</a>
             </div>
           </li>
 
 
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Users
+            </a>
+            <div class="dropdown-menu" aria-labelledby="userDropdown">
+              <a class="dropdown-item" href="{{ url_for('render_user_list') }}"><i class="fa fa-user" aria-hidden="true"></i> Users</a>
+              <a class="dropdown-item" href="{{ url_for('render_user_group_list') }}"><i class="fa fa-users" aria-hidden="true"></i> User Groups</a>
+            </div>
+          </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('render_job_list') }}">Jobs</a>
           </li>
 
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('render_user_list') }}">Users</a>
-          </li>
 
         </ul>
         <ul class="navbar-nav d-flex mr-auto">
@@ -112,9 +130,16 @@
   </div>
   {% block scripts %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/jquery.dataTables.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+    <script type="text/javascript">
+
+      $(document).ready(function() {
+          $('.selectpicker').selectpicker();
+      });
+    </script>
   {%- endblock %}
   </body>
 </html>

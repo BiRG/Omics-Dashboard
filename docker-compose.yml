@@ -3,7 +3,7 @@ version: '3'
 services:
   omics:
     context: omics
-    dockerfile: Dockerfile.cpu
+    dockerfile: Dockerfile.cpu.cpu
     env_file: environment.env
     volumes:
       - ${DATADIR}:/data

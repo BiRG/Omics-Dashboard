@@ -79,7 +79,7 @@ def validate_login(email, password):
 # get user id, if user not logged in, raise an exception. Exception handler will send 401
 def get_user_id():
     if session.get('logged_in'):
-        return session['user']['rowid']
+        return session['user']['id']
     raise LoginError('Not logged in')
 
 
@@ -97,13 +97,29 @@ def get_item_link(record_type, item):
     elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
         return url_for('render_sample', sample_id=item['id'])
     elif record_type.lower() == 'users' or record_type.lower() == 'user':
-        return url_for('render_user_profile', user_id=item['rowid'])
+        return url_for('render_user_profile', user_id=item['id'])
+    elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
+        return url_for('render_user_group',group_id=item['id'])
     elif record_type.lower() == 'analyses' or record_type.lower() == 'analysis':
-        return url_for('render_analysis', analysis_id=item['rowid'])
+        return url_for('render_analysis', analysis_id=item['id'])
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
-        return url_for('render_workflow', workflow_id=item['rowid'])
+        return url_for('render_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
-        return url_for('render_job', job_id=item['rowid'])
+        return url_for('render_job', job_id=item['id'])
+    return '#'
+
+
+def get_update_url(record_type, item):
+    if record_type.lower() == 'collections' or record_type.lower() == 'collection':
+        return url_for('get_collection', collection_id=item['id'])
+    elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
+        return url_for('get_sample', sample_id=item['id'])
+    elif record_type.lower() == 'analyses' or record_type.lower() == 'analysis':
+        return url_for('get_analysis', analysis_id=item['id'])
+    elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
+        return url_for('get_workflow', workflow_id=item['id'])
+    elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
+        return url_for('get_job', job_id=item['id'])
     return '#'
 
 USERKEYS = ['createdBy', 'owner', 'userId']
@@ -114,6 +130,10 @@ app.jinja_env.globals.update(datetime=datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
 app.jinja_env.globals.update(int=int)
 app.jinja_env.globals.update(get_profile_link=get_profile_link)
+app.jinja_env.globals.update(is_write_permitted=datamanip.is_write_permitted)
+app.jinja_env.globals.update(get_user_id=get_user_id)
+app.jinja_env.globals.update(get_update_url=get_update_url)
+app.jinja_env.globals.update(get_included_groups=datamanip.get_included_groups)
 
 
 # close db connection at app close
@@ -189,7 +209,7 @@ def render_sample_list():
         get_user_id()
         data = datamanip.get_all_sample_metadata(get_user_id())
         headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
-        return render_template('list.html', type='Sample', data=data, headings=headings)
+        return render_template('list.html', type='Samples', data=data, headings=headings)
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -265,7 +285,7 @@ def render_analysis_list():
     try:
         user_id = get_user_id()
         analyses = datamanip.get_analyses(user_id)
-        headings = {'rowid':'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
         return render_template('list.html', data=analyses, headings=headings, type='Analyses')
     except Exception as e:
         return handle_exception_browser(e)
@@ -276,14 +296,15 @@ def render_create_analysis():
     try:
         user_id = get_user_id()
         if request.method == 'POST':
-            analysis = datamanip.create_analysis(user_id, request.get_json(force=True))
-            return redirect(url_for('render_analysis', analysis_id=analysis['rowid']))
+            print(request.form)
+            analysis = datamanip.create_analysis(user_id, request.form.to_dict())
+            return redirect(url_for('render_analysis', analysis_id=analysis['id']))
         return render_template('createbase.html', type='Analysis', endpoint='render_create_analysis')
     except Exception as e:
         return handle_exception_browser(e)
 
 
-@app.route('/omics/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/omics/analyses/<analysis_id>', methods=['GET'])
 def render_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
@@ -294,12 +315,33 @@ def render_analysis(analysis_id=None):
         return handle_exception_browser(e)
 
 
+@app.route('/omics/usergroups', methods=['GET'])
+def render_user_group_list():
+    try:
+        user_id = get_user_id()
+        user_groups = datamanip.get_user_groups()
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description'}
+        return render_template('list.html', data=user_groups, type='User Groups', headings=headings)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/omics/usergroups', methods=['GET', 'DELETE'])
+def render_user_group(group_id=None):
+    try:
+        user_id = get_user_id()
+        user_group = datamanip.get_user_group(group_id)
+        return render_template('entry.html', data=user_group, type='User Group')
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
 @app.route('/omics/workflows', methods=['GET', 'POST'])
 def render_workflow_list():
     try:
         user_id = get_user_id()
         workflows = datamanip.get_workflows(user_id)
-        headings = {'rowid': 'id', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        headings = {'id': 'id', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
         return render_template('list.html', data=workflows, headings=headings, type='Workflows')
     except Exception as e:
         return handle_exception_browser(e)
@@ -318,7 +360,11 @@ def render_workflow(workflow_id=None):
 @app.route('/omics/workflows/create', methods=['GET', 'POST', 'DELETE'])
 def render_create_workflow():
     try:
-        return jsonify({'not': 'implemented'}), 501
+        user_id = get_user_id()
+        if request.method == 'POST':
+            workflow = datamanip.create_workflow(user_id, request.form.to_dict())
+            return redirect(url_for('render_workflow', workflow_id=workflow['id']))
+        return render_template('createbase.html', type='Workflow', endpoint='render_create_workflow')
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -375,7 +421,7 @@ def render_user_list():
     try:
         get_user_id()
         users = datamanip.get_users()
-        headings = {'rowid': 'ID', 'name': 'Name', 'admin': 'Admin'}
+        headings = {'id': 'ID', 'name': 'Name', 'admin': 'Admin'}
         return render_template('list.html', type='Users', headings=headings, data=users)
     except Exception as e:
         return handle_exception_browser(e)
@@ -394,7 +440,7 @@ def render_user_profile(user_id=None):
 #  ROUTES FOR NON-BROWSER Clients
 @app.route('/omics/api/login', methods=['POST'])
 def login():
-    credentials = request.get_json()
+    credentials = request.get_json(force=True)
     if validate_login(credentials['email'], credentials['password']):
         session['user'] = datamanip.get_user_by_email(credentials['email'])
         session['logged_in'] = True
@@ -442,7 +488,7 @@ def edit_user(user_id=None):
         if request.method == 'GET':
             return jsonify(datamanip.get_user(user_id))
         if request.method == 'POST':
-            return jsonify(datamanip.update_user(current_user_id, user_id, request.json))
+            return jsonify(datamanip.update_user(current_user_id, user_id, request.get_json(force=True)))
         if request.method == 'DELETE':
             return jsonify(datamanip.delete_user(current_user_id, user_id))
     except Exception as e:
@@ -456,7 +502,7 @@ def list_collections():
         if request.method == 'GET':
             return jsonify(datamanip.get_collections(current_user_id))
         if request.method == 'POST':
-            data = request.get_json()
+            data = request.get_json(force=True)
             return jsonify(datamanip.create_collection(current_user_id, data['sampleIds'], data))
     except Exception as e:
         return handle_exception(e)
@@ -469,7 +515,7 @@ def get_collection(collection_id=None):
         if request.method == 'GET':
             return jsonify(datamanip.get_collection(user_id, collection_id))
         if request.method == 'POST':
-            new_data = request.get_json()
+            new_data = request.get_json(force=True)
             return jsonify(datamanip.update_collection(user_id, collection_id, new_data))
         if request.method == 'DELETE':
             return jsonify(datamanip.delete_collection(user_id, collection_id))
@@ -498,7 +544,7 @@ def download_collection(collection_id=None):
 def upload_collection():
     try:
         user_id = get_user_id()
-        new_data = request.get_json()
+        new_data = request.get_json(force=True)
         if 'file' not in request.files:
             raise ValueError('No file uploaded')
         collection_file = request.files['file']
@@ -530,7 +576,7 @@ def get_sample(sample_id=None):
         if request.method == 'GET':
             return jsonify(datamanip.get_sample(user_id, sample_id))
         if request.method == 'POST':
-            new_data = request.get_json()
+            new_data = request.get_json(force=True)
             return jsonify(datamanip.update_sample(user_id, sample_id, new_data))
         if request.method == 'DELETE':
             return jsonify(datamanip.delete_sample(user_id, sample_id))
@@ -575,15 +621,15 @@ def list_analyses():
 
 
 @app.route('/omics/api/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
-def edit_analysis(analysis_id=None):
+def get_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
         if request.method == 'GET':
             return jsonify(datamanip.get_analysis(user_id, analysis_id))
         if request.method == 'POST':
-            return jsonify(datamanip.update_analysis(user_id, analysis_id, request.json))
+            return jsonify(datamanip.update_analysis(user_id, analysis_id, request.get_json(force=True)))
         if request.method == 'DELETE':
-            return jsonify(datamanip.delete_user(user_id, analysis_id))
+            return jsonify(datamanip.delete_analysis(user_id, analysis_id))
     except Exception as e:
         return handle_exception(e)
 
@@ -601,7 +647,53 @@ def list_usergroups():
 
 
 @app.route('/omics/api/usergroups/<group_id>', methods=['GET', 'POST', 'DELETE'])
-def edit_usergroup(group_id=None):
+def get_usergroup(group_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            return jsonify({})
+        if request.method == 'POST':
+            return jsonify({})
+        if request.method == 'DELETE':
+            return jsonify({})
+    except Exception as e:
+        return handle_exception(e)
+
+
+@app.route('/omics/api/workflows', methods=['GET', 'POST'])
+def list_workflows():
+    try:
+        user_id = get_user_id()
+        return jsonify(datamanip.get_analyses(user_id))
+    except Exception as e:
+        return handle_exception(e)
+
+
+@app.route('/omics/api/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+def get_workflow(workflow_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            return jsonify({})
+        if request.method == 'POST':
+            return jsonify({})
+        if request.method == 'DELETE':
+            return jsonify({})
+    except Exception as e:
+        return handle_exception(e)
+
+
+@app.route('/omics/api/jobs', methods=['GET', 'POST'])
+def list_jobs():
+    try:
+        user_id = get_user_id()
+        return jsonify({})
+    except Exception as e:
+        return handle_exception(e)
+
+
+@app.route('/omics/api/jobs/<job_id>', methods=['GET', 'POST', 'DELETE'])
+def get_job(job_id=None):
     try:
         user_id = get_user_id()
         if request.method == 'GET':
