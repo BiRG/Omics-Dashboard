@@ -9,3 +9,5 @@ print(infilename)
 print(outfilename)
 data = tp.parseTxtXY(infilename)
 tp.saveSampleFile(outfilename, data['data'], data['metadata'])
+sys.exit()
+
