@@ -1,7 +1,9 @@
 import numpy as np
 import h5py
-#value is a list
-#converts anything numeric into a float
+
+
+# value is a list
+# converts anything numeric into a float
 def processMetadataValue(value):
     if len(value) < 2:
         return ''
@@ -10,9 +12,10 @@ def processMetadataValue(value):
     except ValueError:
         return value[1]
 
-#a fuction to parse txtXY files
-#will parse files with or without metadata
-#probably pretty inefficient, but easy to read :)
+
+# a fuction to parse txtXY files
+# will parse files with or without metadata
+# probably pretty inefficient, but easy to read :)
 def parseTxtXY(filename):
     with open(filename, "r") as file:
         rawdata=file.readlines()
@@ -27,29 +30,16 @@ def parseTxtXY(filename):
         metadata = dict(zip(metadataKeys, metadataValues))
         return {'data': data, 'metadata': metadata}
 
-#will save a sample file, assuming that the first row is x and subsequent rows are Y
-#numData is numpy array, metadata is dictionary
-def saveSampleFile(filename, numData, metadata):
-    #clean metadata of empty entries:
-    metadata = {key: value for key, value in metadata.items() if value != ''}
-    with h5py.File(filename, "w", driver="core", libver="latest") as outfile:
-        outfile.create_dataset('x', data=numData[:,0].astype(np.double))
-        outfile.create_dataset('Y', data=numData[:,1:].astype(np.double))
-        for key, value in metadata.items():
-            #removed unicode support, sticking with ascii for now.
-            #convert all strings to unicode
-            #newkey = key
-            #newval = value
-            #if isinstance(key, bytes):
-            #    newkey = key.decode('utf8')
-            #if isinstance(value, bytes):
-            #    newval = value.decode('utf8')
-            #if isinstance(newval, str):
-            #    outfile.attrs.create(newkey, newval, dtype=h5py.special_dtype(vlen=str))
-            #else:
-            #    outfile.attrs.create(newkey, newval)
 
-            #cannot handle complex attributes yet. Will have to be able to do this eventually.
+# will save a sample file, assuming that the first row is x and subsequent rows are Y
+# numData is numpy array, metadata is dictionary
+def saveSampleFile(filename, numData, metadata):
+    # clean metadata of empty entries:
+    metadata = {key: value for key, value in metadata.items() if value != ''}
+    with h5py.File(filename, 'w') as outfile:
+        outfile.create_dataset('x', data=numData[:, 0].astype(np.double))
+        outfile.create_dataset('Y', data=numData[:, 1:].astype(np.double))
+        for key, value in metadata.items():
             if isinstance(value, str):
                 outfile.attrs[key] = np.string_(value)
             else:
