@@ -9,6 +9,7 @@ import h5py
 from xkcdpass import xkcd_password as xp
 
 DATADIR = os.environ['DATADIR']
+COMPUTESERVER = os.environ['COMPUTESERVER']
 
 
 # TODO: raise exceptions for unauthorized
