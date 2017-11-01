@@ -4,7 +4,6 @@ import sys
 import json
 import textparsers as tp
 
-format = sys.argv[3]
 infilename = sys.argv[1]
 outfilename = sys.argv[2]
 data = tp.parseTxtXY(infilename)
