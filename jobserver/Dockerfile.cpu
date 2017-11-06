@@ -1,3 +1,10 @@
-FROM golang:latest
-MAINTAINER Daniel P. Foose <dpfoose@gmail.com">
-RUN go get github.com/ohsu-comp-bio/funnel
+FROM ubuntu:xenial
+MAINTAINER Daniel P. Foose <dpfoose@gmail.com>
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt -y update
+RUN apt -y --no-install-recommends install build-essential
+RUN apt -y --no-install-recommends install python3-dev python3-pip python3-setuptools
+RUN apt -y --no-install-recommends install libhdf5-def
+RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade -r requirements.txt
+CMD ["wes-server"]
