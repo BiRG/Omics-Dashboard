@@ -11,7 +11,6 @@ RUN pip3 install --upgrade pip
 ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial/
 RUN pip3 install --upgrade -r /src/requirements.txt
 RUN chmod +x /src/*
-ENV PATH "$PATH:/src"
-#the entry point will always be python3 followed by the script to run
+RUN cp /src/* /usr/local/bin
 
 
