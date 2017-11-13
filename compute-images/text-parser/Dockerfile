@@ -10,7 +10,5 @@ ADD src /src
 RUN pip3 install --upgrade pip
 ENV HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial/
 RUN pip3 install --upgrade -r /src/requirements.txt
-RUN chmod +x /src/*
-RUN cp /src/* /usr/local/bin
-
-
+RUN cp /src/*.py /usr/local/bin
+RUN chmod +x /src/*.py
