@@ -1,5 +1,4 @@
-from flask import Flask, redirect, request, jsonify, g, send_file, session, render_template, url_for, make_response, send_from_directory
-from flask_bootstrap import Bootstrap
+from flask import Flask, redirect, request, jsonify, g, session, render_template, url_for, make_response, send_from_directory
 from werkzeug.utils import secure_filename
 import datamanip
 from passlib.hash import pbkdf2_sha256
@@ -10,10 +9,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
-Bootstrap(app)
 
 
-DATADIR = '/home/dan/omics_analysis/data'
+DATADIR = os.environ['DATADIR']
 TMPDIR = DATADIR + '/tmp'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = TMPDIR
@@ -22,7 +20,7 @@ app.secret_key = 'VERY SECRET!'  # process from environment variable
 
 @app.before_request
 def make_session_permanent():
-    session.permanent=True
+    session.permanent = True
 
 
 @app.errorhandler(405)

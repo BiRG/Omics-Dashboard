@@ -3,6 +3,6 @@
 <select class="form-control">
   <option value="0">None</option>
   {% for group in groups %}
-  <option value="{{ group['id'] }}">{{ group['id'] }}: {{ group['name'] }}</option>
+  <option value="{{ group['id'] }}" {{ 'selected' if group['id'] == data['userGroup'] }}>{{ group['id'] }}: {{ group['name'] }}</option>
   {% endfor %}
 </select>

@@ -2,8 +2,10 @@
 {% extends "base.html" %}
 {% block content %}
   {{ super() }}
-<div class="container">  
-  <h2>Your Analyses</h2>
-  <h2>Your Workflows</h2>
-</div>
+  <div class="container">
+    <div class="jumbotron">
+      <h1 class="display-3">Hello {{ session['user']['name'] }}!</h1>
+      <p class="lead">Select an option from the menu above.</p>
+    </div>
+  </div>
 {% endblock %}

@@ -43,7 +43,7 @@
   {{ super() }}
   <script type="text/javascript">
       $(document).ready(function() {
-          $('#entries').DataTable();
+          $('#entries').DataTable({'order': [[0, 'desc']]});
       });
   </script>
 {% endblock %}
