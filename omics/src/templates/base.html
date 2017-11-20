@@ -12,24 +12,51 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {%- endblock %}
     {% block styles %}
-      <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/css/dataTables.bootstrap4.min.css" integrity="sha256-LpykTdjMm+jVLpDWiYOkH8bYiithb4gajMYnIngj128=" crossorigin="anonymous">
-      <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
+      <link href="{{ url_for('static', filename='styles/font-awesome.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/bootstrap.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/bootstrap-select.min.css') }}" rel="stylesheet">
+
+      <link href="https://fonts.googleapis.com/css?family=Oswald:500|Roboto:300" rel="stylesheet">
+
       <style>
-      body{
-        padding-top: 6%;
-        margin-bottom: 100px;
-      }
-      .footer {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        /* Set the fixed height of the footer here */
-        height: 100px;
-        line-height: 100px; /* Vertically center the text there */
-        background-color: #f5f5f5;
-      }
+        @font-face {
+          font-family: 'Didact Gothic';
+          font-style: normal;
+          font-weight: 400;
+          src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
+          url('{{ url_for('static',  filename='fonts/didact-gothic-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('{{ url_for('static', filename='fonts/didact-gothic-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+        }
+
+        @font-face {
+          font-family: 'Arimo';
+          font-style: normal;
+          font-weight: 400;
+          src: local('Arimo Regular'), local('Arimo-Regular'),
+          url('{{ url_for('static', filename='fonts/arimo-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('{{ url_for('static', filename='fonts/arimo-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+        }
+        h1, h2, h3, h4, h5, nav, th, button, a {
+          font-family: 'Didact Gothic', sans-serif !important;
+        }
+        p, div {
+          font-family: 'Arimo', sans-serif !important;
+        }
+        body{
+          padding-top: 6%;
+          margin-bottom: 100px;
+        }
+        @-moz-document url-prefix() {
+          select.form-control {
+            padding-right: 25px;
+            background-image: url('{{ url_for('static', filename='img/icon-chevron-down-16.png') }}');
+            background-repeat: no-repeat;
+            background-position: calc(100% - 7px) 50%;
+            -moz-appearance: none;
+            appearance: none;
+          }
+        }
       </style>
     {%- endblock %}
   </head>
@@ -129,11 +156,11 @@
     {% endblock %}
   </div>
   {% block scripts %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/jquery.dataTables.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery.dataTables.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap-select.min.js') }}"></script>
     <script type="text/javascript">
 
       $(document).ready(function() {
