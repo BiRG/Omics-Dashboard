@@ -378,7 +378,7 @@ def render_workflow_modules():
 @app.route('/omics/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
-        data = {}
+        data = datamanip.get_jobs()
         headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
@@ -690,16 +690,20 @@ def list_jobs():
         return handle_exception(e)
 
 
-@app.route('/omics/api/jobs/<job_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/omics/api/jobs/<job_id>', methods=['GET', 'POST'])
 def get_job(job_id=None):
     try:
         user_id = get_user_id()
-        if request.method == 'GET':
-            return jsonify({})
         if request.method == 'POST':
-            return jsonify({})
-        if request.method == 'DELETE':
-            return jsonify({})
+            action = request.args.get('method')
+            if action:
+                if action == 'resume':
+                    return jsonify(datamanip.resume_job(user_id, job_id))
+                if action == 'pause':
+                    return jsonify(datamanip.pause_job(user_id, job_id))
+                if action == 'cancel':
+                    return jsonify(datamanip.cancel_job(user_id, job_id))
+        return jsonify(datamanip.get_job(job_id))
     except Exception as e:
         return handle_exception(e)
 

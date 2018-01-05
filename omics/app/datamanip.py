@@ -7,6 +7,9 @@ from file_tools import h5merge
 from db import db
 import h5py
 from xkcdpass import xkcd_password as xp
+import sys
+import requests
+import json
 
 DATADIR = os.environ['DATADIR']
 COMPUTESERVER = os.environ['COMPUTESERVER']
@@ -551,3 +554,64 @@ def create_invitation(user_id):
         invite_string = xp.generate_xkcdpassword(xp.generate_wordlist(valid_chars='[a-z]'), numwords=3, delimiter='_')
         db.query_db('insert into Invitations (createdBy, value) values (?,?);', [str(user_id), invite_string])
         return db.query_db('select * from Invitations where id=last_insert_rowid();', (), True)
+
+
+def get_modules(path):
+    # parse the module descriptions
+    yaml_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(f)[-1] == 'cwl']
+    # output will include label.
+    out = []
+    for f in yaml_files:
+        with open(f, 'r') as stream:
+            try:
+                out.append(yaml.load(stream))
+            except yaml.YAMLException as e:
+                sys.stderr.write('Error parsing CWL module: ' + f + ' ' + e)
+    return out
+
+
+# request_data is a dictionary
+def start_job(workflow_path, request_data):
+    url = '%s/run?wf=%s' % (COMPUTESERVER, workflow_path)
+    body = json.dumps(request_data)
+    response = requests.post(url, data=body)
+    return json.loads(response)
+
+
+def get_jobs():
+    url = '%s/jobs' % COMPUTESERVER
+    response = requests.get(url)
+    return json.loads(response)
+
+
+def get_job(job_id):
+    url = '%s/jobs/%i' % (COMPUTESERVER, job_id)
+    response = requests.get(url)
+    return json.loads(response)
+
+
+def cancel_job(user_id, job_id):
+    data = json.loads(requests.get('%s/jobs/%i' % (COMPUTESERVER, job_id)))
+    if data['owner'] == user_id or is_admin(user_id):
+        url = 'http://%s/jobs/%i?action=cancel' % (COMPUTESERVER, job_id)
+        response = requests.get(url)
+        return json.loads(response)
+    raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
+
+
+def pause_job(user_id, job_id):
+    data = json.loads(requests.get('%s/jobs/%i' % (COMPUTESERVER, job_id)))
+    if data['owner'] == user_id or is_admin(user_id):
+        url = 'http://%s/jobs/%i?action=pause' % (COMPUTESERVER, job_id)
+        response = requests.get(url)
+        return json.loads(response)
+    raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
+
+
+def resume_job(user_id, job_id):
+    data = json.loads(requests.get('%s/jobs/%i' % (COMPUTESERVER, job_id)))
+    if data['owner'] == user_id or data['owner'] < 0 or is_admin(user_id):
+        url = '%s/jobs/%i?action=resume' % (COMPUTESERVER, job_id)
+        response = requests.get(url)
+        return json.loads(response)
+    raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
