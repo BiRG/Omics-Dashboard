@@ -9,7 +9,7 @@
   <div class="container-fluid">
     <table id="entries" class="table table-striped table-bordered" cellspacing="0" width="auto">
       <thead>
-}t        <tr>
+          <tr>
           {% for heading in headings.values() %}
             <th>{{ heading }}</th>
           {% endfor %}
@@ -27,11 +27,11 @@
             {% elif key=='dateModified' %}
               {{ datetime.utcfromtimestamp(int(item[key])).strftime('%Y-%m-%dT%H:%M:%SZ') }}
             {% elif key == 'admin' %}
-              <i class="{{ 'fa fa-check-square-o' if int(item[key]) else 'fa fa-square-o' }}"></i><p hidden>{{ item[key] }}</p>
+              <i class="{{ 'fas fa-check-square-o' if int(item[key]) else 'fas fa-square-o' }}"></i><p hidden>{{ item[key] }}</p>
             {% elif key == 'options' and type.toLower() == 'jobs' %}
               <div class="btn-group" role="group" aria-label="controls">
                 <button class="btn btn-primary job-play-button" id="{{ item['id'] }}">
-                  <i class="{{ 'fa fa-play' if item['status']=='Paused' else ('fa fa-pause' if item['status']=='Running' else '') }}" aria-hidden="true"></i>
+                  <i class="{{ 'fas fa-play' if item['status']=='Paused' else ('fas fa-pause' if item['status']=='Running' else '') }}" aria-hidden="true"></i>
                 </button>
                 <button class="btn btn-danger job-cancel-button" id="{{ item['id'] }}">
                   <i class="" aria-hidden="true"></i>
@@ -53,13 +53,6 @@
   <script type="text/javascript">
     $(document).ready(function() {
         $('#entries').DataTable({'order': [[0, 'desc']]});
-    });
-  </script>
-  <script>
-    $(".job-play-button").click(function() {
-      $.post('{{ url_for('get_job') }}' + '/' + $(this).id, function(data) {
-         $(this).html('<i class="fa fa-pause"></i>')
-      });
     });
   </script>
 {% endblock %}

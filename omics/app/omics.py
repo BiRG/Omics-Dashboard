@@ -385,6 +385,14 @@ def render_job_list():
         return handle_exception_browser(e)
 
 
+@app.route('/omics/jobs/<job_id>', methods=['GET'])
+def render_job():
+    try:
+        return render_template('entry.html', data={}, headings={}, type="Job")
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
 @app.route('/omics/settings', methods=['GET', 'POST'])
 def render_settings():
     try:

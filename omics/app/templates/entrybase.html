@@ -8,20 +8,20 @@
       {% if type.lower() == 'collection' %}
         <p>
           <a class="btn btn-primary" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
-            <i class="fa fa-download"></i> HDF5
+            <i class="fas fa-download"></i> HDF5
           </a>
         </p>
       </div>
       {% elif type.lower() == 'sample' %}
         <p class="lead">
           <a class="btn btn-primary btn-lg" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
-            <i class="fa fa-download"></i> HDF5
+            <i class="fas fa-download"></i> HDF5
           </a>
         </p>
       {% elif type.lower() == 'user' and session['user']['admin'] and not data['admin'] %}
         <p class="lead">
           <a class="btn btn-success btn-lg" id="elevateButton" href="" role="button">
-            <i class="fa fa-arrow-up"></i> Elevate to Admin
+            <i class="fas fa-arrow-up"></i> Elevate to Admin
           </a>
         </p>
       {% endif %}
@@ -68,7 +68,7 @@
           {% endif %}
         {% if type.lower() != 'user' and is_write_permitted(get_user_id(), data) %}
           {% if key not in protectedKeys or get_user_id() == data['owner'] and key in ['groupPermissions', 'allPermissions', 'userGroup'] %}
-            <td><button class="saveButton btn btn-sm btn-outline-primary"><p hidden>a</p><i class="fa fa-save"></i></button></td>
+            <td><button class="saveButton btn btn-sm btn-outline-primary"><p hidden>a</p><i class="fas fa-save"></i></button></td>
           {% else %}
             <td><p hidden>b</p></td><!-- We use a and b so that list is sortable by editability-->
           {% endif %}
@@ -88,7 +88,7 @@
       <div class="modal-header">
         <h5 class="modal-title" id="failModalLabel">Update Failed</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true"><i class="fa fa-close"></i></span>
+          <span aria-hidden="true"><i class="fas fa-close"></i></span>
         </button>
       </div>
       <div class="modal-body" id="failModalBody">

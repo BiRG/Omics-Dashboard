@@ -41,13 +41,13 @@
         </form>
         {% if error %}
           <div class="alert alert-danger alert-dismissable" role="alert">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fa fa-close"></span></span></button>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fas fa-close"></span></span></button>
             <strong>Error:</strong> {{ error }}
           </div>
         {% endif %}
         {% if msg %}
           <div class="alert alert-success alert-dismissable" role="alert">
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fa fa-close"></span></span></button>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fas fa-close"></span></span></button>
             {{ msg }}
           </div>
         {% endif %}
@@ -67,7 +67,7 @@
               <input type="text" name="invitation" id="invitation" class="form-control" value="Placeholder" readonly>
               <span class="input-group-btn">
                 <button id="copy-button" class="btn btn-outline-secondary" data-toggle="tooltip" data-placement="right" title="Copy to clipboard" type="button" data-clipboard-target="#invitation">
-                 <i class="fa fa-clipboard"></i>
+                 <i class="fas fa-clipboard"></i>
                 </button>
               </span>
             </div>

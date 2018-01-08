@@ -26,14 +26,14 @@
                 <td>
                   <a class="btn btn-primary"
                      href="{{ url_for('download_collection', collection_id=data['id'], path=dataset['path']) }}">
-                    <i class="fa fa-download"></i> CSV
+                    <i class="fas fa-download"></i> CSV
                   </a>
                 </td>
               {% else %}
                 <td>
                   <a class="btn btn-primary"
                      href="{{ url_for('download_sample', sample_id=data['id'], path=dataset['path']) }}">
-                    <i class="fa fa-download"></i> CSV
+                    <i class="fas fa-download"></i> CSV
                   </a>
                 </td>
               {% endif %}

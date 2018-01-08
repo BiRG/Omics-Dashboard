@@ -25,8 +25,8 @@
           font-style: normal;
           font-weight: 400;
           src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
-          url('{{ url_for('static',  filename='fonts/didact-gothic-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-          url('{{ url_for('static', filename='fonts/didact-gothic-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+          url('{{ url_for('static',  filename='webfonts/didact-gothic-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('{{ url_for('static', filename='webfonts/didact-gothic-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
         }
 
         @font-face {
@@ -34,8 +34,8 @@
           font-style: normal;
           font-weight: 400;
           src: local('Arimo Regular'), local('Arimo-Regular'),
-          url('{{ url_for('static', filename='fonts/arimo-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-          url('{{ url_for('static', filename='fonts/arimo-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+          url('{{ url_for('static', filename='webfonts/arimo-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('{{ url_for('static', filename='webfonts/arimo-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
         }
         h1, h2, h3, h4, h5, nav, th, button, a {
           font-family: 'Didact Gothic', sans-serif !important;
@@ -78,8 +78,8 @@
               Samples
             </a>
             <div class="dropdown-menu" aria-labelledby="sampleDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_sample_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
-              <a class="dropdown-item" href="{{ url_for('render_upload_sample') }}"><i class="fa fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
+              <a class="dropdown-item" href="{{ url_for('render_sample_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_upload_sample') }}"><i class="fas fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
             </div>
           </li>
 
@@ -89,8 +89,8 @@
               Collections
             </a>
             <div class="dropdown-menu" aria-labelledby="collectionDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_collection_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_collection') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_collection_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_collection') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
             </div>
           </li>
 
@@ -101,8 +101,8 @@
               Analyses
             </a>
             <div class="dropdown-menu" aria-labelledby="analysisDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_analysis_list') }}"><i class="fa fa-list fa-fw" aria-hidden="true"></i>List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_analysis') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_analysis_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_analysis') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
             </div>
           </li>
 
@@ -113,10 +113,10 @@
               Workflows
             </a>
             <div class="dropdown-menu" aria-labelledby="workflowDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_workflow_list') }}"><i class="fa fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('render_create_workflow') }}"><i class="fa fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
-              <a class="dropdown-item" href="{{ url_for('render_workflow_modules') }}"><i class="fa fa-plug fa-fw" aria-hidden="true"></i>Modules</a>
-              <a class="dropdown-item" href="{{ url_for('render_job_list') }}"><i class="fa fa-tasks fa-fw" area-hidden="true"></i>Jobs</a>
+              <a class="dropdown-item" href="{{ url_for('render_workflow_list') }}"><i class="fas fa-list" aria-hidden="true"></i> List</a>
+              <a class="dropdown-item" href="{{ url_for('render_create_workflow') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+              <a class="dropdown-item" href="{{ url_for('render_workflow_modules') }}"><i class="fas fa-plug fa-fw" aria-hidden="true"></i>Modules</a>
+              <a class="dropdown-item" href="{{ url_for('render_job_list') }}"><i class="fas fa-tasks fa-fw" area-hidden="true"></i>Jobs</a>
             </div>
           </li>
 
@@ -127,8 +127,8 @@
               Users
             </a>
             <div class="dropdown-menu" aria-labelledby="userDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_user_list') }}"><i class="fa fa-user" aria-hidden="true"></i> Users</a>
-              <a class="dropdown-item" href="{{ url_for('render_user_group_list') }}"><i class="fa fa-users" aria-hidden="true"></i> User Groups</a>
+              <a class="dropdown-item" href="{{ url_for('render_user_list') }}"><i class="fas fa-user" aria-hidden="true"></i> Users</a>
+              <a class="dropdown-item" href="{{ url_for('render_user_group_list') }}"><i class="fas fa-users" aria-hidden="true"></i> User Groups</a>
             </div>
           </li>
           <li class="nav-item">
@@ -143,8 +143,8 @@
               {{ session['user']['name'] }}
             </a>
             <div class="dropdown-menu" aria-labelledby="profileDropdown">
-              <a class="dropdown-item" href="{{ url_for('render_settings') }}"><i class="fa fa-cog" aria-hidden="true"></i> Settings</a>
-              <a class="dropdown-item" href="{{ url_for('browser_logout') }}"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
+              <a class="dropdown-item" href="{{ url_for('render_settings') }}"><i class="fas fa-cog" aria-hidden="true"></i> Settings</a>
+              <a class="dropdown-item" href="{{ url_for('browser_logout') }}"><i class="fas fa-sign-out" aria-hidden="true"></i> Logout</a>
             </div>
           </li>
         </ul>
