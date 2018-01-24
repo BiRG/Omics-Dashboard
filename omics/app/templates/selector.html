@@ -1,9 +1,10 @@
 {# This is to be inserted into other views #}
+
 <div class="form-group">
-  <label for="{{ select_id }}">Attach Collections</label>
+  <label for="{{ select_id }}">{{ label }}</label>
   <select id="{{ select_id }}" class="selectpicker form-control" data-live-search="true" multiple>
-    {% for collection in collections %}
-    <option data="{{ collection['id'] }}">{{ collection['id'] }}: {{ collection['name'] }}</option>
+    {% for item in data %}
+    <option data="{{ item['id'] }}">{{ item['id'] }}: {{ item['name'] }}</option>
     {% endfor %}
   </select>
 </div>

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import sys
 import h5py
-import numpy as np 
+import numpy as np
+import shutil
+import os
 filename = sys.argv[1]
 frequency = np.float64(sys.argv[2])
-with h5py.File(filename, 'r+') as file:
-    file['x'][:] = np.array(file['Y']) / frequency
-
+outfile = os.environ['HOME'] + '/out.h5'
+shutil.copy(filename, outfile)
+with h5py.File(outfile, 'r+') as file:
+    file['x'][:] = file['x'][:] / frequency

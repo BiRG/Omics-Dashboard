@@ -63,6 +63,10 @@ create table if not exists Workflows(
     allPermissions text
 );
 
+create table if not exists JobServerTokens(
+    id integer primary key,
+    value text
+);
 
 create table if not exists Invitations(
     id integer primary key,

@@ -10,12 +10,12 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-
 DATADIR = os.environ['DATADIR']
-TMPDIR = DATADIR + '/tmp'
+TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
+MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
-app.config['UPLOAD_DIR'] = TMPDIR
-app.secret_key = 'VERY SECRET!'  # process from environment variable
+app.config['UPLOAD_DIR'] = TMPDIR + '/uploads'
+app.secret_key = os.environ['SECRET']
 
 
 @app.before_request
@@ -117,12 +117,17 @@ def get_update_url(record_type, item):
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
         return url_for('get_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
-        return url_for('get_job', job_id=item['id'])
+        return url_for('render_job', job_id=item['id'])
     return '#'
 
-USERKEYS = ['createdBy', 'owner', 'userId']
 
+USERKEYS = ['createdBy', 'owner', 'userId']
 app.jinja_env.globals.update(USERKEYS=USERKEYS)
+app.jinja_env.globals.update(get_preprocessing_modules=datamanip.get_preprocessing_modules)
+app.jinja_env.globals.update(get_parsing_modules=datamanip.get_parsing_modules)
+app.jinja_env.globals.update(get_samples=datamanip.get_samples)
+app.jinja_env.globals.update(get_analyses=datamanip.get_analyses)
+app.jinja_env.globals.update(get_collections=datamanip.get_collections)
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
@@ -232,12 +237,25 @@ def render_sample(sample_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/samples/create')
+@app.route('/omics/samples/create', methods=['GET', 'POST'])
 def render_upload_sample():
     try:
-        return jsonify({'not': 'implemented'})
+        if request.method == 'POST':
+            user_id = get_user_id()
+            file = request.files['file']
+            filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(file.filename))
+            file.save(filename)
+            metadata = request.form.to_dict()
+            metadata['owner'] = user_id
+            metadata['createdBy'] = user_id
+            workflow_data = datamanip.create_sample_creation_workflow(filename, metadata)
+            datamanip.start_job(workflow_data['workflow_filename'], workflow_data['job'], workflow_data['token'],
+                                data_type='sample', owner=user_id)
+            print('redirect')
+            return redirect(url_for('render_job_list'))
+        return render_template('createbase.html', type='Sample', endpoint='render_upload_sample')
     except Exception as e:
-        handle_exception_browser(e)
+        return handle_exception_browser(e)
 
 
 @app.route('/omics/collections', methods=['GET', 'POST'])
@@ -378,8 +396,11 @@ def render_workflow_modules():
 @app.route('/omics/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
+        print('datamanip.get_jobs()')
         data = datamanip.get_jobs()
-        headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
+        headings = {'id': 'ID', 'owner': 'Owner'}
+        #headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
+        print('render_template')
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
         return handle_exception_browser(e)
@@ -722,6 +743,31 @@ def get_invitation():
         user_id = get_user_id()
         return jsonify(datamanip.create_invitation(user_id))
     except Exception as e:
+        return handle_exception(e)
+
+
+# this is consumed by the job server to clean up files created to facilitate workflow execution
+@app.route('/omics/api/finalize', methods=['POST'])
+def finalize_job():
+    try:
+        data_type = request.args['data_type']
+        if data_type.lower() not in ['collection', 'sample']:
+            print(f'data_type.lower():{str(e)}')
+            raise ValueError('invalid data_type')
+
+        destdir = f'{DATADIR}/{data_type.lower()}s'
+        token = request.headers['Authorization']
+        body = request.get_json()
+        if datamanip.check_jobserver_token(token):
+            outfile = body['output']['outputFile']['path']
+            next_id = datamanip.get_next_id(destdir)
+            print('move file')
+            collection = f'{destdir}/{next_id}.h5'
+            os.rename(outfile, collection)
+            # delete directory containing temp files (using key in auth header)
+            os.rmdir(f'{DATADIR}/tmp/{token}')
+    except Exception as e:
+        print(str(e))
         return handle_exception(e)
 
 

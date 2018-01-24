@@ -1,18 +1,24 @@
-cwlVersion: cwl:draft-3
 class: CommandLineTool
+cwlVersion: v1.0
 id: 13CNMR
-label: 13C-NMR
-baseCommand: [parsetxtxy.py]
+baseCommand:
+  - NMRfreqscale.py
 inputs:
   - id: inputFile
     type: File
     inputBinding:
-      position: 1
+      position: 0
   - id: frequency
-    type: double
+    type: float?
     inputBinding:
       position: 1
-      value: 150819500.0
+      valueFrom: '150819500.0'
+outputs:
+  - id: output
+    type: File
+    outputBinding:
+      glob: '*.h5'
+label: 13C-NMR
 requirements:
   - class: DockerRequirement
-    dockerPull: 'wsubirg/omics-dashboard:text-parser'
+    dockerPull: 'wsubirg/omics-dashboard:spectra-processing-cpu'

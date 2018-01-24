@@ -3,6 +3,7 @@ MAINTAINER Daniel P. Foose <dpfoose@gmail.com>
 ENV DEBIAN_FRONTEND noninteractrive
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential
+RUN apt-get -y --no-install-recommends install liblapack-dev libopenblas-dev
 
 RUN apt-get install -y wget bzip2 ca-certificates \
     libglib2.0-0 libxext6 libsm6 libxrender1

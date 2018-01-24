@@ -1,18 +1,24 @@
-cwlVersion: cwl:draft-3
 class: CommandLineTool
+cwlVersion: v1.0
 id: 31PNMR
-label: 31P-NMR
-baseCommand: [parsetxtxy.py]
+baseCommand:
+  - NMRfreqscale.py
 inputs:
   - id: inputFile
     type: File
     inputBinding:
-      position: 1
+      position: 0
   - id: frequency
-    type: double
+    type: float?
     inputBinding:
       position: 1
-      value: 242778200.0
+      valueFrom: '242778200.0'
+outputs:
+  - id: output
+    type: File
+    outputBinding:
+      glob: '*.h5'
+label: 31P-NMR
 requirements:
   - class: DockerRequirement
-    dockerPull: 'wsubirg/omics-dashboard:spectra-processing'
+    dockerPull: 'wsubirg/omics-dashboard:spectra-processing-gpu'

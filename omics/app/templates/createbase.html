@@ -1,11 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Create {{ type }}{% endblock %}
+{% macro selector(select_id, label, data, multiple=True)  %}
+  <div class="form-group">
+    <label for="{{ select_id }}">{{ label }}</label>
+    <select id="{{ select_id }}" name="{{ select_id }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if multiple }}>
+      {% for item in data %}
+      <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}">{{ item['label'] if 'label' in item else item['id'] + ': ' + item['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
 {% block content %}
 
   <div class="card mx-auto my-auto d-block" style="max-width: 25rem;">
     <h4 class="card-header">{{ type }} Metadata</h4>
     <div class="card-body">
-        <form id="metadata" action="{{ url_for(endpoint) }}" method="post">
+        <form id="metadata" action="{{ url_for(endpoint) }}" method="post" enctype="multipart/form-data">
           <div class="form-group">
             <label for="nameInput">Name</label>
             <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Enter name">
@@ -14,9 +24,31 @@
             <label for="descriptionTextArea">Description</label>
             <textarea name="description" rows="3" id="descriptionTextArea" class="form-control"></textarea>
           </div>
+
+         {% if type == 'Analysis' %}
+          {% with data=get_analyses(user_id) %}
+            {{ selector('analysis', 'Analyses', data) }}
+          {% endwith %}
+        {% elif type == 'Collection' %}
+          {% with data=get_samples(user_id) %}
+            {{ selector('sample', 'Samples', data) }}
+          {% endwith %}
+        {% elif type == 'Sample' %}
+          <div class="form-group">
+            <label for="fileInput">Select File</label>
+            <input type="file" class="form-control" aria-label="Filename" id="fileInput" name="file">
+          </div>
+          {% with data=get_parsing_modules() %}
+            {{ selector('parser', 'File Type (Parser)', data, multiple=False) }}
+          {% endwith %}
+          {% with data=get_preprocessing_modules() %}
+            {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False) }}
+          {% endwith %}
+        {% endif %}
+
           <div class="form-group">
             <label for="userGroup">User Group</label>
-            <select id="userGroup" name="userGroup" class="form-control">
+            <select id="userGroup" name="userGroup" class="form-control selectpicker">
               <option value="-1">None</option>
               {% for group in groups %}
               <option value="{{ group['rowid'] }}">{{ group['name'] }}</option>
@@ -25,26 +57,19 @@
           </div>
           <div class="form-group">
             <label for="groupPermissions">Group Permissions</label>
-            <select id="groupPermissions" name="groupPermissions" class="form-control">
+            <select id="groupPermissions" name="groupPermissions" class="form-control selectpicker">
               <option value="full">Read/Write</option>
               <option value="readonly">Read Only</option>
             </select>
           </div>
           <div class="form-group">
             <label for="allPermissions">Global Permissions</label>
-            <select id="allPermissions" name="allPermissions" class="form-control">
+            <select id="allPermissions" name="allPermissions" class="form-control selectpicker">
               <option value="full">Read/Write</option>
               <option value="readonly">Read Only</option>
               <option value="none">Hidden</option>
             </select>
           </div>
-
-          {#  if type == 'Analysis' #}
-          {# with select_id="collectionSelect" #}
-            {# include 'collectionselector.html' #}
-          {# endwith #}
-        {# endif #}
-
           <div class="form-group">
             <input class="btn btn-primary form-control" type="submit" value="Create">
           </div>
@@ -57,5 +82,4 @@
         {% endif %}
       </div>
     </div>
-  </div>
 {% endblock %}

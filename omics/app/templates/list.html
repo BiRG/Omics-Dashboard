@@ -28,13 +28,14 @@
               {{ datetime.utcfromtimestamp(int(item[key])).strftime('%Y-%m-%dT%H:%M:%SZ') }}
             {% elif key == 'admin' %}
               <i class="{{ 'fas fa-check-square-o' if int(item[key]) else 'fas fa-square-o' }}"></i><p hidden>{{ item[key] }}</p>
-            {% elif key == 'options' and type.toLower() == 'jobs' %}
+            {% elif key == 'options' and type.lower() == 'jobs' %}
               <div class="btn-group" role="group" aria-label="controls">
-                <button class="btn btn-primary job-play-button" id="{{ item['id'] }}">
-                  <i class="{{ 'fas fa-play' if item['status']=='Paused' else ('fas fa-pause' if item['status']=='Running' else '') }}" aria-hidden="true"></i>
+                <button class="btn btn-primary job-play-button" id="{{ item['id'] }}" {{ 'disabled' if item['status'] == 'Canceled' }}>
+                  <i class="{{ 'fas fa-play' if item['status']=='Paused' else ('fas fa-pause' if item['status']=='Running' else '') }}" aria-hidden="true" id="play-icon"></i>
                 </button>
-                <button class="btn btn-danger job-cancel-button" id="{{ item['id'] }}">
-                  <i class="" aria-hidden="true"></i>
+                <!--TODO: put option to restart (may need to change jobserver API)-->
+                <button class="btn btn-danger job-cancel-button" id="{{ item['id'] }}" {{ 'disabled' if item['status'] == 'Canceled' }}>
+                  <i class="fas fa-ban" aria-hidden="true" id="cancel-icon"></i>
                 </button>
               </div>
             {% else %}
@@ -55,4 +56,27 @@
         $('#entries').DataTable({'order': [[0, 'desc']]});
     });
   </script>
+
+  {% if key == 'options' and type.lower() == 'jobs' %}
+    <script>
+    //send request to jobserver to change job status
+      var url = {{ url_for('list_jobs') }} + '/' + $(this).attr('id') + '?method=';
+      $('.job-play-button').click(function() {
+         if ($(this).find('#play-icon').hasClass('fa-play'))
+           url = url + 'resume';
+         else if ($(this).find('#play-icon').hasClass('fa-pause'))
+           url = url + 'pause';
+         $.post(url, function() {
+             window.location.reload(true);
+         });
+      });
+      $('job-cancel-button').click(function() {
+          url = url + 'cancel';
+          $.post(url, function() {
+            window.location.reload(true); //this is theoretically slower than doing a rest request and updating the table,
+              // but we never anticipate much load on one instance of the service
+          });
+      });
+    </script>
+  {% endif %}
 {% endblock %}

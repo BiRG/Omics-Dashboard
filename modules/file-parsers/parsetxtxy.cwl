@@ -1,18 +1,19 @@
-cwlVersion: cwl:draft-3
 class: CommandLineTool
+cwlVersion: v1.0
 id: parsetxtxy
-label: parsetxtxy
-baseCommand: [parsetxtxy.py]
+baseCommand:
+  - parsetxtxy.py
 inputs:
   - id: inputFile
     type: File
     inputBinding:
-      position: 1
+      position: 0
 outputs:
-  - id: outputFile
+  - id: output
     type: File
     outputBinding:
-      glob: "*.h5"
+      glob: '*.h5'
+label: txtXY
 requirements:
   - class: DockerRequirement
     dockerPull: 'wsubirg/omics-dashboard:text-parser'

@@ -10,10 +10,13 @@ from xkcdpass import xkcd_password as xp
 import sys
 import requests
 import json
+import uuid
+import shutil
 
 DATADIR = os.environ['DATADIR']
+TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']
-
+MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
 
 # TODO: raise exceptions for unauthorized
 # route functions should capture exceptions from SQLite3
@@ -558,36 +561,76 @@ def create_invitation(user_id):
 
 def get_modules(path):
     # parse the module descriptions
-    yaml_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(f)[-1] == 'cwl']
+    yaml_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(f)[-1] == '.cwl']
     # output will include label.
+    print('yaml files:')
+    print(yaml_files)
+    print('end yaml files')
     out = []
     for f in yaml_files:
-        with open(f, 'r') as stream:
-            try:
-                out.append(yaml.load(stream))
-            except yaml.YAMLException as e:
-                sys.stderr.write('Error parsing CWL module: ' + f + ' ' + e)
+        try:
+            out.append(get_module(os.path.join(path, f)))
+        except yaml.YAMLError as e:
+            sys.stderr.write(f'Error parsing CWL module {f}: {e}')
+    print(out)
     return out
 
 
+def get_module(path):
+    with open(path, 'r') as stream:
+        data = yaml.load(stream)
+        if 'cwlVersion' not in data:
+            raise yaml.YAMLError('Not a CWL file')
+        print('get_module()')
+        print(path)
+        print(data)
+        data['modulePath'] = path
+        return data
+
+
+def get_module_by_id(basepath, id):
+    yaml_files = [f for f in os.listdir(basepath) if os.path.isfile(os.path.join(basepath, f)) and os.path.splitext(f)[-1] == 'cwl']
+    print('yaml files:')
+    print(yaml_files)
+    print('end yaml files')
+    for f in yaml_files:
+        module = get_module(f)
+        if module['id'] == id:
+            return module
+    raise ValueError(f'Module with id {id} does not exist in {basepath}')
+
+
+def get_preprocessing_modules():
+    return get_modules(f'{DATADIR}/modules/processing-modules')
+
+
+def get_parsing_modules():
+    modules = get_modules(f'{DATADIR}/modules/file-parsers')
+    print(modules)
+    return modules
+
+
 # request_data is a dictionary
-def start_job(workflow_path, request_data):
-    url = '%s/run?wf=%s' % (COMPUTESERVER, workflow_path)
-    body = json.dumps(request_data)
-    response = requests.post(url, data=body)
-    return json.loads(response)
+def start_job(workflow_path, request_data, token, data_type='collection', owner=-1):
+    params = {'wf': f'{workflow_path}', 'data_type': data_type, 'owner': owner}
+    headers = {'Authorization': token}
+    response = requests.post(f'{COMPUTESERVER}/run',
+                             json=request_data,
+                             headers=headers,
+                             params=params)
+    return response.json()
 
 
 def get_jobs():
-    url = '%s/jobs' % COMPUTESERVER
+    url = f'{COMPUTESERVER}/jobs'
     response = requests.get(url)
-    return json.loads(response)
+    return response.json()
 
 
 def get_job(job_id):
-    url = '%s/jobs/%i' % (COMPUTESERVER, job_id)
+    url = f'{COMPUTESERVER}/jobs/{job_id}'
     response = requests.get(url)
-    return json.loads(response)
+    return response.json()
 
 
 def cancel_job(user_id, job_id):
@@ -595,7 +638,7 @@ def cancel_job(user_id, job_id):
     if data['owner'] == user_id or is_admin(user_id):
         url = 'http://%s/jobs/%i?action=cancel' % (COMPUTESERVER, job_id)
         response = requests.get(url)
-        return json.loads(response)
+        return response.json()
     raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
 
 
@@ -604,7 +647,7 @@ def pause_job(user_id, job_id):
     if data['owner'] == user_id or is_admin(user_id):
         url = 'http://%s/jobs/%i?action=pause' % (COMPUTESERVER, job_id)
         response = requests.get(url)
-        return json.loads(response)
+        return response.json()
     raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
 
 
@@ -613,5 +656,109 @@ def resume_job(user_id, job_id):
     if data['owner'] == user_id or data['owner'] < 0 or is_admin(user_id):
         url = '%s/jobs/%i?action=resume' % (COMPUTESERVER, job_id)
         response = requests.get(url)
-        return json.loads(response)
+        return response.json()
     raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
+
+
+def create_sample_creation_workflow(input_filename, metadata):
+    # generate tmpdir for this temporary workflow
+    token = create_jobserver_token()
+    directory = f'{TMPDIR}/{token}'
+    os.mkdir(directory)
+    metadata_filename = f'{directory}/metadata'
+    with open(metadata_filename, 'w') as file:
+        json.dump(metadata, file)
+    os.rename(input_filename, f'{directory}/input')
+    input_file = f'{directory}/input'
+
+    workflow = {
+        'cwlVersion': 'v1.0',
+        'class': 'Workflow',
+        'inputs':
+            [
+                {
+                    'id': 'inputFile',
+                    'type': 'File'
+                },
+                {
+                    'id': 'metadataFile',
+                    'type': 'File'
+                },
+                {
+                    'id': 'dataDirectory',
+                    'type': 'Directory'
+                }
+            ],
+        'outputs':
+            [
+                {
+                    'id': 'outputFile',
+                    'outputSource': 'update/output',
+                    'type': 'File'
+                }
+            ],
+        'steps':
+            [
+                {
+                    'id': 'parse',
+                    'run': metadata["parser"],
+                    'in': [
+                        {
+                            'id': 'inputFile',
+                            'source': 'inputFile'
+                        }
+                    ],
+                    'out': [{'id': 'output'}]
+                },
+                {
+                    'id': 'process',
+                    'run': metadata["preproc"],
+                    'in': [
+                        {
+                            'id': 'inputFile',
+                            'source': 'parse/output'
+                        }
+                    ],
+                    'out': [{'id': 'output'}]
+                },
+                {
+                    'id': 'update',
+                    'run': f'{MODULEDIR}/core-modules/createcollection.cwl',
+                    'in':
+                        [
+                            {'id': 'inputFile',
+                             'source': 'process/output'},
+                            {'id': 'metadataFile',
+                             'source': 'metadataFile'},
+                            {'id': 'dataDirectory',
+                             'source': 'dataDirectory'}
+                        ],
+                    'out': [{'id': 'output'}]
+                }
+            ]
+    }
+    workflow_filename = f'{directory}/workflow.cwl'
+    with open(workflow_filename, 'w') as workflow_file:
+        yaml.dump(workflow, workflow_file, default_flow_style=False)
+    job = {
+        'inputFile': {'path': input_file,
+                      'class': 'File'},
+        'metadataFile': {'path': metadata_filename,
+                         'class': 'File'},
+        'dataDirectory': {'path': f'{DATADIR}/samples',
+                          'class': 'Directory'}
+    }
+    # perhaps move execution here?
+    return {'workflow_filename': workflow_filename, 'job': job, 'token': token}
+
+
+def create_jobserver_token():
+    token = str(uuid.uuid4())
+    while token in os.listdir(f'{TMPDIR}'):
+        token = uuid.uuid4()
+    db.query_db('insert into JobServerTokens (value) values (?)', [str(token)])
+    return token
+
+
+def check_jobserver_token(token):
+    return db.query_db('select * from JobServerTokens where value = ?', [str(token)]) is not None
