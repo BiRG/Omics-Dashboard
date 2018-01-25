@@ -116,7 +116,6 @@ def update_user(current_user_id, target_user_id, new_data):
         # if new password provided, hash it
         if 'password' in new_data:
             new_data['password'] = pbkdf2_sha256.hash(new_data['password'])
-            print(new_data)
         if 'email' in new_data:
             emails = db.query_db('select * from Users where email=?', [new_data['email']])
             if len(emails):
@@ -124,11 +123,9 @@ def update_user(current_user_id, target_user_id, new_data):
         valid_keys = ['name', 'email', 'admin', 'password']
         query = 'update Users set' + ','.join([' %s = ?' % key for key in new_data.keys() if key in valid_keys]) \
                 + ' where id=?;'
-        print('query: %s' % query)
         params = []
         [params.append(str(value)) for key, value in new_data.items() if key in valid_keys]
         params.append(target_user_id)
-        print('params: %s' % str(params))
         db.query_db(query, params)
         return db.query_db('select id, name, email, admin from Users where id=?;', [str(target_user_id)], True)
 
@@ -217,30 +214,10 @@ def list_sample_paths(user_id, sample_id):
 
 
 def update_sample(user_id, sample_id, new_data):
-    print(new_data)
     sample_info = mdt.get_collection_metadata(DATADIR + '/samples/' + str(sample_id) + '.h5')
-    print(sample_info)
     if is_write_permitted(user_id, sample_info):
         return mdt.update_metadata('%s/samples/%s.h5' % (str(DATADIR), str(sample_id)), new_data)
     raise AuthException('User %s does not have permission to edit sample %s' % (str(user_id), str(sample_id)))
-
-
-def parse_sample(user_id, infilename, parser_name):
-    # TODO: this will send something off to the job server
-    # find acceptable out file name
-    sample_id = get_next_id(DATADIR + '/samples')
-    outfilename = DATADIR + '/samples/' + str(sample_id) + '.h5'
-    with open(DATADIR + '/modules/file_parsers/file_parsers.yml', 'r') as stream:
-        parsers = yaml.load(stream) # can raise exception
-    parser_data = [parser for parser in parsers if parsers['name'] == parser_name]
-    if len(parser_data) == 0:
-        raise Exception('parser %s does not exist' % parser_name)
-    if len(parser_data) > 1:
-        raise Exception('file_parsers.yml is invalid (multiple parsers with same name)')
-    # execute file parser script
-    # this can raise exceptions, which the master exception handler should translate to status code
-    parser = importlib.import_module(DATADIR + '/modules/file_parsers/' + parser_data[0]['script'])
-    return get_sample(user_id, sample_id)
 
 
 def delete_sample(user_id, sample_id):
@@ -418,7 +395,6 @@ def get_analysis(user_id, analysis_id):
 
 
 def update_analysis(user_id, analysis_id, new_data):
-    print('new_data:' + str(new_data))
     analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     valid_keys = ['name', 'description', 'owner', 'groupPermissions', 'allPermissions', 'userGroup']
     if is_write_permitted(user_id, analysis):
@@ -434,7 +410,6 @@ def update_analysis(user_id, analysis_id, new_data):
 
 
 def create_analysis(user_id, data):
-    print(data)
     db.query_db('insert into Analyses (name, description, createdBy, owner, groupPermissions, allPermissions, userGroup) '
                 + 'values (?, ?, ?, ?, ?, ?, ?);',
                 [str(data['name']), str(data['description']), str(user_id), str(user_id), str(data['groupPermissions']),
@@ -563,16 +538,12 @@ def get_modules(path):
     # parse the module descriptions
     yaml_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(f)[-1] == '.cwl']
     # output will include label.
-    print('yaml files:')
-    print(yaml_files)
-    print('end yaml files')
     out = []
     for f in yaml_files:
         try:
             out.append(get_module(os.path.join(path, f)))
         except yaml.YAMLError as e:
             sys.stderr.write(f'Error parsing CWL module {f}: {e}')
-    print(out)
     return out
 
 
@@ -581,18 +552,12 @@ def get_module(path):
         data = yaml.load(stream)
         if 'cwlVersion' not in data:
             raise yaml.YAMLError('Not a CWL file')
-        print('get_module()')
-        print(path)
-        print(data)
         data['modulePath'] = path
         return data
 
 
 def get_module_by_id(basepath, id):
     yaml_files = [f for f in os.listdir(basepath) if os.path.isfile(os.path.join(basepath, f)) and os.path.splitext(f)[-1] == 'cwl']
-    print('yaml files:')
-    print(yaml_files)
-    print('end yaml files')
     for f in yaml_files:
         module = get_module(f)
         if module['id'] == id:
@@ -601,12 +566,11 @@ def get_module_by_id(basepath, id):
 
 
 def get_preprocessing_modules():
-    return get_modules(f'{DATADIR}/modules/processing-modules')
+    return get_modules(f'{MODULEDIR}/processing-modules')
 
 
 def get_parsing_modules():
-    modules = get_modules(f'{DATADIR}/modules/file-parsers')
-    print(modules)
+    modules = get_modules(f'{MODULEDIR}/file-parsers')
     return modules
 
 
@@ -618,7 +582,10 @@ def start_job(workflow_path, request_data, token, data_type='collection', owner=
                              json=request_data,
                              headers=headers,
                              params=params)
-    return response.json()
+    try:
+        return response.json()
+    except Exception as e:
+        raise RuntimeError('Invalid response from job server. Is the server running?')
 
 
 def get_jobs():

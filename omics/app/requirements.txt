@@ -1,7 +1,0 @@
-Flask==0.12.2
-xkcdpass==1.8.2
-h5py==2.5.0
-PyYAML==3.12
-Flask-Cors==3.0.3
-uwsgi==2.0.15
-passlib==1.7.1

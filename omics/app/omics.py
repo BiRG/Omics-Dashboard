@@ -11,8 +11,10 @@ app = Flask(__name__)
 CORS(app)
 
 DATADIR = os.environ['DATADIR']
+BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
+log_file_name = f'{DATADIR}/logs/omics.log'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = TMPDIR + '/uploads'
 app.secret_key = os.environ['SECRET']
@@ -43,18 +45,27 @@ class LoginError(Exception):
     pass
 
 
+def log_exception(status, e):
+    with open(log_file_name, 'a+') as log_file:
+        log_file.write(f'{datetime.now().replace(microsecond=0).isoformat(" ")} [{status}]: {str(e)}\n')
+
+
 # handle any exception thrown by a datamanip function
 # this is used for the restful api only
 def handle_exception(e):
     if e is datamanip.AuthException:
+        log_exception(403, e)
         return jsonify({'message': str(e)}), 403
     if e is LoginError:
+        log_exception(401, e)
         return jsonify({'message': str(e)}), 401
+    log_exception(500, e)
     return jsonify({'message': str(e)}), 500
 
 
 def handle_exception_browser(e):
     if e is datamanip.AuthException:
+        log_exception(403, e)
         error_msg = str(e)
         error_title = "403 Forbidden"
         return render_template('error.html', glyphicon_type='glyphicon-ban-circle', error_msg=error_msg, error_title=error_title), 403
@@ -64,6 +75,7 @@ def handle_exception_browser(e):
     if error_msg.lower() == 'not logged in':
         return redirect(url_for('browser_login'))
     error_title = '500 Internal Server Error'
+    log_exception(500, e)
     return render_template('error.html', glyphicon_type='glyphicon-alert', error_msg=error_msg, error_title=error_title), 500
 
 
@@ -137,7 +149,7 @@ app.jinja_env.globals.update(is_write_permitted=datamanip.is_write_permitted)
 app.jinja_env.globals.update(get_user_id=get_user_id)
 app.jinja_env.globals.update(get_update_url=get_update_url)
 app.jinja_env.globals.update(get_included_groups=datamanip.get_included_groups)
-
+app.jinja_env.globals.update(BRAND=BRAND)
 
 # close db connection at app close
 @app.teardown_appcontext
@@ -251,7 +263,6 @@ def render_upload_sample():
             workflow_data = datamanip.create_sample_creation_workflow(filename, metadata)
             datamanip.start_job(workflow_data['workflow_filename'], workflow_data['job'], workflow_data['token'],
                                 data_type='sample', owner=user_id)
-            print('redirect')
             return redirect(url_for('render_job_list'))
         return render_template('createbase.html', type='Sample', endpoint='render_upload_sample')
     except Exception as e:
