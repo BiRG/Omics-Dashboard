@@ -1,4 +1,5 @@
-FROM ubuntu:xenial
+FROM commonworkflowlanguage/cwltool
+#FROM ubuntu:xenial
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt update
 RUN apt -y --no-install-recommends install build-essential
@@ -13,16 +14,19 @@ RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-4.3.27-Linux-x86
 RUN /bin/bash ~/miniconda.sh -b -p /opt/conda 
 RUN rm ~/miniconda.sh
 
+
+
+
 # Install Docker from Docker Inc. repositories.
 # current cwl-runner runs the docker cli instead of communicating via api
-RUN apt update && apt -y --no-install-recommends install apt-transport-https ca-certificates curl software-properties-common
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - 
-RUN add-apt-repository \
-    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-    $(lsb_release -cs) \
-    stable"
-RUN apt update
-RUN apt -y install docker-ce
+#RUN apt update && apt -y --no-install-recommends install apt-transport-https ca-certificates curl software-properties-common
+#RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - 
+#RUN add-apt-repository \
+#    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+#    $(lsb_release -cs) \
+#    stable"
+#RUN apt update
+#RUN apt -y install docker-ce
 
 
 ENV PATH /opt/conda/bin:$PATH

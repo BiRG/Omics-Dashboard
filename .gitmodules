@@ -1,3 +1,0 @@
-[submodule "workflow-service"]
-	path = jobserver/workflow-service
-	url = git@github.com:BiRG/workflow-service.git

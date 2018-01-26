@@ -635,8 +635,8 @@ def create_sample_creation_workflow(input_filename, metadata):
     metadata_filename = f'{directory}/metadata'
     with open(metadata_filename, 'w') as file:
         json.dump(metadata, file)
-    os.rename(input_filename, f'{directory}/input')
-    input_file = f'{directory}/input'
+    os.rename(input_filename, f'{directory}/input.txt')
+    input_file = f'{directory}/input.txt'
 
     workflow = {
         'cwlVersion': 'v1.0',

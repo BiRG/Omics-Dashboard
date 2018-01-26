@@ -10,6 +10,7 @@ services:
   jobserver:
     build: jobserver
     env_file: common.env
+    privileged: true
     volumes:
       - ${DATADIR}:/data
       - ${MODULEDIR}:/modules
