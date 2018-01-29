@@ -14,7 +14,7 @@
       </div>
       {% elif type.lower() == 'sample' %}
         <p class="lead">
-          <a class="btn btn-primary btn-lg" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
+          <a class="btn btn-primary btn-lg" href="{{ url_for('download_sample', sample_id=data['id']) }}" role="button">
             <i class="fas fa-download"></i> HDF5
           </a>
         </p>

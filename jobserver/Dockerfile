@@ -18,13 +18,9 @@ ADD environment.yml /tmp
 RUN conda env create -f /tmp/environment.yml
 RUN rm /tmp/environment.yml
 
-RUN wget --quiet https://github.com/dpfoose/cwltool https://github.com/dpfoose/cwltool/archive/master.zip
-RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install /master.zip &&  rm /master.zip"
-#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install git+https://github.com/dpfoose/cwltool.git"
-#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
-ADD cwltool /cwltool
-#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install -e /cwltool"
-#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
+RUN apt update && apt -y install git
+RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install git+https://github.com/dpfoose/cwltool.git"
+RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
 
 
 RUN wget --quiet https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O docker.tgz
