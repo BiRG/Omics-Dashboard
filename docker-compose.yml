@@ -15,6 +15,8 @@ services:
       - ${DATADIR}:/data
       - ${MODULEDIR}:/modules
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${VARDIR}:/var
+      - /tmp:/tmp
   proxy:
     build: proxy
     env_file: common.env

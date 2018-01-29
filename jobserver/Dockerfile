@@ -1,5 +1,4 @@
-FROM commonworkflowlanguage/cwltool
-#FROM ubuntu:xenial
+FROM ubuntu:xenial
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt update
 RUN apt -y --no-install-recommends install build-essential
@@ -14,25 +13,23 @@ RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-4.3.27-Linux-x86
 RUN /bin/bash ~/miniconda.sh -b -p /opt/conda 
 RUN rm ~/miniconda.sh
 
-
-
-
-# Install Docker from Docker Inc. repositories.
-# current cwl-runner runs the docker cli instead of communicating via api
-#RUN apt update && apt -y --no-install-recommends install apt-transport-https ca-certificates curl software-properties-common
-#RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - 
-#RUN add-apt-repository \
-#    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-#    $(lsb_release -cs) \
-#    stable"
-#RUN apt update
-#RUN apt -y install docker-ce
-
-
 ENV PATH /opt/conda/bin:$PATH
 ADD environment.yml /tmp
 RUN conda env create -f /tmp/environment.yml
 RUN rm /tmp/environment.yml
+
+RUN wget --quiet https://github.com/dpfoose/cwltool https://github.com/dpfoose/cwltool/archive/master.zip
+RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install /master.zip &&  rm /master.zip"
+#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install git+https://github.com/dpfoose/cwltool.git"
+#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
+ADD cwltool /cwltool
+#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install -e /cwltool"
+#RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
+
+
+RUN wget --quiet https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O docker.tgz
+RUN tar xvf docker.tgz
+RUN ln -s /docker/docker /usr/bin/docker
 
 ADD workflow-service /app/
 ADD entrypoint.sh /

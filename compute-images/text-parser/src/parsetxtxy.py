@@ -4,7 +4,7 @@ import textparsers as tp
 import os
 
 infilename = sys.argv[1]
-outfilename = os.path.basename(infilename) + '.h5'
+outfilename = f'{os.environ["HOME"]}/{os.path.basename(infilename)}.h5'
 data = tp.parseTxtXY(infilename)
 tp.saveSampleFile(outfilename, data['data'], data['metadata'])
 sys.exit(0)

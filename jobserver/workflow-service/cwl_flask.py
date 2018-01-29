@@ -70,6 +70,9 @@ class Job(threading.Thread):
     def run(self):
         self.stdout_data, self.stderr_data = self.proc.communicate(self.input_obj)
         if self.proc.returncode == 0:
+            print(self.stdout_data)
+            with open(f'{TMPDIR}/outtest.txt', 'w') as file:
+                file.write(self.stdout_data.decode('utf-8'))
             out_obj = yaml.load(self.stdout_data)
             with self.update_lock:
                 self.status['state'] = 'Success'
