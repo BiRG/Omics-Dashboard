@@ -17,14 +17,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${VARDIR}:/var
       - /tmp:/tmp
-  omics_proxy:
-    build: proxy
-    env_file: common.env
-    ports:
-      - 8080:${HOSTPORT}
-      - 5000:5000
-    volumes:
-      - ${DATADIR}:/data
-    depends_on:
-      - jobserver
-      - omics
+  #proxy:
+        #build: proxy
+        #env_file: common.env
+  # ports:
+  #    - 8080:${HOSTPORT}
+  #    - 5000:5000
+  #  volumes:
+  #    - ${DATADIR}:/data
+  #  depends_on:
+  #    - jobserver
+  #    - omics
