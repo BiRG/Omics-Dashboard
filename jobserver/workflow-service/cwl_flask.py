@@ -80,6 +80,8 @@ class Job(threading.Thread):
             with self.update_lock:
                 self.status['state'] = 'Success'
                 self.status['output'] = out_obj
+                with open(self.log_name, 'r') as log_file:
+                    self.status['log'] = log_file.read()
                 # send cleanup request to omics server
             res = requests.post(f'{OMICSSERVER}/api/finalize',
                                 headers={'Authorization': self.token},

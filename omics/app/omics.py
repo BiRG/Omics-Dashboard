@@ -69,7 +69,7 @@ def handle_exception_browser(e):
         log_exception(403, e)
         error_msg = str(e)
         error_title = "403 Forbidden"
-        return render_template('error.html', glyphicon_type='glyphicon-ban-circle', error_msg=error_msg, error_title=error_title), 403
+        return render_template('error.html', fa_type='fa-ban', error_msg=error_msg, error_title=error_title), 403
     if e is LoginError:
         return redirect(url_for('browser_login'))
     error_msg = str(e)
@@ -77,7 +77,7 @@ def handle_exception_browser(e):
         return redirect(url_for('browser_login'))
     error_title = '500 Internal Server Error'
     log_exception(500, e)
-    return render_template('error.html', glyphicon_type='glyphicon-alert', error_msg=error_msg, error_title=error_title), 500
+    return render_template('error.html', fa_type='fa-exclamation-circle', error_msg=error_msg, error_title=error_title), 500
 
 
 def validate_login(email, password):
@@ -427,9 +427,11 @@ def render_job_list():
 
 
 @app.route('/jobs/<job_id>', methods=['GET'])
-def render_job():
+def render_job(job_id=None):
     try:
-        return render_template('entry.html', data={}, headings={}, type="Job")
+        job = datamanip.get_job(job_id)
+
+        return render_template('entry.html', data=job, type="Job")
     except Exception as e:
         return handle_exception_browser(e)
 
