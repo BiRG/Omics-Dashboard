@@ -68,7 +68,10 @@ def get_read_permitted_records(user_id, records):
 
 
 def get_next_id(path):
-    ids = [int(os.path.splitext(file)[0]) for file in os.listdir(path)]
+    files = os.listdir(path)
+    if not files:
+        return 0
+    ids = [int(os.path.splitext(file)[0]) for file in files]
     return 0 if ids is None else max(ids) + 1
 
 
