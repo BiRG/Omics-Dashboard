@@ -583,7 +583,7 @@ def get_parsing_modules():
 def start_job(workflow_path, request_data, token, data_type='collection', owner=-1):
     params = {'wf': f'{workflow_path}', 'data_type': data_type, 'owner': owner}
     headers = {'Authorization': token}
-    with open('f{DATADIR}/logs/omics.log', 'a+') as log_file:
+    with open(f'{DATADIR}/logs/omics.log', 'a+') as log_file:
         log_file.write(f'request_data: \n{str(request_data)}\n')
     response = requests.post(f'{COMPUTESERVER}/run',
                              json=request_data,
