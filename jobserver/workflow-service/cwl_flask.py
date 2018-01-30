@@ -128,7 +128,7 @@ def run_workflow():
             job = Job(job_id, path, request.stream.read(), token=token, data_type=data_type, owner=(request.args['owner'] if 'owner' in request.args else -1))
             job.start()
             jobs.append(job)
-        return redirect('/jobs/%i' % job_id, code=303)
+        return jsonify(job.get_status())
     except Exception as e:
         return handle_exception(e)
 
