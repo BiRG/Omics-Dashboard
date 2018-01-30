@@ -37,7 +37,7 @@
         <thead>
           <th>Key</th>
           <th>Value</th>
-        {% if type.lower() != 'user' and is_write_permitted(get_user_id(), data) %}
+        {% if type.lower() not in ['user', 'job'] and is_write_permitted(get_user_id(), data) %}
           <th>Save Changes</th>
         {% endif %}
         </thead>
@@ -66,7 +66,7 @@
           {% else %}
           <td class="attribute-value" contenteditable="{{ 'true' if key not in protectedKeys and is_write_permitted(get_user_id(), data) else 'false'}}">{{ value }}</td>
           {% endif %}
-        {% if type.lower() != 'user' and is_write_permitted(get_user_id(), data) %}
+        {% if type.lower() not in ['user', 'job'] and is_write_permitted(get_user_id(), data) %}
           {% if key not in protectedKeys or get_user_id() == data['owner'] and key in ['groupPermissions', 'allPermissions', 'userGroup'] %}
             <td><button class="saveButton btn btn-sm btn-outline-primary"><p hidden>a</p><i class="fas fa-save"></i></button></td>
           {% else %}
