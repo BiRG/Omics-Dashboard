@@ -47,6 +47,8 @@
           <td class="attribute-key">{{ key }}</td>
           {% if key in USERKEYS %}
           <td class="attribute-value"><a href="{{ url_for('render_user_profile', user_id=value) }}">{{ get_user_name(value) }}</a></td>
+          {% elif key=='log' %}
+            <td class="attribute-value"><pre><code>{{ value }}</code></pre></td>
           {% elif key=='dateModified' %}
             <td class="attribute-value">{{ datetime.utcfromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S (UTC)') }}</td>
           {% elif get_user_id() == data['owner'] and key in ['groupPermissions', 'allPermissions'] %}
@@ -64,7 +66,7 @@
               {% include 'usergroupselector.html' %}
             </td>
           {% else %}
-          <td class="attribute-value" contenteditable="{{ 'true' if key not in protectedKeys and is_write_permitted(get_user_id(), data) else 'false'}}">{{ value }}</td>
+          <td class="attribute-value" contenteditable="{{ 'true' if key not in protectedKeys and type.lower() != 'job' and is_write_permitted(get_user_id(), data) else 'false'}}">{{ value }}</td>
           {% endif %}
         {% if type.lower() not in ['user', 'job'] and is_write_permitted(get_user_id(), data) %}
           {% if key not in protectedKeys or get_user_id() == data['owner'] and key in ['groupPermissions', 'allPermissions', 'userGroup'] %}
