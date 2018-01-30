@@ -17,8 +17,8 @@ jobs_lock = threading.Lock()
 jobs = []
 OMICSSERVER = os.environ['OMICSSERVER'] if 'OMICSSERVER' in os.environ else 'localhost:8080'
 TMPDIR = f'{os.environ["DATADIR"]}/tmp' if 'DATADIR' in os.environ else '/tmp'
-log_file_name = f'{os.environ["DATADIR"]}/logs/jobserver.log' if 'DATADIR' in os.environ else '/var/log-dashboard-jobserver.log'
-#app.config['APPLICATION_ROOT'] = '/omics_jobserver'
+log_file_name = f'{os.environ["DATADIR"]}/logs/jobserver.log'
+
 
 def log_error(e):
     with open(log_file_name, 'a+') as log_file:
@@ -38,8 +38,10 @@ def handle_exception(e):
 
 
 class Job(threading.Thread):
-    def __init__(self, job_id, path, input_obj, token='', data_type='collection', owner=-1):
+    def __init__(self, job_id, path, input_obj, token='', data_type='collection', owner=-1, name=''):
         super(Job, self).__init__()
+        if not name:
+            self.name = f'Job {job_id}'
         self.job_id = job_id
         self.path = path
         self.input_obj = input_obj
@@ -78,10 +80,10 @@ class Job(threading.Thread):
                 self.status['state'] = 'Success'
                 self.status['output'] = out_obj
                 # send cleanup request to omics server
-                res = requests.post(f'{OMICSSERVER}/api/finalize',
-                                    headers={'Authorization': self.token},
-                                    json=self.status.copy(),
-                                    params={'data_type': self.data_type})
+            res = requests.post(f'{OMICSSERVER}/api/finalize',
+                                headers={'Authorization': self.token},
+                                json=self.status.copy(),
+                                params={'data_type': self.data_type})
 
         else:
             with self.update_lock:

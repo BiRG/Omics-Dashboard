@@ -22,6 +22,8 @@ MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + 
 # route functions should capture exceptions from SQLite3
 
 
+
+
 class AuthException(Exception):
     pass
 

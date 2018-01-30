@@ -14,11 +14,11 @@ DATADIR = os.environ['DATADIR']
 BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
-log_file_name = f'{DATADIR}/logs.log'
+log_file_name = f'{DATADIR}/logs/omics.log'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = TMPDIR + '/uploads'
-#app.config['APPLICATION_ROOT'] = '/omics'
 app.secret_key = os.environ['SECRET']
+
 
 
 @app.before_request
@@ -410,7 +410,7 @@ def render_job_list():
     try:
         print('datamanip.get_jobs()')
         data = datamanip.get_jobs()
-        headings = {'id': 'ID', 'owner': 'Owner'}
+        headings = {'id': 'ID', 'name': 'Name', 'state': 'State', 'owner': 'Owner'}
         #headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
         print('render_template')
         return render_template('list.html', data=data, headings=headings, type='Jobs')
