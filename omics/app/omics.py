@@ -14,9 +14,10 @@ DATADIR = os.environ['DATADIR']
 BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
-log_file_name = f'{DATADIR}/logs/omics.log'
+log_file_name = f'{DATADIR}/logs.log'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = TMPDIR + '/uploads'
+app.config['APPLICATION_ROOT'] = '/omics'
 app.secret_key = os.environ['SECRET']
 
 
@@ -160,12 +161,12 @@ def close_connection(exception):
 
 
 #  ROUTES FOR BROWSERS
-@app.route('/omics/')
+@app.route('/')
 def render_root():
     return redirect(url_for('render_dashboard'))
 
 
-@app.route('/omics/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def render_registration():
     try:
         invitation = request.args.get('invitation')
@@ -187,7 +188,7 @@ def render_registration():
         return render_template('register.html', error=str(e))
 
 
-@app.route('/omics/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def browser_login(msg=None, error=None, next_template='render_dashboard'):
     try:
         if request.method == 'POST':
@@ -201,7 +202,7 @@ def browser_login(msg=None, error=None, next_template='render_dashboard'):
     return render_template('login.html', msg=msg, error=error)
 
 
-@app.route('/omics/logout', methods=['GET'])
+@app.route('/logout', methods=['GET'])
 def browser_logout():
     if session.get('logged_in'):
         session['logged_in'] = False
@@ -209,7 +210,7 @@ def browser_logout():
     return redirect(url_for('browser_login'))
 
 
-@app.route('/omics/dashboard', methods=['GET'])
+@app.route('/dashboard', methods=['GET'])
 def render_dashboard():
     try:
         get_user_id()
@@ -218,7 +219,7 @@ def render_dashboard():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/samples', methods=['GET', 'POST'])
+@app.route('/samples', methods=['GET', 'POST'])
 def render_sample_list():
     try:
         get_user_id()
@@ -229,7 +230,7 @@ def render_sample_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/samples/<sample_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/samples/<sample_id>', methods=['GET', 'POST', 'DELETE'])
 def render_sample(sample_id=None):
     try:
         user_id = get_user_id()
@@ -249,7 +250,7 @@ def render_sample(sample_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/samples/create', methods=['GET', 'POST'])
+@app.route('/samples/create', methods=['GET', 'POST'])
 def render_upload_sample():
     try:
         if request.method == 'POST':
@@ -269,7 +270,7 @@ def render_upload_sample():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/collections', methods=['GET', 'POST'])
+@app.route('/collections', methods=['GET', 'POST'])
 def render_collection_list():
     try:
         data = datamanip.get_all_collection_metadata(get_user_id())
@@ -279,7 +280,7 @@ def render_collection_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/collections/<collection_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/collections/<collection_id>', methods=['GET', 'POST', 'DELETE'])
 def render_collection(collection_id=None):
     try:
         user_id = get_user_id()
@@ -299,7 +300,7 @@ def render_collection(collection_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/collections/create', methods=['GET', 'POST'])
+@app.route('/collections/create', methods=['GET', 'POST'])
 def render_create_collection():
     try:
         return jsonify({'not': 'implemented'}), 501
@@ -307,7 +308,7 @@ def render_create_collection():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/analyses', methods=['GET', 'POST'])
+@app.route('/analyses', methods=['GET', 'POST'])
 def render_analysis_list():
     try:
         user_id = get_user_id()
@@ -318,7 +319,7 @@ def render_analysis_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/analyses/create', methods=['GET', 'POST'])
+@app.route('/analyses/create', methods=['GET', 'POST'])
 def render_create_analysis():
     try:
         user_id = get_user_id()
@@ -331,7 +332,7 @@ def render_create_analysis():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/analyses/<analysis_id>', methods=['GET'])
+@app.route('/analyses/<analysis_id>', methods=['GET'])
 def render_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
@@ -342,7 +343,7 @@ def render_analysis(analysis_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/usergroups', methods=['GET'])
+@app.route('/usergroups', methods=['GET'])
 def render_user_group_list():
     try:
         user_id = get_user_id()
@@ -353,7 +354,7 @@ def render_user_group_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/usergroups', methods=['GET', 'DELETE'])
+@app.route('/usergroups', methods=['GET', 'DELETE'])
 def render_user_group(group_id=None):
     try:
         user_id = get_user_id()
@@ -363,7 +364,7 @@ def render_user_group(group_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/workflows', methods=['GET', 'POST'])
+@app.route('/workflows', methods=['GET', 'POST'])
 def render_workflow_list():
     try:
         user_id = get_user_id()
@@ -374,7 +375,7 @@ def render_workflow_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
 def render_workflow(workflow_id=None):
     try:
         user_id = get_user_id()
@@ -384,7 +385,7 @@ def render_workflow(workflow_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/omics/workflows/create', methods=['GET', 'POST', 'DELETE'])
+@app.route('/workflows/create', methods=['GET', 'POST', 'DELETE'])
 def render_create_workflow():
     try:
         user_id = get_user_id()
@@ -396,7 +397,7 @@ def render_create_workflow():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/workflows/create', methods=['GET', 'POST', 'DELETE'])
+@app.route('/workflows/create', methods=['GET', 'POST', 'DELETE'])
 def render_workflow_modules():
     try:
         return jsonify({'not': 'implemented'}), 501
@@ -404,7 +405,7 @@ def render_workflow_modules():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/jobs', methods=['GET', 'POST'])
+@app.route('/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
         print('datamanip.get_jobs()')
@@ -417,7 +418,7 @@ def render_job_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/jobs/<job_id>', methods=['GET'])
+@app.route('/jobs/<job_id>', methods=['GET'])
 def render_job():
     try:
         return render_template('entry.html', data={}, headings={}, type="Job")
@@ -425,7 +426,7 @@ def render_job():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/settings', methods=['GET', 'POST'])
+@app.route('/settings', methods=['GET', 'POST'])
 def render_settings():
     try:
         if request.method == 'GET':
@@ -454,7 +455,7 @@ def render_settings():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/users', methods=['GET'])
+@app.route('/users', methods=['GET'])
 def render_user_list():
     try:
         get_user_id()
@@ -465,7 +466,7 @@ def render_user_list():
         return handle_exception_browser(e)
 
 
-@app.route('/omics/users/<user_id>', methods=['GET'])
+@app.route('/users/<user_id>', methods=['GET'])
 def render_user_profile(user_id=None):
     try:
         get_user_id()
@@ -476,7 +477,7 @@ def render_user_profile(user_id=None):
 
 
 #  ROUTES FOR NON-BROWSER Clients
-@app.route('/omics/api/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     credentials = request.get_json(force=True)
     if validate_login(credentials['email'], credentials['password']):
@@ -487,7 +488,7 @@ def login():
         return jsonify({"message": "authentication failed"}), 403
 
 
-@app.route('/omics/api/logout')
+@app.route('/api/logout')
 def logout():
     if session.get('logged_in'):
         session['logged_in'] = False
@@ -495,19 +496,19 @@ def logout():
     return jsonify({'message': 'logged out'}), 200
 
 
-@app.route('/omics/api/currentuser')
+@app.route('/api/currentuser')
 def get_current_user():
     if session.get('logged_in'):
         return jsonify(session['user']), 200
     return jsonify({'message': 'not logged in'}), 404
 
 
-@app.route('/omics/api/')
+@app.route('/api/')
 def send_ok():
     return jsonify({'message': 'API works!'}), 200
 
 
-@app.route('/omics/api/users', methods=['GET', 'POST'])
+@app.route('/api/users', methods=['GET', 'POST'])
 def list_users():
     try:
         user_id = get_user_id()
@@ -519,7 +520,7 @@ def list_users():
         return handle_exception(e)
 
 
-@app.route('/omics/api/users/<user_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/users/<user_id>', methods=['GET', 'POST', 'DELETE'])
 def edit_user(user_id=None):
     try:
         current_user_id = get_user_id()
@@ -533,7 +534,7 @@ def edit_user(user_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/collections', methods=['GET', 'POST'])
+@app.route('/api/collections', methods=['GET', 'POST'])
 def list_collections():
     try:
         current_user_id = get_user_id()
@@ -546,7 +547,7 @@ def list_collections():
         return handle_exception(e)
 
 
-@app.route('/omics/api/collections/<collection_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/collections/<collection_id>', methods=['GET', 'POST', 'DELETE'])
 def get_collection(collection_id=None):
     try:
         user_id = get_user_id()
@@ -561,7 +562,7 @@ def get_collection(collection_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/collections/download/<collection_id>', methods=['GET'])
+@app.route('/api/collections/download/<collection_id>', methods=['GET'])
 def download_collection(collection_id=None):
     try:
         user_id = get_user_id()
@@ -578,7 +579,7 @@ def download_collection(collection_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/collections/upload/', methods=['POST'])
+@app.route('/api/collections/upload/', methods=['POST'])
 def upload_collection():
     try:
         user_id = get_user_id()
@@ -598,7 +599,7 @@ def upload_collection():
         return handle_exception(e)
 
 
-@app.route('/omics/api/samples', methods=['GET'])
+@app.route('/api/samples', methods=['GET'])
 def list_samples():
     try:
         user_id = get_user_id()
@@ -607,7 +608,7 @@ def list_samples():
         return handle_exception(e)
 
 
-@app.route('/omics/api/samples/<sample_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/samples/<sample_id>', methods=['GET', 'POST', 'DELETE'])
 def get_sample(sample_id=None):
     try:
         user_id = get_user_id()
@@ -622,7 +623,7 @@ def get_sample(sample_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/sample/download/<sample_id>', methods=['GET'])
+@app.route('/api/sample/download/<sample_id>', methods=['GET'])
 def download_sample(sample_id=None):
     try:
         user_id = get_user_id()
@@ -639,7 +640,7 @@ def download_sample(sample_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/samples/upload/', methods=['POST'])
+@app.route('/api/samples/upload/', methods=['POST'])
 def upload_sample():
     try:
         # this one involves invoking a file parser module
@@ -649,7 +650,7 @@ def upload_sample():
         return handle_exception(e)
 
 
-@app.route('/omics/api/analyses', methods=['GET', 'POST'])
+@app.route('/api/analyses', methods=['GET', 'POST'])
 def list_analyses():
     try:
         user_id = get_user_id()
@@ -658,7 +659,7 @@ def list_analyses():
         return handle_exception(e)
 
 
-@app.route('/omics/api/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
 def get_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
@@ -672,7 +673,7 @@ def get_analysis(analysis_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/usergroups', methods=['GET', 'POST'])
+@app.route('/api/usergroups', methods=['GET', 'POST'])
 def list_usergroups():
     try:
         user_id = get_user_id()
@@ -684,7 +685,7 @@ def list_usergroups():
         return handle_exception(e)
 
 
-@app.route('/omics/api/usergroups/<group_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/usergroups/<group_id>', methods=['GET', 'POST', 'DELETE'])
 def get_usergroup(group_id=None):
     try:
         user_id = get_user_id()
@@ -698,7 +699,7 @@ def get_usergroup(group_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/workflows', methods=['GET', 'POST'])
+@app.route('/api/workflows', methods=['GET', 'POST'])
 def list_workflows():
     try:
         user_id = get_user_id()
@@ -707,7 +708,7 @@ def list_workflows():
         return handle_exception(e)
 
 
-@app.route('/omics/api/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
 def get_workflow(workflow_id=None):
     try:
         user_id = get_user_id()
@@ -721,7 +722,7 @@ def get_workflow(workflow_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/jobs', methods=['GET', 'POST'])
+@app.route('/api/jobs', methods=['GET', 'POST'])
 def list_jobs():
     try:
         user_id = get_user_id()
@@ -730,7 +731,7 @@ def list_jobs():
         return handle_exception(e)
 
 
-@app.route('/omics/api/jobs/<job_id>', methods=['GET', 'POST'])
+@app.route('/api/jobs/<job_id>', methods=['GET', 'POST'])
 def get_job(job_id=None):
     try:
         user_id = get_user_id()
@@ -748,7 +749,7 @@ def get_job(job_id=None):
         return handle_exception(e)
 
 
-@app.route('/omics/api/invite', methods=['GET'])
+@app.route('/api/invite', methods=['GET'])
 def get_invitation():
     try:
         user_id = get_user_id()
@@ -758,7 +759,7 @@ def get_invitation():
 
 
 # this is consumed by the job server to clean up files created to facilitate workflow execution
-@app.route('/omics/api/finalize', methods=['POST'])
+@app.route('/api/finalize', methods=['POST'])
 def finalize_job():
     try:
         data_type = request.args['data_type']
