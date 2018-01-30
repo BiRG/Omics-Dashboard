@@ -317,11 +317,11 @@ def list_collection_paths(user_id, collection_id):
 
 def create_collection(user_id, sample_ids, new_data):
     new_data['owner'] = user_id
-    outfilename = DATADIR + '/collections/' + str(get_next_id('/data/collections')) + '.h5'
-    filenames = [DATADIR + '/samples/' + str(sample_id) for sample_id in sample_ids]
+    outfilename = f'{DATADIR}/collections/{get_next_id("/data/collections")}.h5'
+    filenames = [f'{DATADIR}/samples/{sample_id}.h5' for sample_id in sample_ids]
     for filename in filenames:
         if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
-            raise AuthException('User %s is not permitted to access file %s' % (str(user_id), str(filename)))
+            raise AuthException(f'User {user_id} is not permitted to access file {filename}')
     h5merge.h5_merge(filenames, outfilename)
     return mdt.update_metadata(outfilename, new_data)
 

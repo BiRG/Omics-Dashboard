@@ -5,7 +5,7 @@
     <label for="{{ select_id }}">{{ label }}</label>
     <select id="{{ select_id }}" name="{{ select_id }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if multiple }}>
       {% for item in data %}
-      <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}">{{ item['label'] if 'label' in item else item['id'] + ': ' + item['name'] }}</option>
+      <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}">{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
       {% endfor %}
     </select>
   </div>
