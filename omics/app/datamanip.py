@@ -591,7 +591,8 @@ def start_job(workflow_path, request_data, token, data_type='collection', owner=
         return response.json()
     except Exception as e:
         with open(f'{DATADIR}/logs/omics.log', 'a+') as log_file:
-            log_file.write(str(e))
+            log_file.write(f'{str(e)}\n')
+            log_file.write(f'{str(request_data)}\n')
         raise RuntimeError('Invalid response from job server. Is the server running?')
 
 
