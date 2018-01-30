@@ -17,7 +17,7 @@ MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + 
 log_file_name = f'{DATADIR}/logs.log'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = TMPDIR + '/uploads'
-app.config['APPLICATION_ROOT'] = '/omics'
+#app.config['APPLICATION_ROOT'] = '/omics'
 app.secret_key = os.environ['SECRET']
 
 
