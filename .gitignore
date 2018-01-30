@@ -1,4 +1,5 @@
-environment.test.sh
-environment.prod.sh
+common.env
+docker-compose.yml
+.env
 .project*
 .settings*

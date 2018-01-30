@@ -1,5 +1,7 @@
 version: '3' 
 #there are two uwsgi applications running through one nginx server
+#rename this to docker-compose.yml and run using docker-compose up --build -d
+#change .env and common.env to suit your environment
 services:
   omics:
     build: omics
@@ -17,14 +19,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${VARDIR}:/var
       - /tmp:/tmp
-  #proxy:
-        #build: proxy
-        #env_file: common.env
-  # ports:
-  #    - 8080:${HOSTPORT}
-  #    - 5000:5000
-  #  volumes:
-  #    - ${DATADIR}:/data
-  #  depends_on:
-  #    - jobserver
-  #    - omics
+  proxy:
+      build: proxy
+      env_file: common.env
+   ports:
+      - 8080:${HOSTPORT}
+      - 5000:5000
+    volumes:
+      - ${DATADIR}:/data
+    depends_on:
+      - jobserver
+      - omics
