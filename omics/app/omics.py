@@ -303,7 +303,15 @@ def render_collection(collection_id=None):
 @app.route('/collections/create', methods=['GET', 'POST'])
 def render_create_collection():
     try:
-        return jsonify({'not': 'implemented'}), 501
+        if request.method == 'POST':
+            form_data = request.form.to_dict()
+            with open(log_file_name, 'a+') as log_file:
+                log_file.write(str(form_data))
+            sample_ids = form_data['sample']
+            data = datamanip.create_collection(get_user_id(), sample_ids, form_data)
+            collection_id = data['id']
+            return redirect(url_for('render_collection', collection_id=collection_id))
+        return render_template('createbase.html', type='Collection', endpoint='render_create_collection')
     except Exception as e:
         return handle_exception_browser(e)
 
