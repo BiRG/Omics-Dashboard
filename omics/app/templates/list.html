@@ -27,7 +27,7 @@
             {% elif key=='dateModified' %}
               {{ datetime.utcfromtimestamp(int(item[key])).strftime('%Y-%m-%dT%H:%M:%SZ') }}
             {% elif key == 'admin' %}
-              <i class="{{ 'fas fa-check-square-o' if int(item[key]) else 'fas fa-square-o' }}"></i><p hidden>{{ item[key] }}</p>
+              <i class="{{ 'fas fa-check-square' if int(item[key]) else 'fas fa-square' }}"></i><p hidden>{{ item[key] }}</p>
             {% elif key == 'options' and type.lower() == 'jobs' %}
               <div class="btn-group" role="group" aria-label="controls">
                 <button class="btn btn-primary job-play-button" id="{{ item['id'] }}" {{ 'disabled' if item['status'] == 'Canceled' }}>

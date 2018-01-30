@@ -40,7 +40,7 @@ def handle_exception(e):
 class Job(threading.Thread):
     def __init__(self, job_id, path, input_obj, token='', data_type='collection', owner=-1, name=''):
         super(Job, self).__init__()
-        if not name:
+        if name == '':
             self.name = f'Job {job_id}'
         self.job_id = job_id
         self.path = path
@@ -63,6 +63,7 @@ class Job(threading.Thread):
                                          cwd=self.outdir)
             self.status = {
                 'id': self.job_id,
+                'name': self.name,
                 'owner': self.owner,
                 'run': self.path,
                 'state': 'Running',
