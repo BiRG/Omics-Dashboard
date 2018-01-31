@@ -348,9 +348,11 @@ def render_create_analysis():
 def render_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
-        # fallback to get
+        collection_headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        collections = datamanip.get_attached_collections(user_id, analysis_id)
         analysis = datamanip.get_analysis(user_id, analysis_id)
-        return render_template('entry.html', data=analysis, type='Analysis')
+        return render_template('entry.html', data=analysis, type='Analysis',
+                               collections=collections, collection_headings=collection_headings)
     except Exception as e:
         return handle_exception_browser(e)
 

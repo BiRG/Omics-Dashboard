@@ -457,6 +457,28 @@ def detach_collection(user_id, analysis_id, collection_id):
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(analysis_id)))
 
 
+def get_attached_collections(user_id, analysis_id):
+    analysis = get_analysis(user_id, analysis_id)
+    attachment_data = db.query_db('select * from CollectionMemberships where analysisId=?;', [str(analysis_id)])
+    if is_read_permitted(user_id, analysis):
+        collections = [mdt.get_collection_info(f'{DATADIR}/collections/{attachment["collection_id"]}.h5') for attachment in attachment_data]
+        return [collection for collection in collections if is_read_permitted(user_id, collection)]
+    raise AuthException(f'User {user_id} is not permitted to access analysis {analysis_id}')
+
+
+def get_attached_analyses(user_id, collection_id):
+    collection = get_collection(user_id, collection_id)
+    attachment_data = db.query_db('select * from CollectionMemberships where collectionId=?;', [str(collection_id)])
+    if is_read_permitted(user_id, collection):
+        analyses = []
+        for attachment in attachment_data:
+            analysis = db.query_db('select * from Analyses where id=?', [str(attachment['analysisId'])])
+            if is_read_permitted(user_id, analysis):
+                analyses.append(analysis)
+        return analyses
+    raise AuthException(f'User {user_id} not permitted to access collection {collection_id}')
+
+
 # user groups
 # user groups do not have permissions for viewing
 def get_user_groups():
