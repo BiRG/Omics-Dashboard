@@ -68,6 +68,7 @@ class Job(threading.Thread):
                 'run': self.path,
                 'state': 'Running',
                 'input': json.loads(self.input_obj),
+                'log': None,
                 'output': None}
 
     def run(self):
@@ -83,10 +84,11 @@ class Job(threading.Thread):
                 with open(self.log_name, 'r') as log_file:
                     self.status['log'] = log_file.read()
                 # send cleanup request to omics server
-            res = requests.post(f'{OMICSSERVER}/api/finalize',
-                                headers={'Authorization': self.token},
-                                json=self.status.copy(),
-                                params={'data_type': self.data_type})
+                print(f'finalize request:\ntoken{self.token}')
+                res = requests.post(f'{OMICSSERVER}/api/finalize',
+                                    headers={'Authorization': self.token},
+                                    json=self.status.copy(),
+                                    params={'data_type': self.data_type})
 
         else:
             with self.update_lock:

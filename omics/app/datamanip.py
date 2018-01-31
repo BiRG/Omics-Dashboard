@@ -316,13 +316,17 @@ def list_collection_paths(user_id, collection_id):
 
 
 def create_collection(user_id, sample_ids, new_data):
+    print('set new_data:\n')
     new_data['owner'] = user_id
     outfilename = f'{DATADIR}/collections/{get_next_id("/data/collections")}.h5'
     filenames = [f'{DATADIR}/samples/{sample_id}.h5' for sample_id in sample_ids]
+    print('check permissions on samples:\n')
     for filename in filenames:
         if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
             raise AuthException(f'User {user_id} is not permitted to access file {filename}')
+    print('h5merge:\n')
     h5merge.h5_merge(filenames, outfilename)
+    print('update_metadata:\n')
     return mdt.update_metadata(outfilename, new_data)
 
 
@@ -602,6 +606,7 @@ def start_job(workflow_path, request_data, token, data_type='collection', owner=
 def get_jobs():
     url = f'{COMPUTESERVER}/jobs'
     response = requests.get(url)
+    print(response)
     return response.json()
 
 

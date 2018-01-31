@@ -26,8 +26,8 @@
           </div>
 
          {% if type == 'Analysis' %}
-          {% with data=get_analyses(user_id) %}
-            {{ selector('analysis', 'Analyses', data) }}
+          {% with data=get_collections(user_id) %}
+            {{ selector('collection', 'Collections', data) }}
           {% endwith %}
         {% elif type == 'Collection' %}
           {% with data=get_samples(user_id) %}

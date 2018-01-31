@@ -37,8 +37,9 @@ def saveSampleFile(filename, numData, metadata):
     # clean metadata of empty entries:
     metadata = {key: value for key, value in metadata.items() if value != ''}
     with h5py.File(filename, 'w') as outfile:
-        outfile.create_dataset('x', data=numData[:, 0].astype(np.double))
-        outfile.create_dataset('Y', data=numData[:, 1:].astype(np.double))
+
+        outfile.create_dataset('x', data=numData[:, 0].astype(np.double)[None,:])
+        outfile.create_dataset('Y', data=numData[:, 1:].astype(np.double).transpose())
         for key, value in metadata.items():
             if isinstance(value, str):
                 outfile.attrs[key] = np.string_(value)

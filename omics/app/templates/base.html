@@ -70,16 +70,14 @@
         .bootstrap-select.btn-group .dropdown-toggle .filter-option {
           display: inline !important;
         }
-        /* allows code blocks scrollable in both directions */
-        .pre-xy-scrollable {
-          overflow: auto;
-          -ms-word-wrap: normal;
-          word-wrap: normal;
-          overflow-wrap: normal;
-          white-space: pre;
-          max-height: 340px;
-        }
 
+	pre code {
+          white-space: pre;
+	  overflow-x: auto;
+	  display: inline-block;
+	  min-width: 100%;
+	}
+	
         @font-face {
           font-family: 'Didact Gothic';
           font-style: normal;

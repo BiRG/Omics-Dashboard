@@ -3,7 +3,9 @@
 {% set protectedKeys =  ['owner', 'id', 'rowid', 'groupPermissions','allPermissions', 'userGroup', 'dateModified'] %}
 {% block content %}
   {{ super() }}
-  {% if is_write_permitted(get_user_id(), data) %}
+  {% if type.lower() == 'job' %}
+    {% include 'joblog.html' %}
+  {% elif is_write_permitted(get_user_id(), data) %}
     {% include 'dangerzone.html' %}
   {% endif %}
 {% endblock %}

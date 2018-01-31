@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import datamanip
 from passlib.hash import pbkdf2_sha256
 import os
+import shutil
 from flask_cors import CORS
 from datetime import datetime
 
@@ -305,10 +306,11 @@ def render_collection(collection_id=None):
 def render_create_collection():
     try:
         if request.method == 'POST':
+            #print('get form data:\n')
             form_data = request.form.to_dict()
-            with open(log_file_name, 'a+') as log_file:
-                log_file.write(str(form_data))
-            sample_ids = form_data['sample']
+            sample_ids = [int(sample_id) for sample_id in request.form.getlist('sample')]
+            del form_data['sample']
+            #print('datamanip.create_copllection:\n')
             data = datamanip.create_collection(get_user_id(), sample_ids, form_data)
             collection_id = data['id']
             return redirect(url_for('render_collection', collection_id=collection_id))
@@ -333,8 +335,9 @@ def render_create_analysis():
     try:
         user_id = get_user_id()
         if request.method == 'POST':
-            print(request.form)
+            collection_ids = [int(collection_id) for collection_id in request.form.getlist('collection')]
             analysis = datamanip.create_analysis(user_id, request.form.to_dict())
+            [datamanip.attach_collection(user_id, analysis['id'], collection_id) for collection_id in collection_ids)
             return redirect(url_for('render_analysis', analysis_id=analysis['id']))
         return render_template('createbase.html', type='Analysis', endpoint='render_create_analysis')
     except Exception as e:
@@ -417,11 +420,12 @@ def render_workflow_modules():
 @app.route('/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
-        print('datamanip.get_jobs()')
+        #print('datamanip.get_jobs()')
         data = datamanip.get_jobs()
+        #print(f'data:\n{data}\n')
         headings = {'id': 'ID', 'name': 'Name', 'state': 'State', 'owner': 'Owner'}
         #headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
-        print('render_template')
+        #print('render_template')
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
         return handle_exception_browser(e)
@@ -772,10 +776,11 @@ def get_invitation():
 # this is consumed by the job server to clean up files created to facilitate workflow execution
 @app.route('/api/finalize', methods=['POST'])
 def finalize_job():
+    #print('finalize job!')
     try:
         data_type = request.args['data_type']
         if data_type.lower() not in ['collection', 'sample']:
-            print(f'data_type.lower():{str(e)}')
+            #print(f'data_type.lower():{str(e)}')
             raise ValueError('invalid data_type')
 
         destdir = f'{DATADIR}/{data_type.lower()}s'
@@ -784,13 +789,14 @@ def finalize_job():
         if datamanip.check_jobserver_token(token):
             outfile = body['output']['outputFile']['path']
             next_id = datamanip.get_next_id(destdir)
-            print('move file')
+            #print('move file')
             collection = f'{destdir}/{next_id}.h5'
             os.rename(outfile, collection)
             # delete directory containing temp files (using key in auth header)
-            os.rmdir(f'{DATADIR}/tmp/{token}')
+            shutil.rmtree(f'{DATADIR}/tmp/{token}', ignore_errors=True)
+        return jsonify({'path': collection})
     except Exception as e:
-        print(str(e))
+        #print(str(e))
         return handle_exception(e)
 
 
