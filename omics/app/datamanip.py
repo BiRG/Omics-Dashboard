@@ -325,7 +325,7 @@ def create_collection(user_id, sample_ids, new_data):
         if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
             raise AuthException(f'User {user_id} is not permitted to access file {filename}')
     print('h5merge:\n')
-    h5merge.h5_merge(filenames, outfilename)
+    h5merge.h5_merge(filenames, outfilename, reserved_paths=['/x', 'x'])
     print('update_metadata:\n')
     return mdt.update_metadata(outfilename, new_data)
 
@@ -438,7 +438,7 @@ def delete_analysis(user_id, analysis_id):
 def attach_collection(user_id, analysis_id, collection_id):
     # check read permissions on analysis and collection
     analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
-    collection = mdt.get_collection_metadata(DATADIR + 'collections/' + str(collection_id) + '.h5')
+    collection = mdt.get_collection_metadata(f'{DATADIR}/collections/{collection_id}.h5')
     if is_write_permitted(user_id, collection) and is_write_permitted(user_id, analysis):
         # see if attached
         if db.query_db('select * from CollectionMemberships where analysisId=? and collectionId=?;',

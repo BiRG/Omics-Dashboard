@@ -74,7 +74,7 @@ class Job(threading.Thread):
     def run(self):
         self.stdout_data, self.stderr_data = self.proc.communicate(self.input_obj)
         if self.proc.returncode == 0:
-            print(self.stdout_data)
+            #print(self.stdout_data)
             with open(f'{TMPDIR}/outtest.txt', 'w') as file:
                 file.write(self.stdout_data.decode('utf-8'))
             out_obj = yaml.load(self.stdout_data)
@@ -84,7 +84,7 @@ class Job(threading.Thread):
                 with open(self.log_name, 'r') as log_file:
                     self.status['log'] = log_file.read()
                 # send cleanup request to omics server
-                print(f'finalize request:\ntoken{self.token}')
+                #:print(f'finalize request:\ntoken{self.token}')
                 res = requests.post(f'{OMICSSERVER}/api/finalize',
                                     headers={'Authorization': self.token},
                                     json=self.status.copy(),

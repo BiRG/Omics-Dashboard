@@ -20,7 +20,7 @@ def paths_agree(file1, file2, path, dim):
         return len(file1[path].shape) == len(file2[path].shape) == dim == 1
 
 
-def h5_merge(infilenames, outfilename, orientation="vert"):
+def h5_merge(infilenames, outfilename, orientation="vert", reserved_paths=[]):
     files = [h5py.File(filename, "r", driver="core", libver="latest") for filename in infilenames]
     # collect all common paths between the files
     paths = set()
@@ -31,7 +31,10 @@ def h5_merge(infilenames, outfilename, orientation="vert"):
     outfile = h5py.File(outfilename, "w", driver="core", libver="latest")
     for path in merge_paths:
         concat_axis = 1 if orientation == "horiz" else 0
-        outfile.create_dataset(path, data=np.concatenate([file[path] for file in files], axis=concat_axis))
+        if path in reserved_paths:
+            outfile.create_dataset(path, data=files[0][path])
+        else:
+            outfile.create_dataset(path, data=np.concatenate([file[path] for file in files], axis=concat_axis))
     outfile.close()
     for file in files:
         file.close()
