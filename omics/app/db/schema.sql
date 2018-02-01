@@ -88,8 +88,8 @@ create table if not exists GroupMemberships(
  */
 create table if not exists AnalysisMemberships(
     analysisId integer,
-    groupMembership integer,
-    unique(analysisId, groupMembership)
+    groupId integer,
+    unique(analysisId, groupId)
 );
 
 /*

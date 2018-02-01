@@ -483,11 +483,16 @@ def get_attached_analyses(user_id, collection_id):
 # user groups
 # user groups do not have permissions for viewing
 def get_user_groups():
-    return db.query_db('select * from UserGroups;')
+    user_groups = db.query_db('select * from UserGroups;')
+    for user_group in user_groups:
+        user_group['users'] = db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group('id'))])
+    return user_groups
 
 
 def get_user_group(group_id):
-    return db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
+    user_group = db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
+    user_group['users'] = db.query_db('select userId from GroupMemberships where groupId=?;', [str(group_id)])
+    return user_group
 
 
 def create_user_group(user_id, data):
@@ -531,7 +536,7 @@ def elevate_user(current_user_id, target_user_id, group_id):
 
 def detach_user(current_user_id, target_user_id, group_id):
     if target_user_id == current_user_id or is_group_admin(current_user_id, group_id):
-        db.query_db('delete from GroupMemberships where userId=? and groupMembership=?;',
+        db.query_db('delete from GroupMemberships where userId=? and groupId=?;',
                  [str(target_user_id), str(group_id)])
         return {'message': 'user ' + str(target_user_id) + ' detached from group ' + str(group_id)}
     raise AuthException('User %s not permitted to modify group %s' % (str(current_user_id), str(group_id)))
@@ -540,7 +545,7 @@ def detach_user(current_user_id, target_user_id, group_id):
 def delete_user_group(user_id, group_id):
     if is_group_admin(user_id, group_id):
         db.query_db('delete from UserGroups where id=?;', [str(group_id)])
-        db.query_db('delete from GroupMemberships where groupMembership=?', [str(group_id)])
+        db.query_db('delete from GroupMemberships where groupId=?', [str(group_id)])
         return {'message': 'user group ' + str(group_id) + ' deleted'}
     raise AuthException('User %s not permitted to modify group %s' % (str(user_id), str(group_id)))
 
