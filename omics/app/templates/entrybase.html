@@ -53,11 +53,10 @@
             <td class="attribute-value">
             <ul>
             {% for uid in value %}
-              <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(value) }}</a></li>
-            {% endfor %}
+              <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
+	    {% endfor %}
             </ul>
             </td>
-          {% endif %}
           {% elif key=='log' %}
           {% elif key=='dateModified' %}
             <td class="attribute-value">{{ datetime.utcfromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S (UTC)') }}</td>

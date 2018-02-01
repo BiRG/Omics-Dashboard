@@ -485,13 +485,13 @@ def get_attached_analyses(user_id, collection_id):
 def get_user_groups():
     user_groups = db.query_db('select * from UserGroups;')
     for user_group in user_groups:
-        user_group['users'] = db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group('id'))])
+        user_group['users'] = [user['userId'] for user in db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group['id'])])]
     return user_groups
 
 
 def get_user_group(group_id):
     user_group = db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
-    user_group['users'] = db.query_db('select userId from GroupMemberships where groupId=?;', [str(group_id)])
+    user_group['users'] = [user['userId'] for user in db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group['id'])])]
     return user_group
 
 
@@ -520,10 +520,10 @@ def update_user_group(user_id, group_id, new_data):
 def attach_user(current_user_id, target_user_id, group_id):
     if is_group_admin(current_user_id, group_id):
         if not user_in_group(target_user_id, group_id):
-            db.query_db('insert into GroupMemberships (userId, groupId, admin) values (?, ?, ?);',
+            db.query_db('insert into GroupMemberships (userId, groupId, groupAdmin) values (?, ?, ?);',
                      [str(target_user_id), str(group_id), '0'])
             return db.query_db('select * from UserGroups order by id desc limit 1;', (), True)
-        return {'message': 'user ' + target_user_id + ' attached to group ' + str(group_id)}
+        return {'message': f'user {target_user_id} attached to group {group_id}'}
     raise AuthException('User %s is not authorized to attach user %s to group %s' % (str(current_user_id), str(target_user_id), str(group_id)))
 
 

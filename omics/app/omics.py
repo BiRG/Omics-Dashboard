@@ -371,11 +371,12 @@ def render_user_group_list():
 
 @app.route('/usergroups/<group_id>', methods=['GET', 'DELETE'])
 def render_user_group(group_id=None):
-    try:
+    #try:
         user_group = datamanip.get_user_group(group_id)
-        return render_template('entry.html', data=user_group, type='User Group')
-    except Exception as e:
-        return handle_exception_browser(e)
+        print(user_group)
+        return render_template('entry.html', type='User Group', data=user_group)
+    #except Exception as e:
+    #    return handle_exception_browser(e)
 
 
 @app.route('/usergroups/create', methods=['GET', 'POST'])
@@ -384,6 +385,7 @@ def render_create_user_group():
         user_id = get_user_id()
         if request.method == 'POST':
             other_user_ids = [int(uid) for uid in request.form.getlist('user')]
+            print(other_user_ids)
             user_group = datamanip.create_user_group(user_id, request.form.to_dict())
             for other_user_id in other_user_ids:
                 datamanip.attach_user(user_id, other_user_id, user_group['id'])
