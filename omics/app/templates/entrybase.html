@@ -115,7 +115,7 @@
         responsive: true
     });
     $('#collections').DataTable({
-        responseive true
+        responsive: true
     }); //will probably cause error in the browser
   });
 
@@ -131,7 +131,7 @@
                   $('#failModal').modal();
               },
               success: function(){
-                  window.location.replace(document.domain + '{{ url_for('render_dashboard') }}');
+                  window.location.replace('{{ url_for('render_dashboard') }}');
               }
           });
       }

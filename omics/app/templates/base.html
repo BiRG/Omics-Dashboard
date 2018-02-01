@@ -101,8 +101,9 @@
         p, div {
           font-family: 'Arimo', sans-serif !important;
         }
+	
         body{
-          padding-top: 6%;
+          /*padding-top: 6%;*/
           margin-bottom: 100px;
         }
         @-moz-document url-prefix() {
@@ -120,7 +121,7 @@
   </head>
   <body>
 {% block navbar %}
-    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark pb-2">
       <a class="navbar-brand" href="{{ url_for('render_dashboard') }}">
         Omics Dashboard @ {{ BRAND }}
       </a>
