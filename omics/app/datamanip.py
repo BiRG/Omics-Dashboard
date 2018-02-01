@@ -334,6 +334,7 @@ def delete_collection(user_id, collection_id):
     collection_info = mdt.get_collection_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5')
     if is_write_permitted(user_id, collection_info):
         os.remove(DATADIR + '/collections/' + str(collection_id) + '.h5')
+        db.query_db('delete from CollectionMemberships where collectionId=?;', [str(collection_id)])
         return {'message': 'collection ' + str(collection_id) + ' removed'}
     raise AuthException('User %s not authorized to modify collection %s' % (str(user_id), str(collection_id)))
 
@@ -386,6 +387,7 @@ def delete_workflow(user_id, workflow_id):
     analysis = db.query_db('select * from Workflows where id=?;', str(workflow_id), True)
     if is_write_permitted(user_id, analysis):
         db.query_db('delete from Workflows where id=?;', [str(workflow_id)])
+        db.query_db('delete from WorkflowMemberships where workflowId=?;', [str(workflow_id)])
         return {'message': 'analysis ' + str(workflow_id) + ' deleted'}
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
@@ -440,11 +442,8 @@ def attach_collection(user_id, analysis_id, collection_id):
     analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     collection = mdt.get_collection_metadata(f'{DATADIR}/collections/{collection_id}.h5')
     if is_write_permitted(user_id, collection) and is_write_permitted(user_id, analysis):
+        db.query_db('insert into CollectionMemberships (collectionId, analysisId) values (?,?);', [str(collection_id), str(analysis_id)])
         # see if attached
-        if db.query_db('select * from CollectionMemberships where analysisId=? and collectionId=?;',
-                       [str(analysis_id), str(collection_id)]) is None:
-            db.query_db('insert into CollectionMemberships (collectionId, analysisId) values (?,?);',
-                        [str(analysis_id), str(collection_id)])
         return {'message': 'collection ' + str(collection_id) + ' attached to analysis ' + str(analysis_id)}
     raise AuthException('User %s is not permitted to attach collection %s to analysis %s' % (str(user_id), str(collection_id), str(analysis_id)))
 
@@ -460,8 +459,10 @@ def detach_collection(user_id, analysis_id, collection_id):
 def get_attached_collections(user_id, analysis_id):
     analysis = get_analysis(user_id, analysis_id)
     attachment_data = db.query_db('select * from CollectionMemberships where analysisId=?;', [str(analysis_id)])
+    print(attachment_data)
     if is_read_permitted(user_id, analysis):
-        collections = [mdt.get_collection_info(f'{DATADIR}/collections/{attachment["collection_id"]}.h5') for attachment in attachment_data]
+        collections = [mdt.get_collection_info(f'{DATADIR}/collections/{attachment["collectionId"]}.h5') for attachment in attachment_data]
+        print([collection for collection in collections if is_read_permitted(user_id, collection)])
         return [collection for collection in collections if is_read_permitted(user_id, collection)]
     raise AuthException(f'User {user_id} is not permitted to access analysis {analysis_id}')
 
@@ -539,6 +540,7 @@ def detach_user(current_user_id, target_user_id, group_id):
 def delete_user_group(user_id, group_id):
     if is_group_admin(user_id, group_id):
         db.query_db('delete from UserGroups where id=?;', [str(group_id)])
+        db.query_db('delete from GroupMemberships where groupMembership=?', [str(group_id)])
         return {'message': 'user group ' + str(group_id) + ' deleted'}
     raise AuthException('User %s not permitted to modify group %s' % (str(user_id), str(group_id)))
 

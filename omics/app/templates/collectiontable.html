@@ -17,7 +17,7 @@
           {% for key in collection_headings.keys() %}
             <td>
             {% if key == 'name' %}
-              <a href="{{ get_item_link(type, item) }}">{{ item[key] }}</a>
+              <a href="{{ get_item_link('collection', item) }}">{{ item[key] }}</a>
             {% elif key in USERKEYS %}
               <a href="{{ get_profile_link(item[key]) }}">{{ get_user_name(item[key]) }}</a>
             {% elif key=='dateModified' %}

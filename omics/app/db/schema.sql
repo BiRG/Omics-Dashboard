@@ -79,7 +79,8 @@ create table if not exists Invitations(
 create table if not exists GroupMemberships(
     userId integer,
     groupId integer,
-    groupAdmin integer /* Whether user is admin of this group */
+    groupAdmin integer, /* Whether user is admin of this group */
+    unique(userId, groupId)
 );
 
 /*
@@ -87,7 +88,8 @@ create table if not exists GroupMemberships(
  */
 create table if not exists AnalysisMemberships(
     analysisId integer,
-    groupMembership integer
+    groupMembership integer,
+    unique(analysisId, groupMembership)
 );
 
 /*
@@ -95,7 +97,8 @@ create table if not exists AnalysisMemberships(
  */
 create table if not exists WorkflowMemberships(
     workflowId integer,
-    analysisId integer
+    analysisId integer,
+    unique(workflowId, analysisId)
 );
 
 /*
@@ -103,6 +106,7 @@ create table if not exists WorkflowMemberships(
 */
 create table if not exists CollectionMemberships(
     collectionId integer,
-    analysisId integer
+    analysisId integer,
+    unique(collectionId, analysisId)
 );
 

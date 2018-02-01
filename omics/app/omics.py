@@ -337,7 +337,8 @@ def render_create_analysis():
         if request.method == 'POST':
             collection_ids = [int(collection_id) for collection_id in request.form.getlist('collection')]
             analysis = datamanip.create_analysis(user_id, request.form.to_dict())
-            [datamanip.attach_collection(user_id, analysis['id'], collection_id) for collection_id in collection_ids]
+            for collection_id in collection_ids:
+                datamanip.attach_collection(user_id, analysis['id'], collection_id)
             return redirect(url_for('render_analysis', analysis_id=analysis['id']))
         return render_template('createbase.html', type='Analysis', endpoint='render_create_analysis')
     except Exception as e:
