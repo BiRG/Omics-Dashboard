@@ -142,6 +142,7 @@ app.jinja_env.globals.update(get_parsing_modules=datamanip.get_parsing_modules)
 app.jinja_env.globals.update(get_samples=datamanip.get_samples)
 app.jinja_env.globals.update(get_analyses=datamanip.get_analyses)
 app.jinja_env.globals.update(get_collections=datamanip.get_collections)
+app.jinja_env.globals.update(get_users=datamanip.get_users())
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
@@ -363,18 +364,32 @@ def render_user_group_list():
     try:
         user_id = get_user_id()
         user_groups = datamanip.get_user_groups()
-        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description'}
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'createdBy': 'Created By'}
         return render_template('list.html', data=user_groups, type='User Groups', headings=headings)
     except Exception as e:
         return handle_exception_browser(e)
 
 
-@app.route('/usergroups', methods=['GET', 'DELETE'])
+@app.route('/usergroups/<group_id>', methods=['GET', 'DELETE'])
 def render_user_group(group_id=None):
     try:
-        user_id = get_user_id()
         user_group = datamanip.get_user_group(group_id)
         return render_template('entry.html', data=user_group, type='User Group')
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/usergroups/create', methods=['GET', 'POST'])
+def render_create_user_group():
+    try:
+        user_id = get_user_id()
+        if request.method == 'POST':
+            other_user_ids = [int(uid) for uid in request.form.getlist('user')]
+            user_group = datamanip.create_user_group(user_id, request.form.to_dict())
+            for other_user_id in other_user_ids:
+                datamanip.attach_user(user_id, other_user_id, user_group['id'])
+            return redirect(url_for('render_user_group', group_id=user_group['id']))
+        return render_template('createbase.html', type='User Group', endpoint='render_create_user_group')
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -492,6 +507,7 @@ def render_user_profile(user_id=None):
         return render_template('entry.html', type='User', data=user)
     except Exception as e:
         return handle_exception_browser(e)
+
 
 
 #  ROUTES FOR NON-BROWSER Clients

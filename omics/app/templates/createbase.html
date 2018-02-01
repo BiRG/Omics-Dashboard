@@ -44,8 +44,13 @@
           {% with data=get_preprocessing_modules() %}
             {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False) }}
           {% endwith %}
+        {% elif type == 'User Group' %}
+           {% with data=get_users() %}
+             {{ selector('user', 'Users', data, multiple=True) }}
+           {% endwith %}
         {% endif %}
 
+        {% if type.lower() != 'user group' %}
           <div class="form-group">
             <label for="userGroup">User Group</label>
             <select id="userGroup" name="userGroup" class="form-control selectpicker">
@@ -70,6 +75,7 @@
               <option value="none">Hidden</option>
             </select>
           </div>
+        {% endif %}
           <div class="form-group">
             <input class="btn btn-primary form-control" type="submit" value="Create">
           </div>
