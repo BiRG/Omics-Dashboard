@@ -45,7 +45,7 @@
             {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False) }}
           {% endwith %}
         {% elif type == 'User Group' %}
-           {% with data=get_users() %}
+           {% with data=users %}
              {{ selector('user', 'Users', data, multiple=True) }}
            {% endwith %}
         {% endif %}

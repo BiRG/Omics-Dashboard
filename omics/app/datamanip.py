@@ -492,11 +492,11 @@ def get_user_group(group_id):
 
 def create_user_group(user_id, data):
     db.query_db('insert into UserGroups (createdBy, name, description) values (?, ?, ?);',
-             [str(user_id), str(data.name), str(data.description)],
+             [str(user_id), str(data['name']), str(data['description'])],
              True)
     new_group = db.query_db('select * from UserGroups order by id desc limit 1;', (), True)
     db.query_db('insert into GroupMemberships (userId, groupId, groupAdmin) values(?, ?, ?);',
-             [str(user_id), str(new_group.id), '1'])
+             [str(user_id), str(new_group['id']), '1'])
     return new_group
 
 

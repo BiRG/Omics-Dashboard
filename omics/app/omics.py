@@ -142,7 +142,6 @@ app.jinja_env.globals.update(get_parsing_modules=datamanip.get_parsing_modules)
 app.jinja_env.globals.update(get_samples=datamanip.get_samples)
 app.jinja_env.globals.update(get_analyses=datamanip.get_analyses)
 app.jinja_env.globals.update(get_collections=datamanip.get_collections)
-app.jinja_env.globals.update(get_users=datamanip.get_users())
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
@@ -389,7 +388,7 @@ def render_create_user_group():
             for other_user_id in other_user_ids:
                 datamanip.attach_user(user_id, other_user_id, user_group['id'])
             return redirect(url_for('render_user_group', group_id=user_group['id']))
-        return render_template('createbase.html', type='User Group', endpoint='render_create_user_group')
+        return render_template('createbase.html', type='User Group', users=datamanip.get_users(), endpoint='render_create_user_group')
     except Exception as e:
         return handle_exception_browser(e)
 
