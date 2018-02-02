@@ -64,8 +64,8 @@ pre code {
   font-style: normal;
   font-weight: 400;
   src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
-  url('/static/webfonts/didact-gothic-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-  url('/static/webfonts/didact-gothic-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  url('../webfonts/didact-gothic-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+  url('../webfonts/didact-gothic-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
 
 @font-face {
@@ -73,8 +73,8 @@ pre code {
   font-style: normal;
   font-weight: 400;
   src: local('Arimo Regular'), local('Arimo-Regular'),
-  url('/static/webfonts/arimo-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-  url('/static/webfonts/arimo-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  url('../webfonts/arimo-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+  url('../webfonts/arimo-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
 
 h1, h2, h3, h4, h5, nav, th, button, a {
