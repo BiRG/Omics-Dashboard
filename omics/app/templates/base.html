@@ -17,106 +17,7 @@
       <link href="{{ url_for('static', filename='styles/bootstrap.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/fileinput.min.css') }}" rel="stylesheet">
-      <link href="https://fonts.googleapis.com/css?family=Oswald:500|Roboto:300" rel="stylesheet">
-
-      <style>
-        /*
-        Make bootstrap-select work with bootstrap 4 see (comment by grosser):
-        https://github.com/silviomoreto/bootstrap-select/issues/1135
-        */
-        .dropdown-toggle.btn-default {
-          color: #292b2c;
-          background-color: #fff;
-          border-color: #ccc;
-        }
-
-        .bootstrap-select.show>.dropdown-menu>.dropdown-menu {
-          display: block;
-        }
-
-        .bootstrap-select > .dropdown-menu > .dropdown-menu li.hidden{
-          display:none;
-        }
-
-        .bootstrap-select > .dropdown-menu > .dropdown-menu li a{
-          display: block;
-          width: 100%;
-          padding: 3px 1.5rem;
-          clear: both;
-          font-weight: 400;
-          color: #292b2c;
-          text-align: inherit;
-          white-space: nowrap;
-          background: 0 0;
-          border: 0;
-        }
-
-        .dropdown-menu > li.active > a {
-          color: #fff !important;
-          background-color: #337ab7 !important;
-        }
-
-        .bootstrap-select .check-mark::after {
-          content: "✓";
-        }
-
-        .bootstrap-select button {
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-
-        /* Make filled out selects be the same size as empty selects */
-        .bootstrap-select.btn-group .dropdown-toggle .filter-option {
-          display: inline !important;
-        }
-
-	pre code {
-          white-space: pre;
-	  overflow-x: auto;
-	  display: inline-block;
-	  min-width: 100%;
-	}
-	
-        @font-face {
-          font-family: 'Didact Gothic';
-          font-style: normal;
-          font-weight: 400;
-          src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
-          url('{{ url_for('static',  filename='webfonts/didact-gothic-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-          url('{{ url_for('static', filename='webfonts/didact-gothic-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-        }
-
-        @font-face {
-          font-family: 'Arimo';
-          font-style: normal;
-          font-weight: 400;
-          src: local('Arimo Regular'), local('Arimo-Regular'),
-          url('{{ url_for('static', filename='webfonts/arimo-v11-latin-regular.woff2') }}') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-          url('{{ url_for('static', filename='webfonts/arimo-v11-latin-regular.woff') }}') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-        }
-        h1, h2, h3, h4, h5, nav, th, button, a {
-          font-family: 'Didact Gothic', sans-serif !important;
-        }
-        p, div {
-          font-family: 'Arimo', sans-serif !important;
-        }
-	
-        body{
-          /*padding-top: 6%;*/
-          margin-bottom: 100px;
-        }
-        @-moz-document url-prefix() {
-          select.form-control {
-            padding-right: 25px;
-            background-image: url('{{ url_for('static', filename='img/icon-chevron-down-16.png') }}');
-            background-repeat: no-repeat;
-            background-position: calc(100% - 7px) 50%;
-            -moz-appearance: none;
-            appearance: none;
-          }
-        }
-      </style>
+      <link href="{{ url_for('static', filename='styles/omics.css') }}" rel="stylesheet">
     {%- endblock %}
   </head>
   <body>
@@ -222,6 +123,7 @@
     <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fileinput.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
     <script type="text/javascript">
       $(document).ready(function(){
         $('.selectpicker').selectpicker();
