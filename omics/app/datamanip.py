@@ -485,13 +485,19 @@ def get_attached_analyses(user_id, collection_id):
 def get_user_groups():
     user_groups = db.query_db('select * from UserGroups;')
     for user_group in user_groups:
-        user_group['users'] = [user['userId'] for user in db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group['id'])])]
+        group_members = get_group_members(user_group['id'])
+        user_group['members'] = group_members
+        user_group['users'] = [member['id'] for member in group_members]
+        user_group['admins'] = [member['id'] for member in group_members if member['groupAdmin']]
     return user_groups
 
 
 def get_user_group(group_id):
     user_group = db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
-    user_group['users'] = [user['userId'] for user in db.query_db('select userId from GroupMemberships where groupId=?;', [str(user_group['id'])])]
+    group_members = get_group_members(group_id)
+    user_group['members'] = group_members
+    user_group['users'] = [member['id'] for member in group_members]
+    user_group['admins'] = [member['id'] for member in group_members if member['groupAdmin']]
     return user_group
 
 
@@ -508,14 +514,28 @@ def create_user_group(user_id, data):
 def update_user_group(user_id, group_id, new_data):
     if is_group_admin(user_id, group_id):
         valid_keys = ['name', 'description']
-        query = 'update UserGroups set' + ','.join([' ? = ?' for key in new_data.keys if key in valid_keys]) + ' where id=?;'
-        params = []
-        [ params.extend([str(key), str(value)]) for key, value in new_data.items() if key in valid_keys ]
-        params.append(str(group_id))
-        db.query_db(query, params)
+        valid_data = {key: value for key, value in new_data.items() if key in valid_keys}
+        if len(valid_data):
+            query = 'update UserGroups set' + ','.join([f' {key} = ?' for key in valid_data.keys()]) + ' where id=?;'
+            params = [str(value) for key, value in new_data.items() if key in valid_keys]
+            params.append(str(group_id))
+            db.query_db(query, params)
         return db.query_db('select * from UserGroups where id=?;', [str(group_id)], True)
     raise AuthException('User %s is not authorized to modify user group %s' % (str(user_id), str(group_id)))
 
+
+def update_user_attachments(current_user_id, group_id, user_ids):
+    if is_group_admin(current_user_id, group_id):
+        user_ids = [int(user_id) for user_id in user_ids if int(user_id) != int(current_user_id)]
+        current_member_ids = [member['id'] for member in get_group_members(group_id)]
+        users_to_detach = [member_id for member_id in current_member_ids if member_id not in user_ids and member_id != current_user_id]
+        users_to_attach = [user_id for user_id in user_ids if user_id not in current_member_ids]
+        for user_id in users_to_attach:
+            attach_user(current_user_id, user_id, group_id)
+        for user_id in users_to_detach:
+            detach_user(current_user_id, user_id, group_id)
+        return {'message': f'Users {str(users_to_attach)} attached to group {group_id}. Users {str(users_to_detach)} detached from group {group_id}'}
+    raise AuthException(f'User {current_user_id} not authorized to modify group {group_id}')
 
 def attach_user(current_user_id, target_user_id, group_id):
     if is_group_admin(current_user_id, group_id):
@@ -559,10 +579,10 @@ def get_included_groups(user_id):
 # returns dict with keys ['id', 'name', 'groupAdmin']
 def get_group_members(group_id):
     query = 'select Users.id, Users.name, GroupMemberships.groupAdmin' \
-            'from Users' \
-            'inner join GroupMemberships on GroupMemberships.userId=Users.id' \
-            'where GroupMemberships.groupId=?'
-    return db.query_db(query, [group_id])
+            ' from Users' \
+            ' inner join GroupMemberships on GroupMemberships.userId=Users.id' \
+            ' where GroupMemberships.groupId=?'
+    return db.query_db(query, [str(group_id)])
 
 
 def create_invitation(user_id):

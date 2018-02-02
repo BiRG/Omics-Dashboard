@@ -6,6 +6,7 @@ import os
 import shutil
 from flask_cors import CORS
 from datetime import datetime
+import traceback
 
 
 app = Flask(__name__)
@@ -47,9 +48,11 @@ class LoginError(Exception):
     pass
 
 
-def log_exception(status, e):
+def log_exception(status, e, tb=""):
     with open(log_file_name, 'a+') as log_file:
         log_file.write(f'{datetime.now().replace(microsecond=0).isoformat(" ")} [{status}]: {str(e)}\n')
+        if tb:
+            log_file.write(f'Traceback: \n{tb}')
 
 
 # handle any exception thrown by a datamanip function
@@ -62,7 +65,8 @@ def handle_exception(e):
         log_exception(401, e)
         return jsonify({'message': str(e)}), 401
     log_exception(500, e)
-    return jsonify({'message': str(e)}), 500
+    tb = traceback.format_exc()
+    return jsonify({'message': str(e), 'traceback': tb}), 500
 
 
 def handle_exception_browser(e):
@@ -76,9 +80,10 @@ def handle_exception_browser(e):
     error_msg = str(e)
     if error_msg.lower() == 'not logged in':
         return redirect(url_for('browser_login'))
+    tb = traceback.format_exc()
     error_title = '500 Internal Server Error'
-    log_exception(500, e)
-    return render_template('error.html', fa_type='fa-exclamation-circle', error_msg=error_msg, error_title=error_title), 500
+    log_exception(500, e, tb)
+    return render_template('error.html', fa_type='fa-exclamation-circle', tb=tb, error_msg=error_msg, error_title=error_title), 500
 
 
 def validate_login(email, password):
@@ -132,6 +137,8 @@ def get_update_url(record_type, item):
         return url_for('get_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
         return url_for('render_job', job_id=item['id'])
+    elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
+        return url_for('get_user_group', group_id=item['id'])
     return '#'
 
 
@@ -340,7 +347,7 @@ def render_create_analysis():
             for collection_id in collection_ids:
                 datamanip.attach_collection(user_id, analysis['id'], collection_id)
             return redirect(url_for('render_analysis', analysis_id=analysis['id']))
-        return render_template('createbase.html', type='Analysis', endpoint='render_create_analysis')
+        return render_template('createbase.html', type='Analysis', groups=datamanip.get_user_groups(), endpoint='render_create_analysis')
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -371,12 +378,16 @@ def render_user_group_list():
 
 @app.route('/usergroups/<group_id>', methods=['GET', 'DELETE'])
 def render_user_group(group_id=None):
-    #try:
+    try:
+        user_id = get_user_id()
+        if request.method == 'DELETE':
+            datamanip.delete_user_group(user_id, group_id)
+            return redirect(url_for('render_user_group_list'))
         user_group = datamanip.get_user_group(group_id)
-        print(user_group)
-        return render_template('entry.html', type='User Group', data=user_group)
-    #except Exception as e:
-    #    return handle_exception_browser(e)
+        del user_group['members']
+        return render_template('entry.html', type='User Group', data=user_group, all_users=datamanip.get_users())
+    except Exception as e:
+        return handle_exception_browser(e)
 
 
 @app.route('/usergroups/create', methods=['GET', 'POST'])
@@ -709,7 +720,7 @@ def get_analysis(analysis_id=None):
 
 
 @app.route('/api/usergroups', methods=['GET', 'POST'])
-def list_usergroups():
+def list_user_groups():
     try:
         user_id = get_user_id()
         if request.method == 'GET':
@@ -721,15 +732,18 @@ def list_usergroups():
 
 
 @app.route('/api/usergroups/<group_id>', methods=['GET', 'POST', 'DELETE'])
-def get_usergroup(group_id=None):
+def get_user_group(group_id=None):
     try:
         user_id = get_user_id()
         if request.method == 'GET':
-            return jsonify({})
+            return jsonify(datamanip.get_user_group(group_id))
         if request.method == 'POST':
-            return jsonify({})
+            new_data = request.get_json(force=True)
+            if 'users' in new_data:
+                datamanip.update_user_attachments(user_id, group_id, new_data['users'])
+            return jsonify(datamanip.update_user_group(user_id, group_id, new_data))
         if request.method == 'DELETE':
-            return jsonify({})
+            return jsonify(datamanip.delete_user_group(user_id, group_id))
     except Exception as e:
         return handle_exception(e)
 

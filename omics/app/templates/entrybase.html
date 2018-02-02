@@ -1,6 +1,6 @@
 {# The dashboard puts resources belonging to the user front and center#}
 {% extends "base.html" %}
-{% set protectedKeys =  ['owner', 'id', 'rowid', 'groupPermissions','allPermissions', 'userGroup', 'dateModified'] %}
+{% set protectedKeys =  ['owner', 'admins', 'id', 'rowid', 'createdBy', 'groupPermissions','allPermissions', 'userGroup', 'dateModified'] %}
 {% block content %}
   <div class="container">
     <div class="page-header">
@@ -49,15 +49,17 @@
 	  {% endif %}
           {% if key in USERKEYS %}
           <td class="attribute-value"><a href="{{ url_for('render_user_profile', user_id=value) }}">{{ get_user_name(value) }}</a></td>
-          {% elif key=='users' %}
-            <td class="attribute-value">
-            <ul>
-            {% for uid in value %}
-              <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
+          {% elif key=='users' and type.lower() == 'user group' %}
+	    {% include 'usergroupeditor.html' %}
+	  {% elif key == 'admins' %}
+	  <td class="admin-list">
+	    <ul>
+	    {% for uid in value %}
+	      <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
 	    {% endfor %}
-            </ul>
-            </td>
-          {% elif key=='log' %}
+	    </ul>
+	  </td>
+	  {% elif key=='log' %}
           {% elif key=='dateModified' %}
             <td class="attribute-value">{{ datetime.utcfromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S (UTC)') }}</td>
           {% elif get_user_id() == data['owner'] and key in ['groupPermissions', 'allPermissions'] %}
@@ -124,11 +126,10 @@
     });
     $('#collections').DataTable({
         responsive: true
-    }); //will probably cause error in the browser
+    });
   });
 
   $('#delete-form').submit(function() {
-      console.log('Submit');
       if ($('#inputName').val() === '{{ data['name'] }}'){
           $.ajax({
               url: '{{ get_update_url(type, data) }}',
@@ -166,9 +167,8 @@
       var url = '{{ get_update_url(type, data) }}';
       var reqData = {};
       var parentClass = $(this).parent().prev().attr('class');
-      console.log('parentClass:');
-      if (parentClass === 'permission-select' || parentClass === 'user-group-select'){
-          reqData[$(this).parent().prev().prev().text()] = $(this).parent().prev().find('select').find(':selected').val();
+      if (parentClass === 'permission-select' || parentClass === 'user-group-select' || parentClass === 'user-group-editor'){
+          reqData[$(this).parent().prev().prev().text()] = $(this).parent().prev().find('select').val();
       }
       else {
           reqData[$(this).parent().prev().prev().text()] = $(this).parent().prev().text();
@@ -184,6 +184,7 @@
           })
           .fail(function(res){
               $('#failModalLabel').text('Update Failed');
+	      console.log(res.responseJSON)
               $('#failModalBody').text(res.responseJSON.message);
               $('#failModal').modal();
           });

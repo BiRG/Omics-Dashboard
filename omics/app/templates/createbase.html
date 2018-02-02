@@ -56,7 +56,7 @@
             <select id="userGroup" name="userGroup" class="form-control selectpicker">
               <option value="-1">None</option>
               {% for group in groups %}
-              <option value="{{ group['rowid'] }}">{{ group['name'] }}</option>
+              <option value="{{ group['id'] }}">{{ group['name'] }}</option>
               {% endfor %}
             </select>
           </div>
