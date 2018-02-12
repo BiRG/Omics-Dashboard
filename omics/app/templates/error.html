@@ -1,6 +1,7 @@
 {# The dashboard puts resources belonging to the user front and center#}
 {% extends "base.html" %}
 {% block content %}
+  <div id="content" class="container-fluid" style="padding: 2%;">
     <div class="container">
       <div class="alert alert-danger">
         <h2><i class="fas {{ fa_type }}"></i> {{ error_title }} <i class="fas {{ fa_type }}"></i></h2>
@@ -10,4 +11,5 @@
         {% endif %}
       </div>
     </div>
+  </div>
 {% endblock %}

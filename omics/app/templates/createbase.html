@@ -11,7 +11,7 @@
   </div>
 {% endmacro %}
 {% block content %}
-
+<div id="contents" class="container-fluid" style="padding: 2%;">
   <div class="card mx-auto my-auto d-block" style="max-width: 25rem;">
     <h4 class="card-header">{{ type }} Metadata</h4>
     <div class="card-body">
@@ -36,8 +36,8 @@
         {% elif type == 'Sample' %}
           <div class="form-group">
             <label for="fileInput">Select File</label>
-            <input type="file" class="form-control" aria-label="Filename" id="fileInput" name="file">
-          </div>
+	    <input type="file" class="file form-control" data-show-preview="false" data-show-remove="false" data-show-upload="false" aria-label="Filename" id="fileInput" name="file">
+	  </div>
           {% with data=get_parsing_modules() %}
             {{ selector('parser', 'File Type (Parser)', data, multiple=False) }}
           {% endwith %}
@@ -88,4 +88,5 @@
         {% endif %}
       </div>
     </div>
+</div>
 {% endblock %}
