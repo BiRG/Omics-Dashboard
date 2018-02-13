@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: 13CNMR
 baseCommand:
-  - NMRfreqscale.py
+  - processNMR.py
 inputs:
   - id: inputFile
     type: File
@@ -13,6 +13,16 @@ inputs:
     inputBinding:
       position: 1
       valueFrom: '150819500.0'
+  - id: referenceFrequency
+    type: float?
+    inputBinding:
+      position: 2
+      valueFrom: '0.0'
+  - id: referenceWindow
+    type: float?
+    inputBinding:
+      position: 3
+      valueFrom: '0.03'
 outputs:
   - id: output
     type: File
@@ -21,4 +31,4 @@ outputs:
 label: 13C-NMR
 requirements:
   - class: DockerRequirement
-    dockerPull: 'wsubirg/omics-dashboard:spectra-processing-cpu'
+    dockerPull: 'wsubirg/omics-dashboard:spectra-processing-gpu'

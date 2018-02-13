@@ -20,7 +20,7 @@ def paths_agree(file1, file2, path, dim):
         return len(file1[path].shape) == len(file2[path].shape) == dim == 1
 
 
-def h5_merge(infilenames, outfilename, orientation="vert", reserved_paths=[]):
+def h5_merge(infilenames, outfilename, orientation="horiz", reserved_paths=[]):
     files = [h5py.File(filename, "r", driver="core", libver="latest") for filename in infilenames]
     # collect all common paths between the files
     paths = set()

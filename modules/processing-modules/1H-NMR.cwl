@@ -13,6 +13,16 @@ inputs:
     inputBinding:
       position: 1
       valueFrom: '599733800.0'
+  - id: referenceFrequency
+    type: float?
+    inputBinding:
+      position: 2
+      valueFrom: '0.0'
+  - id: referenceWindow
+    type: float?
+    inputBinding:
+      position: 3
+      valueFrom: '0.03'
 outputs:
   - id: output
     type: File
