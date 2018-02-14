@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: 31PNMR
 baseCommand:
-  - NMRfreqscale.py
+  - processNMR.py
 inputs:
   - id: inputFile
     type: File
