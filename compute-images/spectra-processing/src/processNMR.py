@@ -11,4 +11,4 @@ x_window = np.float64(sys.argv[4])
 shutil.copy(filename, 'out.h5')
 
 NMRproc.scale('out.h5', frequency)
-NMRproc.reference('out.h5', reference, x_window)
+# NMRproc.reference('out.h5', reference, x_window) # this breaks some workflows

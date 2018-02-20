@@ -7,8 +7,10 @@ def reference(filename, reference, x_window):
     ref_min = reference - x_window
     ref_max = reference + x_window
     with h5py.File('out.h5', 'r+') as file:
-        sub_ind = np.where(np.logical_and(file['x'][:]<=ref_min, file['x'][:]>=ref_max))
-        reference_ind = np.argmax(file['Y'][sub_ind])
+        sub_ind = np.where(np.logical_and(file['x'][:]<=ref_max, file['x'][:]>=ref_min))
+        print(sub_ind)
+        reference_ind = np.argmax(file['Y'][sub_ind, 0])
+        print(reference_ind)
         file['x'][:] = file['x'][:] - reference
     
 def scale(filename, frequency):
