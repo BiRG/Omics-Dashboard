@@ -1,7 +1,5 @@
 import h5py
-import numpy as np
-
-
+import os
 def get_paths(group, path):
     out = set()
     for key in group.keys():
@@ -35,6 +33,10 @@ def h5_merge(infilenames, outfilename, orientation="horiz", reserved_paths=[]):
             outfile.create_dataset(path, data=files[0][path])
         else:
             outfile.create_dataset(path, data=np.concatenate([file[path] for file in files], axis=concat_axis))
+    # create a dataset which stores sample ids
+    outfile.create_dataset("sampleId", (1, len(infilenames)))
+    for i in range(0, len(infilenames)):
+        outfile["baseSampleId"][i] = int(os.path.basename(os.path.splitext(infilenames[i])[0])) # not the most elegant, but works for now
     outfile.close()
     for file in files:
         file.close()
