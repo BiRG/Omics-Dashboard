@@ -5,8 +5,9 @@ from passlib.hash import pbkdf2_sha256
 import os
 import shutil
 from flask_cors import CORS
-from datetime import datetime
+import datetime
 import traceback
+import jwt
 
 
 app = Flask(__name__)
@@ -50,7 +51,7 @@ class LoginError(Exception):
 
 def log_exception(status, e, tb=""):
     with open(log_file_name, 'a+') as log_file:
-        log_file.write(f'{datetime.now().replace(microsecond=0).isoformat(" ")} [{status}]: {str(e)}\n')
+        log_file.write(f'{datetime.datetime.now().replace(microsecond=0).isoformat(" ")} [{status}]: {str(e)}\n')
         if tb:
             log_file.write(f'Traceback: \n{tb}')
 
@@ -93,10 +94,26 @@ def validate_login(email, password):
     return True
 
 
+# returns a str value containing JWT (we handle everything in unicode and convert request bodies to JSON)
+def get_jwt(email, password):
+    validate_login(email, password)
+    user = datamanip.get_user_by_email(email)
+    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256')
+
+
 # get user id, if user not logged in, raise an exception. Exception handler will send 401
+# should use optional token option if used to protect route with JWT (in which case there is no session)
 def get_user_id():
     if session.get('logged_in'):
         return session['user']['id']
+    # check for valid token
+    auth_header = request.headers.get('Authorization')
+    # Header should be in format "JWT <>" or "Bearer <>"
+    token = auth_header.split(' ')[1]
+    user = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
+    if user is None or not pbkdf2_sha256.verify(user['password']):
+        raise ValueError('Token invalid. Please get new token')
     raise LoginError('Not logged in')
 
 
@@ -150,7 +167,7 @@ app.jinja_env.globals.update(get_samples=datamanip.get_samples)
 app.jinja_env.globals.update(get_analyses=datamanip.get_analyses)
 app.jinja_env.globals.update(get_collections=datamanip.get_collections)
 app.jinja_env.globals.update(get_user_name=get_user_name)
-app.jinja_env.globals.update(datetime=datetime)
+app.jinja_env.globals.update(datetime=datetime.datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
 app.jinja_env.globals.update(int=int)
 app.jinja_env.globals.update(str=str)
@@ -522,7 +539,11 @@ def render_user_profile(user_id=None):
 
 
 
-#  ROUTES FOR NON-BROWSER Clients
+# ROUTES FOR NON-BROWSER Clients
+# These routes can be authenticated using the session cookie or a JWT in the Authentication header
+# login/logout used for sessions, authenticate used for JWT
+# deauthenticating a JWT isn't possible. JWTs expire in 24 hours.
+
 @app.route('/api/login', methods=['POST'])
 def login():
     credentials = request.get_json(force=True)
@@ -542,16 +563,27 @@ def logout():
     return jsonify({'message': 'logged out'}), 200
 
 
+@app.route('/api/authenticate')
+def jwt_authenticate():
+    credentials = request.get_json(force=True)
+    if validate_login(credentials['email'], credentials['password']):
+        token = get_jwt(credentials['email'], credentials['password'])
+        return jsonify({'token': token}), 200
+    return jsonify({"message": "authentication failed"}), 403
+
+
 @app.route('/api/currentuser')
 def get_current_user():
-    if session.get('logged_in'):
-        return jsonify(session['user']), 200
-    return jsonify({'message': 'not logged in'}), 404
+    try:
+        user = get_current_user()
+        return jsonify(user), 200
+    except Exception as e:
+        return handle_exception(e)
 
 
 @app.route('/api/')
 def send_ok():
-    return jsonify({'message': 'API works!'}), 200
+    return jsonify({'message': 'API works! See documentation.'}), 200
 
 
 @app.route('/api/users', methods=['GET', 'POST'])
@@ -808,13 +840,16 @@ def get_invitation():
 
 
 # this is consumed by the job server to clean up files created to facilitate workflow execution
+# this uses its own authorization header separate from the JWT for user-facing routes
+# this should only be used by the jobserver.
+# In the docker-compose set up, the jobserver only allows connections from within the 20-bit block (172.16.0.0/12),
+# usually other containers. This will have to be changed to something stricter (probably related to JWT) if the
+# jobserver runs on another host outside the Docker subnet.
 @app.route('/api/finalize', methods=['POST'])
 def finalize_job():
-    #print('finalize job!')
     try:
         data_type = request.args['data_type']
         if data_type.lower() not in ['collection', 'sample']:
-            #print(f'data_type.lower():{str(e)}')
             raise ValueError('invalid data_type')
 
         destdir = f'{DATADIR}/{data_type.lower()}s'
@@ -823,14 +858,12 @@ def finalize_job():
         if datamanip.check_jobserver_token(token):
             outfile = body['output']['outputFile']['path']
             next_id = datamanip.get_next_id(destdir)
-            #print('move file')
             collection = f'{destdir}/{next_id}.h5'
             os.rename(outfile, collection)
             # delete directory containing temp files (using key in auth header)
             shutil.rmtree(f'{DATADIR}/tmp/{token}', ignore_errors=True)
         return jsonify({'path': collection})
     except Exception as e:
-        #print(str(e))
         return handle_exception(e)
 
 

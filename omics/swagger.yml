@@ -1,0 +1,66 @@
+swagger: "2.0"
+info:
+  description: "This is used to control the LIMS side of Omics Dashboard"
+  version: "1.0.0"
+  title: "Omics Dashboard"
+  contact:
+    email: "foose.3@wright.edu"
+  license:
+    name: "GNU AGPL v3.0"
+    url: "https://www.gnu.org/licenses/agpl-3.0.en.html"
+host: "birg.cs.wright.edu"
+basePath: "/omics/api"
+tags:
+- name: "users"
+  description: "Management of Users"
+- name: "collections"
+  description: "Management of Collections"
+- name: "analyses"
+  description: "Management of Analyses"
+- name: "usergroups"
+  description: "Management of User Groups"
+schemes:
+- "https"
+paths:
+  /authenticate:
+    post:
+      tags:
+      - "users"
+      summary: "Get a JSON Webtoken to authenticate to the service"
+      description: ""
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Username and password combination in JSON"
+        required: true
+        schema:
+          $ref: "#/definitions/AuthPair"
+      responses:
+        403: 
+          description: "Authentication Failed"
+        200:
+          description: "Authentication Succeeded"
+          schema:
+            $ref: "#/definitions/AuthResponse"
+definitions:
+  AuthPair:
+    type: "object"
+    properties:
+      email:
+        type: "string"
+      password:
+        type: "string"
+  AuthResponse:
+    type: "object"
+    properties:
+      token:
+        type: "string"
+        description: "JSON webtoken to be used in Authorization header of request in format 'JWT < token >'"
+externalDocs:
+    description: "Find out more about Omics Dashboard"
+    url: "https://github.com/BiRG/Omics-Dashboard"
+

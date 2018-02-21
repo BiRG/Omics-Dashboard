@@ -1,5 +1,8 @@
 import h5py
 import os
+import numpy as np
+
+
 def get_paths(group, path):
     out = set()
     for key in group.keys():
