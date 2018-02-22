@@ -99,7 +99,7 @@ def get_jwt(email, password):
     validate_login(email, password)
     user = datamanip.get_user_by_email(email)
     user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256')
+    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
 
 # get user id, if user not logged in, raise an exception. Exception handler will send 401
@@ -107,13 +107,18 @@ def get_jwt(email, password):
 def get_user_id():
     if session.get('logged_in'):
         return session['user']['id']
-    # check for valid token
-    auth_header = request.headers.get('Authorization')
-    # Header should be in format "JWT <>" or "Bearer <>"
-    token = auth_header.split(' ')[1]
-    user = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
-    if user is None or not pbkdf2_sha256.verify(user['password']):
-        raise ValueError('Token invalid. Please get new token')
+    # check for authorization header
+    if 'Authorization' in request.headers:
+        auth_header = request.headers.get('Authorization')
+        # Header should be in format "JWT <>" or "Bearer <>"
+        try:
+            token = auth_header.split(' ')[1]
+            # if this is invalid, jwt.decode will throw. So no need to check password
+            user = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
+            if user is not None:
+                return user['id']
+        except Exception as e:
+            raise LoginError('not authenticated')
     raise LoginError('Not logged in')
 
 
@@ -563,19 +568,19 @@ def logout():
     return jsonify({'message': 'logged out'}), 200
 
 
-@app.route('/api/authenticate')
+@app.route('/api/authenticate', methods=['POST'])
 def jwt_authenticate():
     credentials = request.get_json(force=True)
     if validate_login(credentials['email'], credentials['password']):
         token = get_jwt(credentials['email'], credentials['password'])
-        return jsonify({'token': token}), 200
+        return jsonify({'token': str(token)}), 200
     return jsonify({"message": "authentication failed"}), 403
 
 
 @app.route('/api/currentuser')
 def get_current_user():
     try:
-        user = get_current_user()
+        user = get_user_id()
         return jsonify(user), 200
     except Exception as e:
         return handle_exception(e)

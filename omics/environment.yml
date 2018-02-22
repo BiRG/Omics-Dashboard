@@ -40,6 +40,7 @@ dependencies:
 - libgfortran-ng=7.2.0=h9f7466a_2
 - mkl=2018.0.1=h19d6760_4
 - numpy=1.14.0=py36h3dfced4_1
+- pyjwt==1.5.3
 - pip:
   - avro-cwl==1.8.4
   - cachecontrol==0.11.7
