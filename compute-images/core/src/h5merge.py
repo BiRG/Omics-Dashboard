@@ -22,7 +22,7 @@ def h5_merge(infilenames, outfilename, orientation="vert"):
     merge_paths = [path for path in paths
                   if all([(path in file) and file[path].shape[dim_ind] == files[0][path].shape[dim_ind]
                           for file in files])]
-    outfile = h5py.File(outfilename, "w", driver="core", libver="latest")
+    outfile = h5py.File(outfilename, "w", driver="core")
     for path in merge_paths:
         dim_ind = 1 if orientation == "horiz" else 0 # opposite of the path checking
         outfile.create_dataset(path, data=np.concatenate([file[path] for file in files], dim_ind))

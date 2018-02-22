@@ -706,7 +706,7 @@ def get_sample(sample_id=None):
         return handle_exception(e)
 
 
-@app.route('/api/sample/download/<sample_id>', methods=['GET'])
+@app.route('/api/samples/download/<sample_id>', methods=['GET'])
 def download_sample(sample_id=None):
     try:
         user_id = get_user_id()
