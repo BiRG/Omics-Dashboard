@@ -1,4 +1,5 @@
 from flask import Flask, redirect, request, jsonify, g, session, render_template, url_for, make_response, send_from_directory
+from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.utils import secure_filename
 import datamanip
 from passlib.hash import pbkdf2_sha256
@@ -580,8 +581,8 @@ def jwt_authenticate():
 @app.route('/api/currentuser')
 def get_current_user():
     try:
-        user = get_user_id()
-        return jsonify(user), 200
+        user_id = get_user_id()
+        return jsonify(datamanip.get_user(user_id)), 200
     except Exception as e:
         return handle_exception(e)
 
@@ -666,17 +667,22 @@ def download_collection(collection_id=None):
 def upload_collection():
     try:
         user_id = get_user_id()
-        new_data = request.get_json(force=True)
+        new_data = dict(request.form)
+        # with multipart/form-data, everything is a list for some reason
+        # we can't use lists of unicode strings as attributes in hdf5
+        # our preferred schema doesn't allow for non-scalar attributes anyway
+        new_data = {key: value[0] if type(value) is list else value for key, value in new_data.items()}
         if 'file' not in request.files:
             raise ValueError('No file uploaded')
         collection_file = request.files['file']
         if collection_file.filename == '':
             raise ValueError('No file uploaded')
         if collection_file:
-            filename = secure_filename(collection_file.filename)
-            collection_file.save(os.path.join(app.config['UPLOAD_DIR'], filename))
+            filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(collection_file.filename))
+            collection_file.save(filename)
             if datamanip.validate_file(filename):
-                return jsonify(datamanip.upload_collection(user_id, filename, new_data))
+                collection_data = datamanip.upload_collection(user_id, filename, new_data)
+                return jsonify(collection_data)
         raise ValueError('uploaded file not valid')
     except Exception as e:
         return handle_exception(e)

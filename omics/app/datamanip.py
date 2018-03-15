@@ -285,7 +285,7 @@ def upload_collection(user_id, filename, new_data):
         new_data['owner'] = user_id
         mdt.update_metadata(filename, new_data)
         os.rename(filename, new_filename)
-        return mdt.get_collection_metadata(new_filename)
+        return mdt.get_collection_info(new_filename)
     raise Exception('file not valid')
 
 
