@@ -9,7 +9,9 @@ from flask_cors import CORS
 import datetime
 import traceback
 import jwt
-
+import base64
+import uuid
+from cgi import parse_header
 
 app = Flask(__name__)
 CORS(app)
@@ -665,27 +667,49 @@ def download_collection(collection_id=None):
 
 @app.route('/api/collections/upload/', methods=['POST'])
 def upload_collection():
-    try:
-        user_id = get_user_id()
-        new_data = dict(request.form)
-        # with multipart/form-data, everything is a list for some reason
-        # we can't use lists of unicode strings as attributes in hdf5
-        # our preferred schema doesn't allow for non-scalar attributes anyway
-        new_data = {key: value[0] if type(value) is list else value for key, value in new_data.items()}
-        if 'file' not in request.files:
-            raise ValueError('No file uploaded')
-        collection_file = request.files['file']
-        if collection_file.filename == '':
-            raise ValueError('No file uploaded')
-        if collection_file:
-            filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(collection_file.filename))
-            collection_file.save(filename)
-            if datamanip.validate_file(filename):
-                collection_data = datamanip.upload_collection(user_id, filename, new_data)
-                return jsonify(collection_data)
-        raise ValueError('uploaded file not valid')
-    except Exception as e:
-        return handle_exception(e)
+    with open('/data/debuglog', 'w') as logfile:
+        try:
+            content_type = parse_header(request.headers.get('Content-Type'))[0]
+            user_id = get_user_id()
+            if content_type == 'multipart/form-data':
+                new_data = dict(request.form)
+                # with multipart/form-data, everything is a list for some reason
+                # we can't use lists of unicode strings as attributes in hdf5
+                # our preferred schema doesn't allow for non-scalar attributes anyway
+                new_data = {key: value[0] if type(value) is list else value for key, value in new_data.items()}
+                if 'file' not in request.files:
+                    raise ValueError('No file uploaded')
+                collection_file = request.files['file']
+                if collection_file.filename == '':
+                    raise ValueError('No file uploaded')
+                if collection_file:
+                    filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(collection_file.filename))
+                    collection_file.save(filename)
+                    if datamanip.validate_file(filename):
+                        collection_data = datamanip.upload_collection(user_id, filename, new_data)
+                        return jsonify(collection_data)
+                raise ValueError('uploaded file not valid')
+            elif content_type == 'application/json':
+                # for request from MATLAB client that doesn't support multipart/form-data
+                # file is base64 encoded.
+                new_data = request.get_json()
+                if 'file' not in new_data:
+                    raise ValueError('No file uploaded')
+                collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+                del new_data['file']
+                filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
+                with open(filename, 'wb') as file:
+                    file.write(collection_file_data)
+                if datamanip.validate_file(filename):
+                    logfile.write('file validated\n')
+                    collection_data = datamanip.upload_collection(user_id, filename, new_data)
+                    logfile.write('return jsonify\n')
+                    return jsonify(collection_data)
+                logfile.write(f'file invalid')
+            logfile.write(f'wrong content type: {content_type}\n')
+            raise ValueError('invalid content type')
+        except Exception as e:
+            return handle_exception(e)
 
 
 @app.route('/api/samples', methods=['GET'])
@@ -748,16 +772,34 @@ def list_analyses():
         return handle_exception(e)
 
 
+@app.route('/api/analyses/attach/<analysis_id>', methods=['POST'])
+def attach_collection(analysis_id=None):
+    try:
+        user_id = get_user_id()
+        data = request.get_json()
+        if 'collectionIds' in data:
+            for collection_id in data['collectionIds']:
+                res_data = datamanip.attach_collection(user_id, analysis_id, collection_id)
+        elif 'collectionId' in data:
+            res_data = datamanip.attach_collection(user_id, analysis_id, data['collectionId'])
+        else:
+            raise ValueError('No collection id(s) specified')
+        return jsonify(res_data)
+    except Exception as e:
+        return handle_exception(e)
+
 @app.route('/api/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
 def get_analysis(analysis_id=None):
     try:
         user_id = get_user_id()
         if request.method == 'GET':
-            return jsonify(datamanip.get_analysis(user_id, analysis_id))
+            res_data = datamanip.get_analysis(user_id, analysis_id)
+            res_data['collections'] = datamanip.get_attached_collections(user_id, analysis_id)
         if request.method == 'POST':
-            return jsonify(datamanip.update_analysis(user_id, analysis_id, request.get_json(force=True)))
+            res_data = datamanip.update_analysis(user_id, analysis_id, request.get_json(force=True))    
         if request.method == 'DELETE':
-            return jsonify(datamanip.delete_analysis(user_id, analysis_id))
+            res_data = datamanip.delete_analysis(user_id, analysis_id)
+        return jsonify(res_data)
     except Exception as e:
         return handle_exception(e)
 
