@@ -28,8 +28,11 @@ RUN tar xvf docker.tgz
 RUN ln -s /docker/docker /usr/bin/docker
 
 ADD workflow-service /app/
-ADD tools/*.py /usr/local/bin
-ADD ../omics/app/file_tools/* /usr/local/bin
+ADD tools/*.py /usr/local/bin/
+# We're not allowed to do the below
+# need to find a better way to incorporate this code into both
+# might want to bundle accessory functions into a package
+# ADD ../omics/app/file_tools/* /usr/local/bin/
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

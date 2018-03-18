@@ -41,10 +41,21 @@ def get_csv(filename, path):
     s = StringIO()
     if dataset is not None:
         for row in dataset:
-            s.write(','.join([str(item) for item in row]))
+            s.write(convert_row(row))
             s.write('\n')
         return s.getvalue()
     raise ValueError('File or path not found')
+
+
+def convert_row(row):
+    if isinstance(row, bytes):
+        return row.decode('ascii')
+    else:
+        return ','.join([convert_cell(cell) for cell in row])
+
+
+def convert_cell(cell):
+    return cell.decode('ascii') if isinstance(cell, bytes) else str(cell)
 
 
 def iterate_dataset_paths(group, paths):
