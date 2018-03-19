@@ -289,13 +289,13 @@ def render_upload_sample():
     try:
         if request.method == 'POST':
             user_id = get_user_id()
-            file = request.files['file']
-            filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(file.filename))
-            file.save(filename)
+            files = request.files.getlist('files')
+            filenames = [os.path.join(app.config['UPLOAD_DIR'], secure_filename(file.filename)) for file in files]
+            [file.save(filename) for file, filename in zip(files, filenames)]
             metadata = request.form.to_dict()
             metadata['owner'] = user_id
             metadata['createdBy'] = user_id
-            workflow_data = datamanip.create_sample_creation_workflow(filename, metadata)
+            workflow_data = datamanip.create_sample_creation_workflow(filenames, metadata)
             datamanip.start_job(workflow_data['workflow_filename'], workflow_data['job'], workflow_data['token'],
                                 data_type='sample', owner=user_id)
             return redirect(url_for('render_job_list'))
@@ -340,9 +340,12 @@ def render_create_collection():
         if request.method == 'POST':
             #print('get form data:\n')
             form_data = request.form.to_dict()
+            with open('/data/logs/omics.log', 'a+') as log_file:
+                log_file.write(f'form_data:\n{form_data}\n')
             sample_ids = [int(sample_id) for sample_id in request.form.getlist('sample')]
             del form_data['sample']
-            #print('datamanip.create_copllection:\n')
+            sort_by = form_data['sortBy']
+            del form_data['sortBy']
             data = datamanip.create_collection(get_user_id(), sample_ids, form_data)
             collection_id = data['id']
             return redirect(url_for('render_collection', collection_id=collection_id))
@@ -716,7 +719,7 @@ def upload_collection():
 def list_samples():
     try:
         user_id = get_user_id()
-        return jsonify(datamanip.get_collections(user_id))
+        return jsonify(datamanip.get_samples(user_id))
     except Exception as e:
         return handle_exception(e)
 
@@ -734,6 +737,22 @@ def get_sample(sample_id=None):
             return jsonify(datamanip.delete_sample(user_id, sample_id))
     except Exception as e:
         return handle_exception(e)
+
+
+@app.route('/api/samples/common_attributes', methods=['POST'])
+def get_common_attributes():
+    try:
+        user_id = get_user_id()
+        data = request.get_json(force=True)
+        samples = [datamanip.get_sample(user_id, sample_id) for sample_id in data['samples']]
+        protected_keys = ['allPermissions', 'createdBy', 'datasets', 'description', 'groupPermissions', 
+                          'groups', 'id', 'name', 'owner', 'parser', 'path', 'preproc', 'userGroup']
+        common_keys = [item for item in samples[0].keys() 
+                       if item not in protected_keys and all([item in sample for sample in samples])]
+        return jsonify(common_keys)
+    except Exception as e:
+        return handle_exception(e)
+
 
 
 @app.route('/api/samples/download/<sample_id>', methods=['GET'])
@@ -909,13 +928,14 @@ def finalize_job():
         token = request.headers['Authorization']
         body = request.get_json()
         if datamanip.check_jobserver_token(token):
-            outfile = body['output']['outputFile']['path']
+            outfiles = [output_file['path'] for output_file in body['output']['outputFiles']]
             next_id = datamanip.get_next_id(destdir)
-            collection = f'{destdir}/{next_id}.h5'
-            os.rename(outfile, collection)
+            collection_ids = [i for i in range(next_id, next_id + len(outfiles))]
+            collections = [f'{destdir}/{collection_id}.h5' for collection_id in collection_ids]
+            [os.rename(outfile, collection) for outfile, collection in zip(outfiles, collections)]
             # delete directory containing temp files (using key in auth header)
             shutil.rmtree(f'{DATADIR}/tmp/{token}', ignore_errors=True)
-        return jsonify({'path': collection})
+        return jsonify({'paths': collections})
     except Exception as e:
         return handle_exception(e)
 

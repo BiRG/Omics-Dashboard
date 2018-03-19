@@ -1,11 +1,11 @@
 class: CommandLineTool
 cwlVersion: v1.0
-id: createcollection
+id: createcollections
 baseCommand:
-  - createcollection.py
+  - createcollections.py
 inputs:
-  - id: inputFile
-    type: File
+  - id: inputFiles
+    type: File[]
     inputBinding:
       position: 0
   - id: metadataFile
@@ -18,10 +18,7 @@ inputs:
       position: 2
 outputs:
   - id: output
-    type: File
+    type: File[]
     outputBinding:
       glob: '*.h5'
-label: Create Collection
-requirements:
-  - class: DockerRequirement
-    dockerPull: 'wsubirg/omics-dashboard:core'
+label: Create Collection(s)

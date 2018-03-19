@@ -433,6 +433,8 @@ def create_analysis(user_id, data):
 
 def delete_analysis(user_id, analysis_id):
     analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
+    if analysis is None:
+        return {'message': f'Analysis {analysis_id} does not exist'}
     if is_write_permitted(user_id, analysis):
         db.query_db('delete from Analyses where id=?;', [str(analysis_id)])
         return {'message': 'analysis ' + str(analysis_id) + ' deleted'}
@@ -638,8 +640,6 @@ def get_parsing_modules():
 def start_job(workflow_path, request_data, token, data_type='collection', owner=-1):
     params = {'wf': f'{workflow_path}', 'data_type': data_type, 'owner': owner}
     headers = {'Authorization': token}
-    with open(f'{DATADIR}/logs/omics.log', 'a+') as log_file:
-        log_file.write(f'request_data: \n{str(request_data)}\n')
     response = requests.post(f'{COMPUTESERVER}/run',
                              json=request_data,
                              headers=headers,
@@ -694,16 +694,18 @@ def resume_job(user_id, job_id):
     raise AuthException('User %s is not authorized to resume job %s' % (str(user_id), str(job_id)))
 
 
-def create_sample_creation_workflow(input_filename, metadata):
+def create_sample_creation_workflow(input_filenames, metadata):
     # generate tmpdir for this temporary workflow
     token = create_jobserver_token()
     directory = f'{TMPDIR}/{token}'
     os.mkdir(directory)
     metadata_filename = f'{directory}/metadata'
+    prefix = metadata['name']
+    del metadata['name']
     with open(metadata_filename, 'w') as file:
         json.dump(metadata, file)
-    os.rename(input_filename, f'{directory}/input')
-    input_file = f'{directory}/input'
+    new_filenames = [f'{directory}/{os.path.basename(input_filename)}' for input_filename in input_filenames]
+    [os.rename(input_filename, new_filename) for input_filename, new_filename in zip(input_filenames, new_filenames)]
 
     workflow = {
         'cwlVersion': 'v1.0',
@@ -711,8 +713,8 @@ def create_sample_creation_workflow(input_filename, metadata):
         'inputs':
             [
                 {
-                    'id': 'inputFile',
-                    'type': 'File'
+                    'id': 'inputFiles',
+                    'type': 'File[]'
                 },
                 {
                     'id': 'metadataFile',
@@ -721,14 +723,18 @@ def create_sample_creation_workflow(input_filename, metadata):
                 {
                     'id': 'dataDirectory',
                     'type': 'Directory'
+                },
+                {
+                    'id': 'prefix',
+                    'type': 'string'
                 }
             ],
         'outputs':
             [
                 {
-                    'id': 'outputFile',
+                    'id': 'outputFiles',
                     'outputSource': 'update/output',
-                    'type': 'File'
+                    'type': 'File[]'
                 }
             ],
         'steps':
@@ -738,8 +744,12 @@ def create_sample_creation_workflow(input_filename, metadata):
                     'run': metadata["parser"],
                     'in': [
                         {
-                            'id': 'inputFile',
-                            'source': 'inputFile'
+                            'id': 'inputFiles',
+                            'source': 'inputFiles'
+                        },
+                        {
+                            'id': 'prefix',
+                            'source': 'prefix'
                         }
                     ],
                     'out': [{'id': 'output'}]
@@ -749,7 +759,7 @@ def create_sample_creation_workflow(input_filename, metadata):
                     'run': metadata["preproc"],
                     'in': [
                         {
-                            'id': 'inputFile',
+                            'id': 'inputFiles',
                             'source': 'parse/output'
                         }
                     ],
@@ -757,10 +767,10 @@ def create_sample_creation_workflow(input_filename, metadata):
                 },
                 {
                     'id': 'update',
-                    'run': f'{MODULEDIR}/core-modules/createcollection.cwl',
+                    'run': f'{MODULEDIR}/core-modules/createcollections.cwl',
                     'in':
                         [
-                            {'id': 'inputFile',
+                            {'id': 'inputFiles',
                              'source': 'process/output'},
                             {'id': 'metadataFile',
                              'source': 'metadataFile'},
@@ -775,12 +785,12 @@ def create_sample_creation_workflow(input_filename, metadata):
     with open(workflow_filename, 'w') as workflow_file:
         yaml.dump(workflow, workflow_file, default_flow_style=False)
     job = {
-        'inputFile': {'path': input_file,
-                      'class': 'File'},
+        'inputFiles': [{'path': filename, 'class': 'File'} for filename in new_filenames],
         'metadataFile': {'path': metadata_filename,
                          'class': 'File'},
         'dataDirectory': {'path': f'{DATADIR}/samples',
-                          'class': 'Directory'}
+                          'class': 'Directory'},
+        'prefix': prefix
     }
     # perhaps move execution here?
     return {'workflow_filename': workflow_filename, 'job': job, 'token': token}

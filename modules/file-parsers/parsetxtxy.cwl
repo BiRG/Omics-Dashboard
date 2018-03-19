@@ -4,8 +4,8 @@ id: parsetxtxy
 baseCommand:
   - batchparsetxtxy.py
 inputs:
-  - id: inputFile
-    type: File
+  - id: inputFiles
+    type: File[]
     inputBinding:
       position: 0
   - id: prefix
@@ -14,7 +14,7 @@ inputs:
       position: 1
 outputs:
   - id: output
-    type: File
+    type: File[]
     outputBinding:
       glob: '*.h5'
 label: txtXY

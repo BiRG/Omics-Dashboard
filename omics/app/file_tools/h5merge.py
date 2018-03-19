@@ -51,7 +51,7 @@ def h5_merge(infilenames, outfilename, orientation="horiz", reserved_paths=[], s
     # create a dataset which stores sample ids
     baseSampleIds = np.array([[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in infilenames]])
     # unicode datasets are not supported by all software using hdf5
-    baseSampleNames = np.array([[file.attrs['name'].encode('ascii') for file in files]])
+    baseSampleNames = np.array([[file.attrs['name'].encode('ascii') if isinstance(file.attrs['name'], str) else file.attrs['name'] for file in files]])
     np.reshape(baseSampleIds, (1, len(infilenames)))
     np.reshape(baseSampleNames, (1, len(infilenames)))
     outfile.create_dataset('baseSampleId', data=baseSampleIds)

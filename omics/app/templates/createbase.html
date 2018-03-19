@@ -4,6 +4,9 @@
   <div class="form-group">
     <label for="{{ select_id }}">{{ label }}</label>
     <select id="{{ select_id }}" name="{{ select_id }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if multiple }}>
+      {% if select_id=='userGroup' %}
+      <option value="0" selected>None</option>
+      {% endif %}
       {% for item in data %}
       <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}">{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
       {% endfor %}
@@ -17,7 +20,7 @@
     <div class="card-body">
         <form id="metadata" action="{{ url_for(endpoint) }}" method="post" enctype="multipart/form-data">
           <div class="form-group">
-            <label for="nameInput">Name</label>
+		  <label for="nameInput">Name{{' Prefix' if type=='Sample' else ''}}</label>
             <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Enter name">
           </div>
           <div class="form-group">
@@ -26,17 +29,23 @@
           </div>
 
          {% if type == 'Analysis' %}
-          {% with data=get_collections(user_id) %}
+          {% with data=get_collections(get_user_id()) %}
             {{ selector('collection', 'Collections', data) }}
           {% endwith %}
         {% elif type == 'Collection' %}
-          {% with data=get_samples(user_id) %}
+          {% with data=get_samples(get_user_id()) %}
             {{ selector('sample', 'Samples', data) }}
+	    <div class="form-group">
+	      <label for="sortBy">Sort By</label>
+	      <select id="sortBy" name="sortBy" class="form-control selectpicker" data-live-search="true">
+	        <option value="baseSampleId" selected>baseSampleId</option>
+	      </select>
+	    </div>
           {% endwith %}
         {% elif type == 'Sample' %}
           <div class="form-group">
-            <label for="fileInput">Select File</label>
-	    <input type="file" class="file form-control" data-show-preview="false" data-show-remove="false" data-show-upload="false" aria-label="Filename" id="fileInput" name="file">
+            <label for="fileInput">Files</label>
+	    <input type="file" class="file form-control" data-show-upload="false" data-show-preview="false" data-show-remove="false" aria-label="Filename" id="fileInput" name="files" multiple>
 	  </div>
           {% with data=get_parsing_modules() %}
             {{ selector('parser', 'File Type (Parser)', data, multiple=False) }}
@@ -45,22 +54,16 @@
             {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False) }}
           {% endwith %}
         {% elif type == 'User Group' %}
-           {% with data=users %}
-             {{ selector('user', 'Users', data, multiple=True) }}
-           {% endwith %}
+          {% with data=users %}
+            {{ selector('user', 'Users', data, multiple=True) }}
+          {% endwith %}
         {% endif %}
 
         {% if type.lower() != 'user group' %}
-          <div class="form-group">
-            <label for="userGroup">User Group</label>
-            <select id="userGroup" name="userGroup" class="form-control selectpicker">
-              <option value="-1">None</option>
-              {% for group in groups %}
-              <option value="{{ group['id'] }}">{{ group['name'] }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
+	  {% with data=get_included_groups(get_user_id()) %}
+	    {{ selector('userGroup', 'User Group', data, multiple=False) }}
+	  {% endwith %}
+	  <div class="form-group">
             <label for="groupPermissions">Group Permissions</label>
             <select id="groupPermissions" name="groupPermissions" class="form-control selectpicker">
               <option value="full">Read/Write</option>
@@ -89,4 +92,45 @@
       </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+{% if type == 'Sample' %}
+<script>
+  $('#fileInput').fileinput({
+      theme: "fas"
+  });
+</script>
+{% endif %}
+{% if type == 'Collection' %}
+<script>
+  $('#sample').on('change', function(){
+      var reqData = {'samples': $(this).val()};
+      var url = '{{url_for('get_common_attributes')}}';
+      $.post(url, JSON.stringify(reqData))
+          .done(function(res) {
+	      $('#sortBy').find('option').remove().end();
+	      $('#sortBy').append($('<option>', {
+	          value: 'baseSampleId',
+		  text: 'baseSampleId'
+	      }));
+	      for (val in res){
+	          $('#sortBy').append($('<option>', {
+		      value: res[val],
+		      text: res[val]
+		  }));
+	      }
+	      $('#sortBy').selectpicker('refresh');
+	  })
+	  .fail(function(res) {
+	      $('#sortBy').find('option').remove().end();
+	      $('#sortBy').append($('<option>', {
+	          value: 'baseSampleId',
+		  text: 'baseSampleId'
+	      }));
+	      $('#sortBy').selectpicker('refresh');
+	  });
+  });
+</script>
+{% endif %}
 {% endblock %}

@@ -20,5 +20,6 @@ RUN rm /tmp/environment.yml
 ADD app /app/
 ADD entrypoint.sh / 
 RUN chmod +x /entrypoint.sh
+ADD jobserver.py /
 #RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && python3 /app/db/initdb.py /data/omics.db"
 ENTRYPOINT ["/entrypoint.sh"]

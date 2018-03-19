@@ -19,8 +19,8 @@ RUN conda env create -f /tmp/environment.yml
 RUN rm /tmp/environment.yml
 
 RUN apt update && apt -y install git
-RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install git+https://github.com/dpfoose/cwltool.git"
-RUN /bin/bash -c "source /opt/conda/bin/activate serverenv && pip install cwlref-runner"
+RUN /bin/bash -c "source activate serverenv && pip install git+https://github.com/dpfoose/cwltool.git"
+RUN /bin/bash -c "source activate serverenv && pip install cwlref-runner"
 
 
 RUN wget --quiet https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O docker.tgz
@@ -29,10 +29,8 @@ RUN ln -s /docker/docker /usr/bin/docker
 
 ADD workflow-service /app/
 ADD tools/*.py /usr/local/bin/
-# We're not allowed to do the below
-# need to find a better way to incorporate this code into both
-# might want to bundle accessory functions into a package
-# ADD ../omics/app/file_tools/* /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.py
+
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
