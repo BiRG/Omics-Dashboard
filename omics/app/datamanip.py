@@ -202,6 +202,24 @@ def download_sample_dataset(user_id, sample_id, path):
     raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(sample_id)))
 
 
+def upload_sample(user_id, filename, new_data):
+    # verify that the collection file is valid
+    # filename is in a temporary location for uploads
+    if validate_file(filename):
+        new_id = get_next_id(f'{DATADIR}/samples/')
+        new_filename = f'{DATADIR}/samples/{new_id}.h5'
+        os.rename(filename, new_filename)
+        # user can add any arbitrary valid JSON to a collection
+        # if it gets to this point, it has already been validated!
+        mdt.update_metadata(new_filename, new_data)
+        new_data = {} if new_data is None else new_data
+        new_data['createdBy'] = user_id
+        new_data['owner'] = user_id
+        mdt.update_metadata(new_filename, new_data)
+        return mdt.get_collection_info(new_filename)
+    raise Exception('file not valid')
+
+
 def download_sample(user_id, sample_id):
     filename = '%s/samples/%s.h5' % (DATADIR, str(sample_id))
     sample = mdt.get_collection_metadata(filename)

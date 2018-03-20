@@ -589,10 +589,10 @@ paths:
                 $ref: '#/components/schemas/Message'
   /samples/upload:
     post:
-      description: This isn't implemented!
+      description: Upload an HDF5 file as a Sample
       tags:
       - Samples
-      summary: Parse a file into a Sample
+      summary: Upload HDF5 file as sample.
       requestBody:
         description: Sample metadata and file
         content:
@@ -620,6 +620,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SampleOut'
+  /samples/create:
+    post:
+      description: Parse a file into a Sample
+      tags:
+      - Samples
+      summary: Upload a text or binary file, then parse and preprocess it into a Sample. Outputs a list of jobs.
+      requestBody:
+        description: Sample and job metadata and file
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SampleParseSubmission'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              type: array
+              items:
+                $ref: '#/components/schemas/JobOut'
   /analyses:
     get:
       tags:
@@ -1144,8 +1178,14 @@ components:
     Collection:
       allOf:
       - $ref: '#/components/schemas/RecordBase'
-      - type: object
-        properties:
+    CollectionOut:
+      allOf:
+      - $ref: '#/components/schemas/Collection'
+      - properties:
+          id:
+            type: integer
+            format: int64
+            description: The ID of this record.
           datasets:
             type: array
             description: HDF5 Datasets (matrices) in collection.
@@ -1156,14 +1196,6 @@ components:
             description: HDF5 Groups (like directories) in collection
             items:
               type: object
-    CollectionOut:
-      allOf:
-      - $ref: '#/components/schemas/Collection'
-      - properties:
-          id:
-            type: integer
-            format: int64
-            description: The ID of this record.
     CollectionSubmission:
       allOf:
       - $ref: '#/components/schemas/Collection'
@@ -1197,11 +1229,43 @@ components:
           parser:
             type: string
             description: Path to CWL CommandLineTool definition used in parsing sample file.
-    SampleOut:
+    SampleSubmission:
       allOf:
       - $ref: '#/components/schemas/Sample'
       - type: object
         properties:
+          file:
+            type: string
+            format: byte
+            description: A base64-encoding of the HDF5 file.
+        required:
+        - file
+    SampleParseSubmission:
+      allOf:
+      - $ref: '#/components/schemas/RecordBase'
+      - type: object
+        properties:
+          file:
+            type: string
+            format: byte
+            description: A base64-encoding of a text or binary input file (encoding should be of binary contents, not text).
+          parser:
+            type: string
+            description: A path (relative to the server) to the CWL CommandLineTool definition file for the tool that transforms this input file into an HDF5 file
+          preproc:
+            type: string
+            description: A path (relative to the server) to the CWL CommandLineTool definition file for the tool that transforms the parsed HDF5 file into the intended format for samples/collections.
+    SampleOut:
+      allOf:
+      - $ref: '#/components/schemas/CollectionOut'
+      - type: object
+        properties:
+          preproc:
+            type: string
+            description: Path to CWL CommandLineTool definition used in preprocessing stage of sample creation.
+          parser:
+            type: string
+            description: Path to CWL CommandLineTool definition used in parsing sample file.
           id:
             type: integer
             format: int64
