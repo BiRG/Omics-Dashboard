@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  description: This is used to control the data management aspect of Omics Dashobard
+  description: This is used to control the data management aspect of Omics Dashboard
   version: '0.1'
   title: Omics Dashboard
   contact:
