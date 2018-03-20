@@ -21,10 +21,11 @@ swaggerui_blueprint = get_swaggerui_blueprint(
     API_FILE,
     config = {'app_name': 'Omics Dashboard'}
 )
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 app = Flask(__name__)
 CORS(app)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
 
 DATADIR = os.environ['DATADIR']
 BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
