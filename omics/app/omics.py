@@ -12,19 +12,10 @@ import jwt
 import base64
 import uuid
 from cgi import parse_header
-from flask_swagger_ui import get_swaggerui_blueprint
-SWAGGER_URL = '/api/docs'
-API_FILE = '/app/swagger.yml'
 
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_FILE,
-    config = {'app_name': 'Omics Dashboard'}
-)
 
 app = Flask(__name__)
 CORS(app)
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 DATADIR = os.environ['DATADIR']
 BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
@@ -559,6 +550,9 @@ def render_user_profile(user_id=None):
         return handle_exception_browser(e)
 
 
+@app.route('/apidocs')
+def render_api_docs():
+    return render_template('swagger.html')
 
 # ROUTES FOR NON-BROWSER Clients
 # These routes can be authenticated using the session cookie or a JWT in the Authentication header
@@ -762,7 +756,6 @@ def get_common_attributes():
         return jsonify(common_keys)
     except Exception as e:
         return handle_exception(e)
-
 
 
 @app.route('/api/samples/download/<sample_id>', methods=['GET'])
