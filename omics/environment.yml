@@ -47,6 +47,7 @@ dependencies:
   - chardet==3.0.4
   - cwlref-runner==1.0
   - cwltool==1.0.20180116213856
+  - flask-swagger-ui==0.0.3
   - future==0.16.0
   - idna==2.6
   - isodate==0.6.0

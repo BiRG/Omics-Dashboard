@@ -12,6 +12,16 @@ import jwt
 import base64
 import uuid
 from cgi import parse_header
+from flask_swagger_ui import get_swaggerui_blueprint
+SWAGGER_URL = '/api/docs'
+API_FILE = '/app/swagger.yml'
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_FILE,
+    config = {'app_name': 'Omics Dashboard'}
+)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 app = Flask(__name__)
 CORS(app)
