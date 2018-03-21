@@ -479,12 +479,8 @@ def render_workflow_modules():
 @app.route('/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
-        #print('datamanip.get_jobs()')
         data = datamanip.get_jobs()
-        #print(f'data:\n{data}\n')
         headings = {'id': 'ID', 'name': 'Name', 'state': 'State', 'owner': 'Owner'}
-        #headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
-        #print('render_template')
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
         return handle_exception_browser(e)
@@ -507,24 +503,37 @@ def render_settings():
             return render_template('settings.html')
         if request.method == 'POST':
             data = {key: value[0] for key, value in dict(request.form).items()}
-            change_password = not (data['password1'] == '' and data['password2'] == '')
-            valid_passwords = data['password1'] == data['password2'] if change_password else False
-            new_data = {key: value for key, value in data.items() if key in ['email', 'name'] and not value == ''}
-            valid_keys = ['name', 'email', 'password']
-            if change_password:
-                if not valid_passwords:
-                    return render_template('settings.html', error='passwords do not match')
-                new_data['password'] = data['password1']
-            msg = '\n'.join(['Changed password' if key == 'password' else 'Changed %s to %s.' % (key, value)
-                             for key, value in new_data.items() if key in valid_keys])
-            datamanip.update_user(get_user_id(), get_user_id(), new_data)
-            # update session with new data
-            if 'password' in new_data:
-                # invalidate session on password change
-                browser_logout()
-                return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
-            session['user'] = datamanip.get_user(get_user_id())
-            return render_template('settings.html', msg=msg)
+            if 'changePassword1' in data:
+                change_password = not (data['changePassword1'] == '' and data['changePassword2'] == '' and data['changeEmail'] == '')
+                valid_passwords = data['changePassword1'] == data['changePassword2']
+                if change_password:
+                    if not valid_passwords:
+                        return render_template('setings.html', password_change_error='Passwords do not match')
+                    new_password = data['changePassword1']
+                    email = data['changeEmail']
+                    other_user_id = datamanip.get_user_by_email(email)['id']
+                    datamanip.update_user(get_user_id(), other_user_id, {'password': new_password})
+                    msg = f'Changed password for {email}'
+                    return render_template('settings.html', password_change_msg=msg)
+            else:
+                change_password = not (data['password1'] == '' and data['password2'] == '')
+                valid_passwords = data['password1'] == data['password2'] if change_password else False
+                new_data = {key: value for key, value in data.items() if key in ['email', 'name'] and not value == ''}
+                valid_keys = ['name', 'email', 'password']
+                if change_password:
+                    if not valid_passwords:
+                        return render_template('settings.html', error='passwords do not match')
+                    new_data['password'] = data['password1']
+                msg = '\n'.join(['Changed password' if key == 'password' else 'Changed %s to %s.' % (key, value)
+                                 for key, value in new_data.items() if key in valid_keys])
+                datamanip.update_user(get_user_id(), get_user_id(), new_data)
+                # update session with new data
+                if 'password' in new_data:
+                    # invalidate session on password change
+                    browser_logout()
+                    return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
+                session['user'] = datamanip.get_user(get_user_id())
+                return render_template('settings.html', msg=msg)
     except Exception as e:
         return handle_exception_browser(e)
 
