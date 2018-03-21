@@ -607,7 +607,8 @@ def get_current_user():
 
 @app.route('/api/')
 def send_ok():
-    return jsonify({'message': 'API works! See documentation.'}), 200
+    message = f'API works! View {url_for(render_api_docs)} in your browser to see Swagger-UI documentation.'
+    return jsonify({'message': message}), 200
 
 
 @app.route('/api/users', methods=['GET', 'POST'])
