@@ -12,19 +12,9 @@ import jwt
 import base64
 import uuid
 from cgi import parse_header
-from flask_swagger_ui import get_swaggerui_blueprint
-SWAGGER_URL = '/api/docs'
-API_FILE = '/app/swagger.yml'
-
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_FILE,
-    config = {'app_name': 'Omics Dashboard'}
-)
 
 app = Flask(__name__)
 CORS(app)
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 
 DATADIR = os.environ['DATADIR']
@@ -489,12 +479,8 @@ def render_workflow_modules():
 @app.route('/jobs', methods=['GET', 'POST'])
 def render_job_list():
     try:
-        #print('datamanip.get_jobs()')
         data = datamanip.get_jobs()
-        #print(f'data:\n{data}\n')
         headings = {'id': 'ID', 'name': 'Name', 'state': 'State', 'owner': 'Owner'}
-        #headings = {'id': 'ID', 'workflow': 'Workflow', 'status': 'Status', 'options': 'Options'}
-        #print('render_template')
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
         return handle_exception_browser(e)
@@ -517,24 +503,37 @@ def render_settings():
             return render_template('settings.html')
         if request.method == 'POST':
             data = {key: value[0] for key, value in dict(request.form).items()}
-            change_password = not (data['password1'] == '' and data['password2'] == '')
-            valid_passwords = data['password1'] == data['password2'] if change_password else False
-            new_data = {key: value for key, value in data.items() if key in ['email', 'name'] and not value == ''}
-            valid_keys = ['name', 'email', 'password']
-            if change_password:
-                if not valid_passwords:
-                    return render_template('settings.html', error='passwords do not match')
-                new_data['password'] = data['password1']
-            msg = '\n'.join(['Changed password' if key == 'password' else 'Changed %s to %s.' % (key, value)
-                             for key, value in new_data.items() if key in valid_keys])
-            datamanip.update_user(get_user_id(), get_user_id(), new_data)
-            # update session with new data
-            if 'password' in new_data:
-                # invalidate session on password change
-                browser_logout()
-                return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
-            session['user'] = datamanip.get_user(get_user_id())
-            return render_template('settings.html', msg=msg)
+            if 'changePassword1' in data:
+                change_password = not (data['changePassword1'] == '' and data['changePassword2'] == '' and data['changeEmail'] == '')
+                valid_passwords = data['changePassword1'] == data['changePassword2']
+                if change_password:
+                    if not valid_passwords:
+                        return render_template('setings.html', password_change_error='Passwords do not match')
+                    new_password = data['changePassword1']
+                    email = data['changeEmail']
+                    other_user_id = datamanip.get_user_by_email(email)['id']
+                    datamanip.update_user(get_user_id(), other_user_id, {'password': new_password})
+                    msg = f'Changed password for {email}'
+                    return render_template('settings.html', password_change_msg=msg)
+            else:
+                change_password = not (data['password1'] == '' and data['password2'] == '')
+                valid_passwords = data['password1'] == data['password2'] if change_password else False
+                new_data = {key: value for key, value in data.items() if key in ['email', 'name'] and not value == ''}
+                valid_keys = ['name', 'email', 'password']
+                if change_password:
+                    if not valid_passwords:
+                        return render_template('settings.html', error='passwords do not match')
+                    new_data['password'] = data['password1']
+                msg = '\n'.join(['Changed password' if key == 'password' else 'Changed %s to %s.' % (key, value)
+                                 for key, value in new_data.items() if key in valid_keys])
+                datamanip.update_user(get_user_id(), get_user_id(), new_data)
+                # update session with new data
+                if 'password' in new_data:
+                    # invalidate session on password change
+                    browser_logout()
+                    return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
+                session['user'] = datamanip.get_user(get_user_id())
+                return render_template('settings.html', msg=msg)
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -560,6 +559,9 @@ def render_user_profile(user_id=None):
         return handle_exception_browser(e)
 
 
+@app.route('/apidocs')
+def render_api_docs():
+    return render_template('swagger.html')
 
 # ROUTES FOR NON-BROWSER Clients
 # These routes can be authenticated using the session cookie or a JWT in the Authentication header
@@ -681,49 +683,25 @@ def download_collection(collection_id=None):
 
 @app.route('/api/collections/upload/', methods=['POST'])
 def upload_collection():
-    with open('/data/debuglog', 'w') as logfile:
-        try:
-            content_type = parse_header(request.headers.get('Content-Type'))[0]
-            user_id = get_user_id()
-            if content_type == 'multipart/form-data':
-                new_data = dict(request.form)
-                # with multipart/form-data, everything is a list for some reason
-                # we can't use lists of unicode strings as attributes in hdf5
-                # our preferred schema doesn't allow for non-scalar attributes anyway
-                new_data = {key: value[0] if type(value) is list else value for key, value in new_data.items()}
-                if 'file' not in request.files:
-                    raise ValueError('No file uploaded')
-                collection_file = request.files['file']
-                if collection_file.filename == '':
-                    raise ValueError('No file uploaded')
-                if collection_file:
-                    filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(collection_file.filename))
-                    collection_file.save(filename)
-                    if datamanip.validate_file(filename):
-                        collection_data = datamanip.upload_collection(user_id, filename, new_data)
-                        return jsonify(collection_data)
-                raise ValueError('uploaded file not valid')
-            elif content_type == 'application/json':
-                # for request from MATLAB client that doesn't support multipart/form-data
-                # file is base64 encoded.
-                new_data = request.get_json()
-                if 'file' not in new_data:
-                    raise ValueError('No file uploaded')
-                collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
-                del new_data['file']
-                filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
-                with open(filename, 'wb') as file:
-                    file.write(collection_file_data)
-                if datamanip.validate_file(filename):
-                    logfile.write('file validated\n')
-                    collection_data = datamanip.upload_collection(user_id, filename, new_data)
-                    logfile.write('return jsonify\n')
-                    return jsonify(collection_data)
-                logfile.write(f'file invalid')
-            logfile.write(f'wrong content type: {content_type}\n')
-            raise ValueError('invalid content type')
-        except Exception as e:
-            return handle_exception(e)
+    try:
+        content_type = parse_header(request.headers.get('Content-Type'))[0]
+        user_id = get_user_id()
+        # for request from MATLAB client that doesn't support multipart/form-data
+        # file is base64 encoded.
+        new_data = request.get_json()
+        if 'file' not in new_data:
+            raise ValueError('No file uploaded')
+        collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+        del new_data['file']
+        filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
+        with open(filename, 'wb') as file:
+            file.write(collection_file_data)
+        if datamanip.validate_file(filename):
+            collection_data = datamanip.upload_collection(user_id, filename, new_data)
+            return jsonify(collection_data)
+        raise ValueError('invalid content type')
+    except Exception as e:
+        return handle_exception(e)
 
 
 @app.route('/api/samples', methods=['GET'])
@@ -765,7 +743,6 @@ def get_common_attributes():
         return handle_exception(e)
 
 
-
 @app.route('/api/samples/download/<sample_id>', methods=['GET'])
 def download_sample(sample_id=None):
     try:
@@ -783,12 +760,45 @@ def download_sample(sample_id=None):
         return handle_exception(e)
 
 
+@app.route('/api/samples/create', methods=['POST'])
+def parse_sample():
+    try:
+        user_id = get_user_id()
+        data = request.get_json(force=True)
+        file_contents = data['file']
+        del data['file']
+        decoded_file_contents = base64.b64decode(file_contents)
+        filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(uuid.uuid4()))
+        with open(filename, 'wb') as file:
+            file.write(decoded_file_contents)
+        data['owner'] = user_id
+        data['createdBy'] = user_id
+        workflow_data = datamanip.create_sample_creation_workflow([filename], data)
+        datamanip.start_job(workflow_data['workflow_filename'], workflow_data['job'], workflow_data['token'],
+                            data_type='sample', owner=user_id)
+        return redirect(url_for('list_jobs'))
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
 @app.route('/api/samples/upload/', methods=['POST'])
 def upload_sample():
     try:
-        # this one involves invoking a file parser module
         user_id = get_user_id()
+        # for request from MATLAB client that doesn't support multipart/form-data
+        # file is base64 encoded.
         new_data = request.get_json()
+        if 'file' not in new_data:
+            raise ValueError('No file uploaded')
+        sample_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+        del new_data['file']
+        filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
+        with open(filename, 'wb') as file:
+            file.write(sample_file_data)
+        if datamanip.validate_file(filename):
+            sample_data = datamanip.upload_sample(user_id, filename, new_data)
+            return jsonify(sample_data)
+        raise ValueError('invalid content type')
     except Exception as e:
         return handle_exception(e)
 
@@ -817,6 +827,7 @@ def attach_collection(analysis_id=None):
         return jsonify(res_data)
     except Exception as e:
         return handle_exception(e)
+
 
 @app.route('/api/analyses/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
 def get_analysis(analysis_id=None):
@@ -889,8 +900,7 @@ def get_workflow(workflow_id=None):
 @app.route('/api/jobs', methods=['GET', 'POST'])
 def list_jobs():
     try:
-        user_id = get_user_id()
-        return jsonify({})
+        return jsonify(datamanip.get_jobs())
     except Exception as e:
         return handle_exception(e)
 

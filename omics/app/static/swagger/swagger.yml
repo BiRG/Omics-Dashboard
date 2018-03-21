@@ -1,0 +1,1424 @@
+openapi: 3.0.0
+info:
+  description: This is used to control the data management aspect of Omics Dashboard
+  version: '0.1'
+  title: Omics Dashboard
+  contact:
+    email: foose.3@wright.edu
+  license:
+    name: GNU AGPL v3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.en.html
+servers:
+- url: https://birg.cs.wright.edu/omics/api
+  description: Omics Dashboard @ BiRG
+tags:
+- name: Users
+  description: Management of Users
+- name: Collections
+  description: Management of Collections
+- name: Samples
+  description: Management of Samples
+- name: Analyses
+  description: Management of Analyses
+- name: UserGroups
+  description: Management of User Groups
+- name: Jobs
+  description: Management of Jobs
+
+paths:
+  /authenticate:
+    post:
+      tags:
+      - Users
+      summary: Get a JSON Webtoken to authenticate to the service
+      requestBody:
+        description: User credentials
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthPair'
+      responses:
+        403:
+          description: Authentication Failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: Authentication Succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /currentuser:
+    get:
+      tags:
+      - Users
+      summary: Get the information of the currently authenticated user
+      security:
+      - bearerAuth: []
+      responses:
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+  /users:
+    get:
+      tags:
+      - Users
+      summary: Get a list of all user accounts
+      description: A list of user accounts
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserOut'
+  /users/{id}:
+    get:
+      tags:
+      - Users
+      summary: Get the record for a particular user.
+      parameters:
+      - name: id
+        in: path
+        description: ID of user
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: User does not exist
+        403:
+          description: Not authenticated
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+    post:
+      tags:
+      - Users
+      summary: Update a user record
+      parameters:
+      - name: id
+        in: path
+        description: ID of user
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Data to update user (all fields are optional and id will be ignored)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: User does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit user record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+    delete:
+      tags:
+      - Users
+      summary: Delete a user record
+      parameters:
+      - name: id
+        in: path
+        description: ID of user
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: User does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit user record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /users/create:
+    post:
+      tags:
+      - Users
+      summary: Create a user account
+      requestBody:
+        description: User account information
+        content:
+          application/json:
+            schema:
+              properties:
+                email:
+                  description: Email address used to log in
+                  type: string
+                password:
+                  type: string
+                  description: Un-hashed user password
+                admin:
+                  type: integer
+                  enum: [1, 0]
+                  description: Whether or not new user should be admin
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create user account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+  /collections:
+    get:
+      tags:
+      - Collections
+      summary: Get a list of collections
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionOut'
+  /collections/{id}:
+    get:
+      tags:
+      - Collections
+      summary: Get a specific collection
+      parameters:
+      - name: id
+        in: path
+        description: ID of collection
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionOut'
+    post:
+      tags:
+      - Collections
+      summary: Update a collection.
+      parameters:
+      - name: id
+        in: path
+        description: ID of collection
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Data to update collection (all fields are optional and arbitrary fields can be added)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordBase'
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Collection does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit collection record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+    delete:
+      tags:
+      - Collections
+      summary: Delete a collection
+      parameters:
+      - name: id
+        in: path
+        description: ID of collection
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Collection does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /collections/upload:
+    post:
+      tags:
+      - Collections
+      summary: Create a collection (from hdf5)
+      requestBody:
+        description: Collection metadata and file
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionSubmission'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionOut'
+  /collections/create:
+    post:
+      tags:
+      - Collections
+      summary: Create a collection (from a list of sample IDs)
+      requestBody:
+        description: Collection metadata
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionConcatenation'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionOut'
+  /samples:
+    get:
+      tags:
+      - Samples
+      summary: Get a list of samples
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sample'
+  /samples/{id}:
+    get:
+      tags:
+      - Samples
+      summary: Get a specific sample
+      parameters:
+      - name: id
+        in: path
+        description: ID of sample
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sample'
+    post:
+      tags:
+      - Samples
+      summary: Update a sample
+      parameters:
+      - name: id
+        in: path
+        description: ID of sample
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Data to update user (all fields are optional, arbitrary field can be created)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordBase'
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Sample does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit sample record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sample'
+    delete:
+      tags:
+      - Samples
+      summary: Delete a sample
+      parameters:
+      - name: id
+        in: path
+        description: ID of sample
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Sample does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /samples/upload:
+    post:
+      description: Upload an HDF5 file as a Sample
+      tags:
+      - Samples
+      summary: Upload HDF5 file as sample.
+      requestBody:
+        description: Sample metadata and file
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SampleSubmission'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SampleOut'
+  /samples/create:
+    post:
+      description: Parse a file into a Sample
+      tags:
+      - Samples
+      summary: Upload a text or binary file, then parse and preprocess it into a Sample. Outputs a list of jobs.
+      requestBody:
+        description: Sample and job metadata and file
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SampleParseSubmission'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              type: array
+              items:
+                $ref: '#/components/schemas/JobOut'
+  /analyses:
+    get:
+      tags:
+      - Analyses
+      summary: Get a list of analyses
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalysisOut'
+  /analyses/{id}:
+    get:
+      tags:
+      - Analyses
+      summary: Get a specific analysis
+      parameters:
+      - name: id
+        in: path
+        description: ID of analysis
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisOut'
+    post:
+      tags:
+      - Analyses
+      summary: Update an analysis.
+      parameters:
+      - name: id
+        in: path
+        description: ID of analysis
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Data to update analysis (all fields are optional and arbitrary fields can be added)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordBase'
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Analysis does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit analysis record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+    delete:
+      tags:
+      - Analyses
+      summary: Delete a analysis
+      parameters:
+      - name: id
+        in: path
+        description: ID of analysis
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Analysis does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /analyses/create:
+    post:
+      tags:
+      - Analyses
+      summary: Create an analysis
+      parameters:
+      - name: id
+        in: path
+        description: ID of analysis
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Analysis metadata and file
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Analysis'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisOut'
+  /analyses/attach/{id}:
+        post:
+          tags:
+          - Analyses
+          summary: Attach collections to an Analysis
+          parameters:
+          - name: id
+            in: path
+            description: ID of analysis
+            required: true
+            schema:
+              type: integer
+              format: int64
+          requestBody:
+            description: IDs of collections.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    collectionIds:
+                      type: array
+                      description: IDs of collections to attach to this analysis.
+                      items:
+                        type: integer
+                        format: int64
+          security:
+          - bearerAuth: []
+          responses:
+            403:
+              description: Not authorized to create analysis
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/Error'
+            500:
+              description: Internal Server Error
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/InternalServerError'
+            200:
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/AnalysisOut'
+  /usergroups:
+    get:
+      tags:
+      - UserGroups
+      summary: Get a list of user groups
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGroupOut'
+  /usergroups/{id}:
+    get:
+      tags:
+      - UserGroups
+      summary: Get a specific usergroup
+      parameters:
+      - name: id
+        in: path
+        description: ID of usergroup
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupOut'
+    post:
+      tags:
+      - UserGroups
+      summary: Update an user group.
+      parameters:
+      - name: id
+        in: path
+        description: ID of user group
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Data to update user group (all fields are optional and arbitrary fields can be added)
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordBase'
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: UserGroup does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit user group record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+    delete:
+      tags:
+      - UserGroups
+      summary: Delete a user group
+      parameters:
+      - name: id
+        in: path
+        description: ID of user group
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: UserGroup does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit usergroup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  /usergroups/create:
+    post:
+      tags:
+      - UserGroups
+      summary: Create an usergroup
+      requestBody:
+        description: UserGroup metadata.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroup'
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authorized to create user group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroupOut'
+  /jobs:
+    get:
+      tags:
+      - Jobs
+      summary: Get a list of jobs
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobOut'
+  /jobs/{id}:
+    get:
+      tags:
+      - Jobs
+      summary: Get a specific job
+      parameters:
+      - name: id
+        in: path
+        description: ID of job
+        required: true
+        schema:
+          type: integer
+          format: int64
+      security:
+      - bearerAuth: []
+      responses:
+        403:
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobOut'
+    post:
+      tags:
+      - Jobs
+      summary: Update an job.
+      parameters:
+      - name: id
+        in: path
+        description: ID of job
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: action
+        in: path
+        description: Action to perform
+        required: true
+        schema:
+          type: string
+          enum: [cancel, pause, resume]
+      security:
+      - bearerAuth: []
+      responses:
+        404:
+          description: Job does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Not authorized to edit job record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        200:
+          description: User record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobOut'
+
+components:
+  schemas:
+    AuthPair:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JSON webtoken to be used in Authorization header of request in format "JWT < token >"
+    RecordBase:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of this record
+        description:
+          type: string
+          description: The description of this record.
+        groupPermissions:
+          type: string
+          description: The permissions allowed for members of the associated user group.
+          enum: [full, readonly]
+        allPermissions:
+          type: string
+          description: The permissions allowed by default for all users.
+          enum: [full, readonly, none]
+        userGroup:
+          type: integer
+          description: The user group id for the user group associated with this record
+    Collection:
+      allOf:
+      - $ref: '#/components/schemas/RecordBase'
+    CollectionOut:
+      allOf:
+      - $ref: '#/components/schemas/Collection'
+      - properties:
+          id:
+            type: integer
+            format: int64
+            description: The ID of this record.
+          datasets:
+            type: array
+            description: HDF5 Datasets (matrices) in collection.
+            items:
+              $ref: '#/components/schemas/Dataset'
+          groups:
+            type: array
+            description: HDF5 Groups (like directories) in collection
+            items:
+              type: object
+    CollectionSubmission:
+      allOf:
+      - $ref: '#/components/schemas/Collection'
+      - type: object
+        properties:
+          file:
+            type: string
+            format: byte
+            description: A base64-encoding of the HDF5 file
+        required:
+        - file
+    CollectionConcatenation:
+      allOf:
+        - $ref: '#/components/schema/Collection'
+        - type: object
+          properties:
+            sampleIds:
+              type: array
+              items:
+                type: integer
+                format: int64
+      description: A request to create collection from set of samples.
+    Sample:
+      allOf:
+      - $ref: '#/components/schemas/Collection'
+      - type: object
+        properties:
+          preproc:
+            type: string
+            description: Path to CWL CommandLineTool definition used in preprocessing stage of sample creation.
+          parser:
+            type: string
+            description: Path to CWL CommandLineTool definition used in parsing sample file.
+    SampleSubmission:
+      allOf:
+      - $ref: '#/components/schemas/Sample'
+      - type: object
+        properties:
+          file:
+            type: string
+            format: byte
+            description: A base64-encoding of the HDF5 file.
+        required:
+        - file
+    SampleParseSubmission:
+      allOf:
+      - $ref: '#/components/schemas/RecordBase'
+      - type: object
+        properties:
+          file:
+            type: string
+            format: byte
+            description: A base64-encoding of a text or binary input file (encoding should be of binary contents, not text).
+          parser:
+            type: string
+            description: A path (relative to the server) to the CWL CommandLineTool definition file for the tool that transforms this input file into an HDF5 file
+          preproc:
+            type: string
+            description: A path (relative to the server) to the CWL CommandLineTool definition file for the tool that transforms the parsed HDF5 file into the intended format for samples/collections.
+    SampleOut:
+      allOf:
+      - $ref: '#/components/schemas/CollectionOut'
+      - type: object
+        properties:
+          preproc:
+            type: string
+            description: Path to CWL CommandLineTool definition used in preprocessing stage of sample creation.
+          parser:
+            type: string
+            description: Path to CWL CommandLineTool definition used in parsing sample file.
+          id:
+            type: integer
+            format: int64
+            description: ID of this sample,.
+    Analysis:
+      allOf:
+      - $ref: '#/components/schemas/RecordBase'
+      description: A grouping of collections.
+    AnalysisOut:
+      allOf:
+      - $ref: '#/components/schemas/Analysis'
+      - type: object
+        properties:
+          collections:
+            type: array
+            items:
+              $ref: '#/components/schemas/CollectionOut'
+          id:
+            type: integer
+            format: int64
+            description: The ID of this record.
+    UserGroup:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the user group
+        description:
+          type: string
+          description: A description of the purpose of the user group
+        admins:
+          type: array
+          description: The user ids of the administrator users for the group
+          items:
+            type: integer
+        users:
+          type: array
+          description: The user ids of the members of the group
+          items:
+            type: integer
+        members:
+          type: array
+          description: Admin status, user id and name of group members
+          items:
+            type: object
+        id:
+         type: integer
+         description: The ID of the user group.
+    UserGroupOut:
+      allOf:
+      - $ref: '#/components/schemas/UserGroup'
+      - type: object
+        properties:
+          id:
+            type: integer
+            description: The ID of the user group.
+            format: int64
+    Dataset:
+      type: object
+      description: An hdf5 dataset contained in a collection or sample.
+      properties:
+        nrows:
+          description: The number of rows
+          type: integer
+        ncols:
+          description: The number of columns
+          type: integer
+        path:
+          description: The path to this dataset relative to the root group of the file
+          type: string
+        dtype:
+          description: The Numpy datatype of the array.
+          type: string
+    User:
+      type: object
+      description: A user record
+      properties:
+        admin:
+          type: integer
+          enum: [0, 1]
+          description: Whether (1) or not (0) a user is an administrator
+        email:
+          type: string
+          description: The email address for this user
+        name:
+          type: string
+          description: The name of this user (usually, but not always, a common name/surname pair.
+    UserOut:
+      allOf:
+      - $ref: '#/components/schemas/User'
+      - type: object
+        properties:
+          id:
+            type: integer
+            description: The user's ID number.
+    InternalServerError:
+      type: object
+      description: A response object sent with status 500
+      properties:
+        message:
+          type: string
+          description: A basic description of the exception.
+        traceback:
+          type: string
+          description: A python traceback of the exception.
+    Error:
+      type: object
+      description: A response sent with an error status other than 500
+      properties:
+        message:
+          type: string
+          description: A basic description of the exception.
+    Message:
+      type: object
+      description: A response sent when sending a data object does not make sense
+      properties:
+        message:
+          type: string
+          description: A basic description of the behavior.
+    JobOut:
+      type: object
+      description: A job in the job queue.
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The id of the job.
+        name:
+          type: string
+          description: The name of the job.
+        owner:
+          type: integer
+          format: int64
+        output:
+          type: object
+          description: output of CWL runner
+        input:
+          type: object
+          description: input to CWL runner
+        run:
+          type: string
+          description: Path to CWL workflow
+        state:
+          type: string
+          enum: [Running, Success, Failure]
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+externalDocs:
+    description: Find out more about Omics Dashboard
+    url: https://github.com/BiRG/Omics-Dashboard
+security:
+- bearerAuth: []
