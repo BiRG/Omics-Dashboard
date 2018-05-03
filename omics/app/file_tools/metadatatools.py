@@ -21,6 +21,9 @@ def get_collection_info(filename):
     collection_info.update(collection_info['attrs'])
     del collection_info['attrs']
     collection_info['dateModified'] = int(os.path.getmtime(filename))
+    dims = approximate_dims(filename)
+    collection_info['maxRowCount'] = dims[0]
+    collection_info['maxColCount'] = dims[1]
     return {key: (value.item() if hasattr(value, 'item') else value) for (key, value) in collection_info.items()}
 
 
@@ -94,4 +97,12 @@ def update_metadata(filename, new_data):
     with h5py.File(filename, 'r+') as file:
         file.attrs.update(new_data)
     return get_collection_info(filename)
+
+
+def approximate_dims(filename):
+    """ Return a (m, n) pair where m is the longest row count and n is longest col count of all datasets"""
+    with h5py.File(filename, 'r') as file:
+        m = max([dataset.shape[0] for datasets in file.datasets])
+        n = max([dataset.shape[1] if len(dataset.shape) > 1 else 1 for datasets in file.datasets])
+        return (m, n)
 
