@@ -39,6 +39,21 @@ create table if not exists Analyses (
 );
 
 /*
+  Samples can be grouped while remaining distinct. A collection is a concatenation/merging
+  of samples following a particular order.
+ */
+create table if not exists SampleGroups(
+    id integer primary key,
+    name text,
+    description text,
+    createdBy integer,
+    owner integer,
+    groupPermissions text,
+    allPermissions text,
+    userGroup integer
+);
+
+/*
  This table contains group id's and metadata 
  */
 create table if not exists UserGroups(
@@ -110,3 +125,8 @@ create table if not exists CollectionMemberships(
     unique(collectionId, analysisId)
 );
 
+create table if not exists SampleGroupMemberships(
+    sampleId integer,
+    sampleGroupId integer,
+    unique(sampleId, sampleGroupId)
+);
