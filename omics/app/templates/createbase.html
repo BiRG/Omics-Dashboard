@@ -20,7 +20,7 @@
     <div class="card-body">
         <form id="metadata" action="{{ url_for(endpoint) }}" method="post" enctype="multipart/form-data">
           <div class="form-group">
-		  <label for="nameInput">Name{{' Prefix' if type=='Sample' else ''}}</label>
+		  <label for="nameInput">{{ 'Group ' if type=='Sample' else '' }}Name</label>
             <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Enter name">
           </div>
           <div class="form-group">

@@ -2,7 +2,7 @@ import sqlite3
 import os
 from flask import g
 DATADIR = os.environ['DATADIR']
-DATABASE = '%s/omics.db' % DATADIR
+DATABASE = f'{DATADIR}/omics.db'
 
 
 def make_dicts(cursor, row):

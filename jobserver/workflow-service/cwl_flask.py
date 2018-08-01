@@ -75,45 +75,47 @@ class Job(threading.Thread):
         self.stdout_data, self.stderr_data = self.proc.communicate(self.input_obj)
         if self.proc.returncode == 0:
             out_obj = yaml.load(self.stdout_data)
-            with self.update_lock:
-                self.status['state'] = 'Success'
-                self.status['output'] = out_obj
-                with open(self.log_name, 'r') as log_file:
-                    self.status['log'] = log_file.read()
-                # send cleanup request to omics server
-                #:print(f'finalize request:\ntoken{self.token}')
-                res = requests.post(f'{OMICSSERVER}/api/finalize',
-                                    headers={'Authorization': self.token},
-                                    json=self.status.copy(),
-                                    params={'data_type': self.data_type})
+            # with self.update_lock:
+            self.status['state'] = 'Success'
+            self.status['output'] = out_obj
+            with open(self.log_name, 'r') as log_file:
+                self.status['log'] = log_file.read()
+            # send cleanup request to omics server
+            # print(f'finalize request:\ntoken{self.token}')
+            print('finalize request:')
+            res = requests.post(f'{OMICSSERVER}/api/finalize',
+                                headers={'Authorization': self.token},
+                                json=self.status.copy(),
+                                params={'data_type': self.data_type})
+            print(f'status {res.status}')
 
         else:
-            with self.update_lock:
-                self.status['state'] = 'Failed'
-                log_error(str(log_spooler(self.job_id)))
-                # failures are not cleaned up for debug purposes
+            # with self.update_lock:
+            self.status['state'] = 'Failed'
+            log_error(str(log_spooler(self.job_id)))
+            # failures are not cleaned up for debug purposes
 
     def get_status(self):
-        with self.update_lock:
-            return self.status.copy()
+        # with self.update_lock:
+        return self.status.copy()
 
     def cancel(self):
         if self.status['state'] == 'Running':
             self.proc.send_signal(signal.SIGQUIT)
-            with self.update_lock:
-                self.status['state'] = 'Canceled'
+            # with self.update_lock:
+            self.status['state'] = 'Canceled'
 
     def pause(self):
         if self.status['state'] == 'Running':
             self.proc.send_signal(signal.SIGTSTP)
-            with self.update_lock:
-                self.status['state'] = 'Paused'
+            # with self.update_lock:
+            self.status['state'] = 'Paused'
 
     def resume(self):
         if self.status['state'] == 'Paused':
             self.proc.send_signal(signal.SIGCONT)
-            with self.update_lock:
-                self.status['state'] = 'Running'
+            # with self.update_lock:
+            self.status['state'] = 'Running'
 
 
 @app.route('/run', methods=['POST'])

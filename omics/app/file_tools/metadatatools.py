@@ -1,6 +1,5 @@
 import h5py
 import os
-import numpy as np
 from io import StringIO
 
 
@@ -10,7 +9,10 @@ def get_collection_metadata(filename):
     collection_id = os.path.splitext(os.path.basename(filename))[0]
     attrs['id'] = int(collection_id)
     attrs['dateModified'] = int(os.path.getmtime(filename))
-    return attrs
+    dims = approximate_dims(filename)
+    attrs['maxRowCount'] = dims[0]
+    attrs['maxColCount'] = dims[1]
+    return {key: (value.item() if hasattr(value, 'item') else value) for (key, value) in attrs.items()}
 
 
 def get_collection_info(filename):
@@ -36,9 +38,6 @@ def get_dataset_paths(filename):
 
 #  Can raise exceptions!
 def get_csv(filename, path):
-    print('get_csv')
-    print(filename)
-    print(path)
     with h5py.File(filename, 'r') as infile:
         dataset = infile[str(path)].value
     s = StringIO()
@@ -102,7 +101,10 @@ def update_metadata(filename, new_data):
 def approximate_dims(filename):
     """ Return a (m, n) pair where m is the longest row count and n is longest col count of all datasets"""
     with h5py.File(filename, 'r') as file:
-        m = max([dataset.shape[0] for datasets in file.datasets])
-        n = max([dataset.shape[1] if len(dataset.shape) > 1 else 1 for datasets in file.datasets])
+        m = max([dataset.shape[0] for dataset in get_datasets(file)])
+        n = max([dataset.shape[1] if len(dataset.shape) > 1 else 1 for dataset in get_datasets(file)])
         return (m, n)
 
+
+def get_datasets(file):
+    return [file[key] for key in file.keys() if isinstance(file[key], h5py.Dataset)]

@@ -1,5 +1,6 @@
+import json
+
 from flask import Flask, redirect, request, jsonify, g, session, render_template, url_for, make_response, send_from_directory
-from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.utils import secure_filename
 import datamanip
 from passlib.hash import pbkdf2_sha256
@@ -11,7 +12,8 @@ import traceback
 import jwt
 import base64
 import uuid
-from cgi import parse_header
+
+from datamanip import get_jwt
 
 app = Flask(__name__)
 CORS(app)
@@ -98,12 +100,6 @@ def validate_login(email, password):
     return True
 
 
-# returns a str value containing JWT (we handle everything in unicode and convert request bodies to JSON)
-def get_jwt(email, password):
-    validate_login(email, password)
-    user = datamanip.get_user_by_email(email)
-    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
 
 # get user id, if user not logged in, raise an exception. Exception handler will send 401
@@ -139,6 +135,8 @@ def get_item_link(record_type, item):
         return url_for('render_collection', collection_id=item['id'])
     elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
         return url_for('render_sample', sample_id=item['id'])
+    elif record_type.lower() == 'sample groups' or record_type.lower() == 'sample group':
+        return url_for('render_sample_group', sample_group_id=item['id'])
     elif record_type.lower() == 'users' or record_type.lower() == 'user':
         return url_for('render_user_profile', user_id=item['id'])
     elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
@@ -157,6 +155,8 @@ def get_update_url(record_type, item):
         return url_for('get_collection', collection_id=item['id'])
     elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
         return url_for('get_sample', sample_id=item['id'])
+    elif record_type.lower() == 'sample groups' or record_type.lower() == 'sample group':
+        return url_for('get_sample_group', sample_group_id=item['id'])
     elif record_type.lower() == 'analyses' or record_type.lower() == 'analysis':
         return url_for('get_analysis', analysis_id=item['id'])
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
@@ -259,7 +259,7 @@ def render_sample_list():
     try:
         get_user_id()
         data = datamanip.get_all_sample_metadata(get_user_id())
-        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner', 'maxRowCount': 'Rows', 'maxRowCount': 'Columns'}
         return render_template('list.html', type='Samples', data=data, headings=headings)
     except Exception as e:
         return handle_exception_browser(e)
@@ -285,6 +285,42 @@ def render_sample(sample_id=None):
         return handle_exception_browser(e)
 
 
+@app.route('/sample_groups', methods=['GET', 'POST'])
+def render_sample_group_list():
+    try:
+        get_user_id()
+        data = datamanip.get_sample_groups(get_user_id())
+        print(data)
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        return render_template('list.html', type='Sample Groups', data=data, headings=headings)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/sample_groups/<sample_group_id>', methods=['GET', 'POST', 'DELETE'])
+def render_sample_group(sample_group_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            data = datamanip.get_sample_group(get_user_id(), sample_group_id)
+            sample_headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+            samples = data['members']
+            del data['members']
+            return render_template('entry.html', type='Sample Group', data=data, samples=samples, sample_headings=sample_headings)
+        if request.method == 'DELETE':
+            datamanip.delete_sample_group(get_user_id(), sample_group_id)
+            return redirect(url_for('render_sample_group_list'))
+        if request.method == 'POST':
+            datamanip.update_sample_group(get_user_id(), sample_group_id, request.form)
+            data = datamanip.get_sample_metadata(get_user_id(), sample_group_id)
+            samples = data['members']
+            del data['members']
+            sample_headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+            return render_template('entry.html', type='Sample', data=data, samples=samples, sample_headings=sample_headings)
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
 @app.route('/samples/create', methods=['GET', 'POST'])
 def render_upload_sample():
     try:
@@ -296,9 +332,8 @@ def render_upload_sample():
             metadata = request.form.to_dict()
             metadata['owner'] = user_id
             metadata['createdBy'] = user_id
-            workflow_data = datamanip.create_sample_creation_workflow(filenames, metadata)
-            datamanip.start_job(workflow_data['workflow_filename'], workflow_data['job'], workflow_data['token'],
-                                data_type='sample', owner=user_id)
+            workflow_data = datamanip.create_sample_creation_workflow(user_id, filenames, metadata)
+            datamanip.start_job(workflow_data['workflow'], workflow_data['job'], user_id)
             return redirect(url_for('render_job_list'))
         return render_template('createbase.html', type='Sample', endpoint='render_upload_sample')
     except Exception as e:
@@ -309,7 +344,7 @@ def render_upload_sample():
 def render_collection_list():
     try:
         data = datamanip.get_all_collection_metadata(get_user_id())
-        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
+        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner', 'maxRowCount': 'Rows', 'maxColCount': 'Columns'}
         return render_template('list.html', type='Collections', headings=headings, data=data)
     except Exception as e:
         return handle_exception_browser(e)
@@ -568,6 +603,7 @@ def render_api_docs():
 # login/logout used for sessions, authenticate used for JWT
 # deauthenticating a JWT isn't possible. JWTs expire in 24 hours.
 
+
 @app.route('/api/login', methods=['POST'])
 def login():
     credentials = request.get_json(force=True)
@@ -607,7 +643,8 @@ def get_current_user():
 
 @app.route('/api/')
 def send_ok():
-    message = f'API works! View {url_for(render_api_docs)} in your browser to see Swagger-UI documentation.'
+    message = f'API works! View {url_for("render_api_docs")} in your browser to see Swagger-UI documentation.'
+    print(message)
     return jsonify({'message': message}), 200
 
 
@@ -684,19 +721,24 @@ def download_collection(collection_id=None):
 
 @app.route('/api/collections/upload/', methods=['POST'])
 def upload_collection():
+    #  TODO: support files encoded as base64 in application/json and actual files in multipart/form-data
     try:
-        content_type = parse_header(request.headers.get('Content-Type'))[0]
         user_id = get_user_id()
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
         new_data = request.get_json()
-        if 'file' not in new_data:
+        if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')
         collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
         del new_data['file']
         filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
-        with open(filename, 'wb') as file:
-            file.write(collection_file_data)
+        if 'file' in request.files:
+            if request.files['file'].filename == '':
+                raise ValueError('No file uploaded')
+            request.files['file'].save(filename)
+        else:
+            with open(filename, 'wb') as file:
+                file.write(collection_file_data)
         if datamanip.validate_file(filename):
             collection_data = datamanip.upload_collection(user_id, filename, new_data)
             return jsonify(collection_data)
@@ -721,12 +763,40 @@ def get_sample(sample_id=None):
         if request.method == 'GET':
             return jsonify(datamanip.get_sample(user_id, sample_id))
         if request.method == 'POST':
-            new_data = request.get_json(force=True)
-            return jsonify(datamanip.update_sample(user_id, sample_id, new_data))
+            if 'file' in request.files:
+                filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
+                request.files['file'].save(filename)
+                sample_data = datamanip.upload_sample(get_user_id(), request.form, filename, sample_id)
+                os.remove(filename)
+            else:
+                sample_data = datamanip.update_sample(user_id, sample_id, request.get_json(force=True))
+            return jsonify(sample_data)
         if request.method == 'DELETE':
             return jsonify(datamanip.delete_sample(user_id, sample_id))
     except Exception as e:
         return handle_exception(e)
+
+
+@app.route('/api/sample_groups', methods=['GET', 'POST'])
+def list_sample_groups():
+    try:
+        return jsonify(datamanip.get_sample_groups(get_user_id()))
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@app.route('/api/sample_groups/<sample_group_id>', methods=['GET', 'POST', 'DELETE'])
+def get_sample_group(sample_group_id=None):
+    try:
+        user_id = get_user_id()
+        if request.method == 'GET':
+            return jsonify(datamanip.get_sample_group(get_user_id(), sample_group_id))
+        if request.method == 'DELETE':
+            return jsonify(datamanip.delete_sample_group(get_user_id(), sample_group_id))
+        if request.method == 'POST':
+            return jsonify(datamanip.update_sample_group(get_user_id(), sample_group_id, request.form))
+    except Exception as e:
+        return handle_exception_browser(e)
 
 
 @app.route('/api/samples/common_attributes', methods=['POST'])
@@ -942,22 +1012,14 @@ def get_invitation():
 @app.route('/api/finalize', methods=['POST'])
 def finalize_job():
     try:
-        data_type = request.args['data_type']
-        if data_type.lower() not in ['collection', 'sample']:
-            raise ValueError('invalid data_type')
-
-        destdir = f'{DATADIR}/{data_type.lower()}s'
-        token = request.headers['Authorization']
+        user_id = get_user_id()
         body = request.get_json()
-        if datamanip.check_jobserver_token(token):
-            outfiles = [output_file['path'] for output_file in body['output']['outputFiles']]
-            next_id = datamanip.get_next_id(destdir)
-            collection_ids = [i for i in range(next_id, next_id + len(outfiles))]
-            collections = [f'{destdir}/{collection_id}.h5' for collection_id in collection_ids]
-            [os.rename(outfile, collection) for outfile, collection in zip(outfiles, collections)]
-            # delete directory containing temp files (using key in auth header)
+        token = body['wfToken']
+        path = f'{DATADIR}/tmp/{token}'
+        info = json.load(f'{path}/wfdata.json')
+        if datamanip.check_jobserver_token(token) and datamanip.is_write_permitted(user_id, info):
             shutil.rmtree(f'{DATADIR}/tmp/{token}', ignore_errors=True)
-        return jsonify({'paths': collections})
+        return jsonify({'message': f'Removed {path}'})
     except Exception as e:
         return handle_exception(e)
 
