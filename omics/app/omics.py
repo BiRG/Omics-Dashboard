@@ -3,7 +3,6 @@ import json
 from flask import Flask, redirect, request, jsonify, g, session, render_template, url_for, make_response, send_from_directory
 from werkzeug.utils import secure_filename
 import datamanip
-from passlib.hash import pbkdf2_sha256
 import os
 import shutil
 from flask_cors import CORS
@@ -13,7 +12,7 @@ import jwt
 import base64
 import uuid
 
-from datamanip import get_jwt
+from datamanip import get_jwt, validate_login
 
 app = Flask(__name__)
 CORS(app)
@@ -91,15 +90,6 @@ def handle_exception_browser(e):
     error_title = '500 Internal Server Error'
     log_exception(500, e, tb)
     return render_template('error.html', fa_type='fa-exclamation-circle', tb=tb, error_msg=error_msg, error_title=error_title), 500
-
-
-def validate_login(email, password):
-    pwhash = datamanip.get_user_password_hash(email)['password']
-    if pwhash is None or not pbkdf2_sha256.verify(password, pwhash):
-        raise ValueError('Invalid username/password')
-    return True
-
-
 
 
 # get user id, if user not logged in, raise an exception. Exception handler will send 401

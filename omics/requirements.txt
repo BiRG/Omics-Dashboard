@@ -6,7 +6,7 @@ h5py
 itsdangerous
 jinja2
 markupsafe
-pyyaml
+ruamel.yaml
 setuptools
 six
 uwsgi

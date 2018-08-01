@@ -16,8 +16,6 @@ import json
 import uuid
 import shutil
 
-from omics import validate_login
-
 DATADIR = os.environ['DATADIR']
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']
@@ -36,6 +34,25 @@ class AuthException(Exception):
 def validate_file(path):
     return h5py.is_hdf5(path)
 
+
+def validate_login(email, password):
+    pwhash = get_user_password_hash(email)['password']
+    if pwhash is None or not pbkdf2_sha256.verify(password, pwhash):
+        raise ValueError('Invalid username/password')
+    return True
+
+
+def get_jwt(email, password):
+    validate_login(email, password)
+    user = get_user_by_email(email)
+    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
+
+
+def get_jwt_by_id(user_id):
+    user = get_user(user_id)
+    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
 def is_admin(user_id):
     return db.query_db('select * from Users where id=? and admin=1;', [str(user_id)], True) is not None
@@ -741,7 +758,7 @@ def get_modules(path):
 
 def get_module(path):
     with open(path, 'r') as stream:
-        data = yaml.load(stream)
+        data = yaml.safe_load(stream)
         if 'cwlVersion' not in data:
             raise yaml.YAMLError('Not a CWL file')
         data['modulePath'] = path
@@ -774,15 +791,23 @@ def start_job(workflow, job, owner):
     files = {'workflowSource': StringIO(),
              'workflowInputs': StringIO(),
              'labels': labels}
-    yaml.dump(workflow, files['workflowSource'])
-    yaml.dump(job, files['workflowInputs'])
+    yaml.safe_dump(workflow, files['workflowSource'])
+    yaml.safe_dump(job, files['workflowInputs'])
     files['workflowInputs'].seek(0)
     files['workflowSource'].seek(0)
     params = {'workflowType': 'CWL', 'workflowTypeVersion': 'v1.0'}
-    res = requests.post(f'{COMPUTESERVER}/workflows/v1',
+    url = f'{COMPUTESERVER}/api/workflows/v1'
+    print('SEND TO JOBSERVER')
+    print(f'files: {files}')
+    print(f'labels: {labels}')
+    print(f'params: {params}')
+    print(f'url: {url}')
+    res = requests.post(url,
                         headers={'Authorization': auth_token},
                         data=params,
                         files=files)
+    print('RESPONSE:')
+    print(res)
     try:
         return res.json()
     except Exception as e:
@@ -832,15 +857,16 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
     directory = f'{TMPDIR}/{token}'
     os.mkdir(directory)
     metadata_filename = f'{directory}/metadata'
-    prefix = metadata['name']
-    del metadata['name']
     with open(metadata_filename, 'w') as file:
         json.dump(metadata, file)
     with open(f'{directory}/wfdata.json', 'w') as file:
         json.dump({'owner': user_id}, file)
     new_filenames = [f'{directory}/{os.path.basename(input_filename)}' for input_filename in input_filenames]
     [os.rename(input_filename, new_filename) for input_filename, new_filename in zip(input_filenames, new_filenames)]
+    prefix = metadata['name']
+    metadata['name'] = f'PLACEHOLDER <{prefix}>'
     output_ids = create_placeholder_samples(metadata, len(input_filenames))
+    del metadata['name']
     workflow = {
         'cwlVersion': 'v1.0',
         'class': 'Workflow',
@@ -968,7 +994,7 @@ def check_jobserver_token(token):
 def create_placeholder_sample(data):
     sample_id = get_next_id(f'{DATADIR}/samples')
     path = f'{DATADIR}/samples/{sample_id}.h5'
-    mdt.update_metadata(path, data)
+    mdt.create_empty_file(path, data)
     return sample_id
 
 
@@ -976,14 +1002,4 @@ def create_placeholder_samples(data, count):
     return [create_placeholder_sample(data) for _ in range(0, count)]
 
 
-def get_jwt(email, password):
-    validate_login(email, password)
-    user = get_user_by_email(email)
-    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
-
-def get_jwt_by_id(user_id):
-    user = get_user(user_id)
-    user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')

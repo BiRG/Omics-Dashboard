@@ -98,12 +98,21 @@ def update_metadata(filename, new_data):
     return get_collection_info(filename)
 
 
+def create_empty_file(filename, new_data):
+    with h5py.File(filename, 'w') as file:
+        file.attrs.update(new_data)
+    return get_collection_info(filename)
+
+
 def approximate_dims(filename):
     """ Return a (m, n) pair where m is the longest row count and n is longest col count of all datasets"""
     with h5py.File(filename, 'r') as file:
-        m = max([dataset.shape[0] for dataset in get_datasets(file)])
-        n = max([dataset.shape[1] if len(dataset.shape) > 1 else 1 for dataset in get_datasets(file)])
-        return (m, n)
+        try:
+            m = max([dataset.shape[0] for dataset in get_datasets(file)])
+            n = max([dataset.shape[1] if len(dataset.shape) > 1 else 1 for dataset in get_datasets(file)])
+            return m, n
+        except ValueError:
+            return 0, 0
 
 
 def get_datasets(file):
