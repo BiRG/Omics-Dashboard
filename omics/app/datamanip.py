@@ -6,7 +6,7 @@ from ruamel import yaml
 import os
 from file_tools import metadatatools as mdt
 from file_tools import h5merge
-from db import db
+import database.db as db
 from io import StringIO
 import h5py
 from xkcdpass import xkcd_password as xp
@@ -17,7 +17,7 @@ import uuid
 import shutil
 
 DATADIR = os.environ['DATADIR']
-TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
+TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
 
@@ -96,7 +96,7 @@ def get_next_id(path):
     return 0 if ids is None else max(ids) + 1
 
 
-# Create, Read, Update, Delete from db or files
+# Create, Read, Update, Delete from database or files
 # Users
 def get_users():
     return db.query_db('select id, name, email, admin from Users;')
@@ -235,14 +235,14 @@ def upload_sample(user_id, filename, new_data, sample_id=None):
         if (sample_id is not None) and (old_data is None):
             raise Exception('Cannot update nonexistent collection!')
         if (sample_id is None) or is_write_permitted(user_id, old_data):
-            os.rename(filename, new_filename)
+            shutil.copy(filename, new_filename)
+            os.remove(filename)
             # user can add any arbitrary valid JSON to a collection
             # if it gets to this point, it has already been validated!
-            mdt.update_metadata(new_filename, new_data)
-            new_data = {} if new_data is None else new_data
-            new_data['createdBy'] = user_id
-            new_data['owner'] = user_id
-            mdt.update_metadata(new_filename, new_data)
+            metadata = {} if new_data is None else dict(new_data)
+            metadata['createdBy'] = user_id
+            metadata['owner'] = user_id
+            mdt.update_metadata(new_filename, metadata)
             return mdt.get_collection_info(new_filename)
     raise Exception('file not valid')
 
@@ -324,7 +324,8 @@ def upload_collection(user_id, filename, new_data):
     if validate_file(filename):
         new_id = get_next_id(f'{DATADIR}/collections/')
         new_filename = f'{DATADIR}/collections/{new_id}.h5'
-        os.rename(filename, new_filename)
+        shutil.copy(filename, new_filename)
+        os.remove(filename)
         # user can add any arbitrary valid JSON to a collection
         # if it gets to this point, it has already been validated!
         mdt.update_metadata(new_filename, new_data)
@@ -677,11 +678,17 @@ def update_sample_group(user_id, group_id, new_data):
 
 
 def update_sample_group_attachments(user_id, group_id, sample_ids):
+    print('update_sample_group_attachments')
     group = db.query_db('select * from SampleGroups where id=?', [str(group_id)], True)
+    print(json.dumps({'user_id': user_id, 'group_id': group_id, 'sample_ids': sample_ids}))
     if is_write_permitted(user_id, group):
-        current_member_ids = db.query_db('select sampleId from GroupMemberships where sampleGroupId=?', [str(group_id)], True)
-        samples_to_detach = [sample_id for sample_id in current_member_ids if sample_id not in sample_ids]
-        samples_to_attach = [sample_id for sample_id in sample_ids if sample_id not in current_member_ids]
+        current_member_ids = db.query_db('select sampleId from SampleGroupMemberships where sampleGroupId=?', [str(group_id)], True)
+        if current_member_ids is not None:
+            samples_to_detach = [sample_id for sample_id in current_member_ids if sample_id not in sample_ids]
+            samples_to_attach = [sample_id for sample_id in sample_ids if sample_id not in current_member_ids]
+        else:
+            samples_to_detach = []
+            samples_to_attach = sample_ids
         for sample_id in samples_to_detach:
             detach_sample(user_id, sample_id, group_id)
         for sample_id in samples_to_attach:
@@ -695,7 +702,7 @@ def attach_sample(user_id, sample_id, group_id):
     sample = mdt.get_collection_info(DATADIR + '/samples/' + str(sample_id) + '.h5')
     if is_write_permitted(user_id, group) and is_write_permitted(user_id, sample):
         if not sample_in_sample_group(sample_id, group_id):
-            db.query_db('insert into SampleGroupMemberships (sampleId, groupId) values (?,?);', [str(sample_id), str(group_id)])
+            db.query_db('insert into SampleGroupMemberships (sampleId, sampleGroupId) values (?,?);', [str(sample_id), str(group_id)])
             # see if attached
         return {'message': 'collection ' + str(sample_id) + ' attached to analysis ' + str(group_id)}
     raise AuthException(f'User {user_id} is not permitted to attach {sample_id} to group {group_id}')
@@ -727,8 +734,8 @@ def get_included_sample_groups(group_id):
 
 def get_sample_group_members(user_id, group_id):
     query = 'select sampleId from SampleGroupMemberships where sampleGroupId=?'
-    sample_ids = db.query_db(query, [str(group_id)])
-    return [mdt.get_sample_metdata(user_id, sample_id) for sample_id in sample_ids]
+    sample_ids = [line['sampleId'] for line in db.query_db(query, [str(group_id)])]
+    return [get_sample_metadata(user_id, sample_id) for sample_id in sample_ids]
 
 
 def sample_in_sample_group(sample_id, group_id):
@@ -775,11 +782,11 @@ def get_module_by_id(basepath, id):
 
 
 def get_preprocessing_modules():
-    return get_modules(f'{MODULEDIR}/processing-modules')
+    return get_modules(f'{MODULEDIR}/sample-processing')
 
 
 def get_parsing_modules():
-    modules = get_modules(f'{MODULEDIR}/file-parsers')
+    modules = get_modules(f'{MODULEDIR}/sample-parsing')
     return modules
 
 
@@ -787,7 +794,7 @@ def get_parsing_modules():
 def start_job(workflow, job, owner):
     auth_token = get_jwt_by_id(owner)
     job['authToken'] = auth_token
-    labels = json.dumps({'owner': owner})
+    labels = json.dumps({'owner': str(owner)})
     files = {'workflowSource': StringIO(),
              'workflowInputs': StringIO(),
              'labels': labels}
@@ -853,20 +860,21 @@ def resume_job(user_id, job_id):
 
 def create_sample_creation_workflow(user_id, input_filenames, metadata):
     # generate tmpdir for this temporary workflow
+    new_metadata = dict(metadata)
     token = create_jobserver_token()
     directory = f'{TMPDIR}/{token}'
     os.mkdir(directory)
-    metadata_filename = f'{directory}/metadata'
+    metadata_filename = f'{directory}/metadata.json'
     with open(metadata_filename, 'w') as file:
-        json.dump(metadata, file)
+        json.dump(new_metadata, file)
     with open(f'{directory}/wfdata.json', 'w') as file:
         json.dump({'owner': user_id}, file)
     new_filenames = [f'{directory}/{os.path.basename(input_filename)}' for input_filename in input_filenames]
     [os.rename(input_filename, new_filename) for input_filename, new_filename in zip(input_filenames, new_filenames)]
-    prefix = metadata['name']
-    metadata['name'] = f'PLACEHOLDER <{prefix}>'
-    output_ids = create_placeholder_samples(metadata, len(input_filenames))
-    del metadata['name']
+    prefix = new_metadata['name']
+    new_metadata['name'] = f'PLACEHOLDER <{prefix}>'
+    output_ids = create_placeholder_samples(new_metadata, len(input_filenames))
+    del new_metadata['name']
     workflow = {
         'cwlVersion': 'v1.0',
         'class': 'Workflow',
@@ -909,7 +917,7 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
             [
                 {
                     'id': 'responses',
-                    'outputSource': 'update/output',
+                    'outputSource': 'update/responses',
                     'type': 'string'
                 }
             ],
@@ -917,7 +925,7 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
             [
                 {
                     'id': 'parse',
-                    'run': metadata["parser"],
+                    'run': new_metadata["parser"],
                     'in': [
                         {
                             'id': 'inputFiles',
@@ -928,34 +936,34 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
                             'source': 'prefix'
                         }
                     ],
-                    'out': [{'id': 'output'}]
+                    'out': [{'id': 'outputFiles'}]
                 },
                 {
                     'id': 'process',
-                    'run': metadata["preproc"],
+                    'run': new_metadata["preproc"],
                     'in': [
                         {
                             'id': 'inputFiles',
-                            'source': 'parse/output'
+                            'source': 'parse/outputFiles'
                         }
                     ],
-                    'out': [{'id': 'output'}]
+                    'out': [{'id': 'outputFiles'}]
                 },
                 {
                     'id': 'update',
-                    'run': f'{MODULEDIR}/core-modules/uploadsamples.cwl',
+                    'run': f'{MODULEDIR}/omics-service/uploadsamples.cwl',
                     'in':
                         [
                             {'id': 'inputFiles',
-                             'source': 'process/output'},
+                             'source': 'process/outputFiles'},
                             {'id': 'metadataFile',
                              'source': 'metadataFile'},
                             {'id': 'idStart',
                              'source': 'firstId'},
-                            {'id': 'omicsUrl',
-                             'source': 'omicsUrl'},
                             {'id': 'wfToken',
                              'source': 'wfToken'},
+                            {'id': 'omicsUrl',
+                             'source': 'omicsUrl'},
                             {'id': 'authToken',
                              'source': 'authToken'}
                         ],
@@ -976,7 +984,12 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
         'omicsUrl': os.environ['OMICSSERVER']
     }
     # perhaps move execution here?
-    return {'workflow': workflow, 'job': job}
+    #debug
+    with open(f'{directory}/workflow.cwl', 'w') as file:
+        yaml.safe_dump(workflow, file)
+    with open(f'{directory}/job.json', 'w') as file:
+        json.dump(job, file)
+    return {'workflow': workflow, 'job': job, 'outputIds': output_ids}
 
 
 def create_jobserver_token():

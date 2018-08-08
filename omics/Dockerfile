@@ -6,4 +6,6 @@ RUN pip install -r requirements.txt
 
 ADD app /app/
 ADD jobserver.py /
-ENTRYPOINT ["uwsgi", "--ini", "/app/uwsgi.ini"]
+ADD entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

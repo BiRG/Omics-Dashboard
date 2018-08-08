@@ -16,9 +16,9 @@ def update_metadata(filename, new_data):
 input_filenames = sys.argv[1:len(sys.argv) - 5]
 metadata_file = sys.argv[len(sys.argv) - 5]
 collection_id_start = int(sys.argv[len(sys.argv) - 4])
-wf_token = sys.argv[len(sys.argv) - 3)
+wf_token = sys.argv[len(sys.argv) - 3]
 omics_url = sys.argv[len(sys.argv) - 2]
-auth_token = f'JWT {sys.argv[len(sys.argv)] - 1}' # every workflow that talks to the omics server should have a 'token' parameter handled by the server.
+auth_token = f'JWT {sys.argv[len(sys.argv) - 1]}' # every workflow that talks to the omics server should have a 'token' parameter handled by the server.
 with open(metadata_file, 'r') as f:
     metadata = json.load(f)
 
@@ -32,12 +32,14 @@ output = []
 for output_filename, collection_id in zip(output_filenames, collection_ids):
     url = f'{omics_url}/api/samples/{collection_id}'
     files = {'file': open(output_filename, 'rb')}
-    res = requests.post(url,
-                        headers={'Authorization': auth_token},
-                        files=files)
+    res = post(url,
+               headers={'Authorization': auth_token},
+               files=files)
+    res.raise_for_status()
     output.append(json.loads(res.text))
 print(json.dumps(output))
-requests.post(f'{omics_url}/api/finalize', 
-	      headers={'Authorization': auth_token,
-	      json={'wfToken': wf_token})
+res = post(f'{omics_url}/api/finalize', 
+     	   headers={'Authorization': auth_token},
+           json={'wfToken': wf_token})
+res.raise_for_status()
 sys.exit(0)

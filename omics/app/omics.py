@@ -11,8 +11,9 @@ import traceback
 import jwt
 import base64
 import uuid
-
+import database.initdb as initdb
 from datamanip import get_jwt, validate_login
+import file_tools.initfs as initfs
 
 app = Flask(__name__)
 CORS(app)
@@ -20,7 +21,7 @@ CORS(app)
 
 DATADIR = os.environ['DATADIR']
 BRAND = os.environ['BRAND'] if 'BRAND' in os.environ else ''
-TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else DATADIR + '/tmp'
+TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'  # should be a docker volume
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
 log_file_name = f'{DATADIR}/logs/omics.log'
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
@@ -177,7 +178,7 @@ app.jinja_env.globals.update(get_update_url=get_update_url)
 app.jinja_env.globals.update(get_included_groups=datamanip.get_included_groups)
 app.jinja_env.globals.update(BRAND=BRAND)
 
-# close db connection at app close
+# close database connection at app close
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
@@ -317,14 +318,16 @@ def render_upload_sample():
         if request.method == 'POST':
             user_id = get_user_id()
             files = request.files.getlist('files')
-            filenames = [os.path.join(app.config['UPLOAD_DIR'], secure_filename(file.filename)) for file in files]
+            filenames = [os.path.join(app.config['UPLOAD_DIR'], secure_filename(file. filename)) for file in files]
             [file.save(filename) for file, filename in zip(files, filenames)]
             metadata = request.form.to_dict()
             metadata['owner'] = user_id
             metadata['createdBy'] = user_id
             workflow_data = datamanip.create_sample_creation_workflow(user_id, filenames, metadata)
+            sample_group = datamanip.create_sample_group(user_id, metadata)
+            datamanip.update_sample_group_attachments(user_id, sample_group['id'], workflow_data['outputIds'])
             datamanip.start_job(workflow_data['workflow'], workflow_data['job'], user_id)
-            return redirect(url_for('render_job_list'))
+            return redirect(url_for('render_sample_group', sample_group_id=sample_group['id']))
         return render_template('createbase.html', type='Sample', endpoint='render_upload_sample')
     except Exception as e:
         return handle_exception_browser(e)
@@ -419,7 +422,7 @@ def render_analysis(analysis_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/usergroups', methods=['GET'])
+@app.route('/user_groups', methods=['GET'])
 def render_user_group_list():
     try:
         user_id = get_user_id()
@@ -430,7 +433,7 @@ def render_user_group_list():
         return handle_exception_browser(e)
 
 
-@app.route('/usergroups/<group_id>', methods=['GET', 'DELETE'])
+@app.route('/user_groups/<group_id>', methods=['GET', 'DELETE'])
 def render_user_group(group_id=None):
     try:
         user_id = get_user_id()
@@ -444,7 +447,7 @@ def render_user_group(group_id=None):
         return handle_exception_browser(e)
 
 
-@app.route('/usergroups/create', methods=['GET', 'POST'])
+@app.route('/user_groups/create', methods=['GET', 'POST'])
 def render_create_user_group():
     try:
         user_id = get_user_id()
@@ -719,8 +722,6 @@ def upload_collection():
         new_data = request.get_json()
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')
-        collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
-        del new_data['file']
         filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
         if 'file' in request.files:
             if request.files['file'].filename == '':
@@ -728,7 +729,9 @@ def upload_collection():
             request.files['file'].save(filename)
         else:
             with open(filename, 'wb') as file:
+                collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
                 file.write(collection_file_data)
+                del new_data['file']
         if datamanip.validate_file(filename):
             collection_data = datamanip.upload_collection(user_id, filename, new_data)
             return jsonify(collection_data)
@@ -754,10 +757,10 @@ def get_sample(sample_id=None):
             return jsonify(datamanip.get_sample(user_id, sample_id))
         if request.method == 'POST':
             if 'file' in request.files:
-                filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
+                filename = f'{app.config["UPLOAD_DIR"]}/sample_upload_{str(uuid.uuid4())}.h5'
                 request.files['file'].save(filename)
-                sample_data = datamanip.upload_sample(get_user_id(), request.form, filename, sample_id)
-                os.remove(filename)
+                print(f'filename: {filename}')
+                sample_data = datamanip.upload_sample(get_user_id(), filename, request.form, sample_id)
             else:
                 sample_data = datamanip.update_sample(user_id, sample_id, request.get_json(force=True))
             return jsonify(sample_data)
@@ -813,7 +816,7 @@ def download_sample(sample_id=None):
             out = datamanip.download_sample_dataset(user_id, sample_id, path)
             response = make_response(out['csv'])
             response.headers['Content-Disposition'] = out['cd']
-            response.mimetype='text/csv'
+            response.mimetype = 'text/csv'
             return response
         out = datamanip.download_sample(user_id, sample_id)
         return send_from_directory('%s/samples' % DATADIR, out['filename'], as_attachment=True)
@@ -849,13 +852,19 @@ def upload_sample():
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
         new_data = request.get_json()
+        filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
         if 'file' not in new_data:
             raise ValueError('No file uploaded')
-        sample_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
-        del new_data['file']
-        filename = os.path.join(app.config['UPLOAD_DIR'], str(uuid.uuid4()))
-        with open(filename, 'wb') as file:
-            file.write(sample_file_data)
+
+        if 'file' in request.files:
+            if request.files['file'].filename == '':
+                raise ValueError('No file uploaded')
+            request.files['file'].save(filename)
+        else:
+            with open(filename, 'wb') as file:
+                sample_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+                file.write(sample_file_data)
+                del new_data['file']
         if datamanip.validate_file(filename):
             sample_data = datamanip.upload_sample(user_id, filename, new_data)
             return jsonify(sample_data)
@@ -906,7 +915,7 @@ def get_analysis(analysis_id=None):
         return handle_exception(e)
 
 
-@app.route('/api/usergroups', methods=['GET', 'POST'])
+@app.route('/api/user_groups', methods=['GET', 'POST'])
 def list_user_groups():
     try:
         user_id = get_user_id()
@@ -918,7 +927,7 @@ def list_user_groups():
         return handle_exception(e)
 
 
-@app.route('/api/usergroups/<group_id>', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/user_groups/<group_id>', methods=['GET', 'POST', 'DELETE'])
 def get_user_group(group_id=None):
     try:
         user_id = get_user_id()
@@ -1003,12 +1012,12 @@ def get_invitation():
 def finalize_job():
     try:
         user_id = get_user_id()
-        body = request.get_json()
+        body = request.get_json(force=True)
         token = body['wfToken']
-        path = f'{DATADIR}/tmp/{token}'
-        info = json.load(f'{path}/wfdata.json')
+        path = f'{TMPDIR}/{token}'
+        info = json.load(open(f'{path}/wfdata.json', 'r'))
         if datamanip.check_jobserver_token(token) and datamanip.is_write_permitted(user_id, info):
-            shutil.rmtree(f'{DATADIR}/tmp/{token}', ignore_errors=True)
+            shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
         return handle_exception(e)

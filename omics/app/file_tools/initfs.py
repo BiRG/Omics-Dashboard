@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-def initfs():
+def initialize_fs():
     DATADIR = os.environ['DATADIR']
     paths = [
         f'{DATADIR}/samples',
@@ -15,4 +15,4 @@ def initfs():
 if __name__ == '__main__':
     # test1.py executed as script
     # do something
-    initfs()
+    initialize_fs()

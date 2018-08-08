@@ -26,7 +26,7 @@ inputs:
       position: 4
   - id: authToken
     type: string
-    inputBinding
+    inputBinding:
       position: 5
 outputs:
   - id: responses

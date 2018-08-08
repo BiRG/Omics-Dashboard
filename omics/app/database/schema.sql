@@ -24,8 +24,8 @@ create table if not exists Users (
 /*
  Multiple collections can be attached to an Analysis
  these analyses are stored in the hdf5 file of the collection as a list
- in a veritable Gertrude Stein's Muenster of properly normalized SQL db
- and poorly-implemented homebrew document-oriented db
+ in a veritable Gertrude Stein's Muenster of properly normalized SQL database
+ and poorly-implemented homebrew document-oriented database
  */
 create table if not exists Analyses (
     id integer primary key,

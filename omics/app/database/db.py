@@ -10,7 +10,7 @@ def make_dicts(cursor, row):
                 for idx, value in enumerate(row))
 
 
-# connect to db if not already connected
+# connect to database if not already connected
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:

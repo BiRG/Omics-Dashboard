@@ -13,8 +13,9 @@ inputs:
     inputBinding:
       position: 1
 outputs:
-  - id: output
+  - id: outputFiles
     type: File[]
     outputBinding:
       glob: '*.h5'
 label: txtXY
+doc: Parse a text file in the .txtXY format, which consists of a number of header lines with $key:value pairs followed by paired numeric data.
