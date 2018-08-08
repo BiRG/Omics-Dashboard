@@ -7,18 +7,25 @@ services:
     build: omics
     env_file: common.env
     volumes:
-      - ${DATADIR}:/data
+      - data:/data
       - ${MODULEDIR}:/modules
   jobserver:
     build: jobserver
     env_file: common.env
     privileged: true
     volumes:
-      - ${DATADIR}:/data
+      - data:/data
       - ${MODULEDIR}:/modules
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${VARDIR}:/var
-      - /tmp:/tmp
+        #- ${VARDIR}:/var
+      - tmp:/tmp
+    depends_on:
+      - jobserverdb
+  jobserverdb:
+    image: mariadb:latest
+    env_file: common.env
+    volumes:
+      - jobserverdb:/var/lib/mysql
   proxy:
     build: proxy
     env_file: common.env
@@ -26,7 +33,11 @@ services:
       - 8080:${HOSTPORT}
       - 5000:5000
     volumes:
-      - ${DATADIR}:/data
+      - data:/data
     depends_on:
       - jobserver
       - omics
+volumes:
+  data:
+  tmp:
+  jobserverdb:
