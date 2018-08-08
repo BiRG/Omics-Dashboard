@@ -1,0 +1,4 @@
+{
+    "name": "File Parsers",
+    "description": "Tools to create HDF5 files to use in the system from text or binary files produced by instruments."
+}
