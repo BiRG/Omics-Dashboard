@@ -50,7 +50,8 @@ create table if not exists SampleGroups(
     owner integer,
     groupPermissions text,
     allPermissions text,
-    userGroup integer
+    userGroup integer,
+    uploadWorkflowId text
 );
 
 /*

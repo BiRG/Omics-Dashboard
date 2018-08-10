@@ -15,5 +15,5 @@ RUN ln -s /docker/docker /usr/bin/docker
 
 ADD tools/*.py /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.py
-
-ENTRYPOINT ["java", "-jar", "cromwell-34.jar", "server"]
+ADD cromwell.conf /
+ENTRYPOINT ["java", "-Dconfig.file=/cromwell.conf", "-jar", "cromwell-34.jar", "server"]

@@ -16,6 +16,10 @@
       <link href="{{ url_for('static', filename='styles/bootstrap-select.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/bootstrap.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/buttons.bootstrap4.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/fixedColumns.bootstrap4.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/colReorder.bootstrap4.min.css') }}" rel="stylesheet">
+      <link href="{{ url_for('static', filename='styles/select.bootstrap4.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/fileinput.min.css') }}" rel="stylesheet">
       <link href="{{ url_for('static', filename='styles/omics.css') }}" rel="stylesheet">
     {%- endblock %}
@@ -113,16 +117,21 @@
       </div>
     </nav>
   {%- endblock %}
-  <div id="content" class="container-fluid" >
+  <div id="content" class="container" >
     {% block content %}
     {% endblock %}
   </div>
   {% block scripts %}
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.dataTables.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap-select.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap-select.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery.dataTables.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.select.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.fixedColumns.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/buttons.bootstrap4.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dataTables.colReorder.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fileinput.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fileinput-theme.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>

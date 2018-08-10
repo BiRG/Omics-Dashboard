@@ -21,6 +21,8 @@ omics_url = sys.argv[len(sys.argv) - 2]
 auth_token = f'JWT {sys.argv[len(sys.argv) - 1]}' # every workflow that talks to the omics server should have a 'token' parameter handled by the server.
 with open(metadata_file, 'r') as f:
     metadata = json.load(f)
+if 'name' in metadata:
+    del metadata['name'] # preserve name set up in previous steps
 
 collection_ids = [i for i in range(collection_id_start, collection_id_start + len(input_filenames))]
 output_filenames = [f'{os.environ["HOME"]}/{collection_id}.h5' for collection_id in collection_ids]
@@ -41,5 +43,7 @@ print(json.dumps(output))
 res = post(f'{omics_url}/api/finalize', 
      	   headers={'Authorization': auth_token},
            json={'wfToken': wf_token})
+if res.status_code == 500:
+    print(res.json())
 res.raise_for_status()
 sys.exit(0)

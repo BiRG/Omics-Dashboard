@@ -15,13 +15,13 @@ import requests
 import json
 import uuid
 import shutil
+from file_tools.collectiontools import get_dataframe
 
 DATADIR = os.environ['DATADIR']
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
 
-# TODO: raise exceptions for unauthorized
 # route functions should capture exceptions from SQLite3
 
 
@@ -54,6 +54,7 @@ def get_jwt_by_id(user_id):
     user['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
+
 def is_admin(user_id):
     return db.query_db('select * from Users where id=? and admin=1;', [str(user_id)], True) is not None
 
@@ -72,7 +73,7 @@ def is_group_admin(user_id, group_id):
 def is_read_permitted(user_id, record):
     return record['owner'] == user_id \
         or is_admin(user_id) \
-        or record['allPermissions'] == 'readonly' \
+        or record['allPermissions'] == 'readonly'  \
         or record['allPermissions'] == 'full' \
         or ((record['groupPermissions'] == 'readonly' or record['groupPermissions'] == 'full') and user_in_group(record['userGroup']))
 
@@ -347,16 +348,24 @@ def download_collection(user_id, collection_id):
 
 
 def download_collection_dataset(user_id, collection_id, path):
-    filename = '%s/collections/%s.h5' % (DATADIR, str(collection_id))
+    filename = f'{DATADIR}/collections/{collection_id}.h5'
     collection = mdt.get_collection_metadata(filename)
     csv_filename = os.path.basename(os.path.normpath(path))
     if is_read_permitted(user_id, collection):
         return {'csv': mdt.get_csv(filename, path), 'cd': 'attachment; filename=%s.csv' % csv_filename}
-    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
+
+
+def download_collection_dataframe(user_id, collection_id):
+    filename = f'{DATADIR}/collections/{collection_id}.h5'
+    collection = mdt.get_collection_metadata(filename)
+    if is_read_permitted(user_id, collection):
+        return {'csv': get_dataframe(filename), 'cd': f'attachment; filename={collection_id}.csv'}
+    raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 
 def list_collection_paths(user_id, collection_id):
-    filename = '%s/collections/%s.h5' % (DATADIR, str(collection_id))
+    filename = f'{DATADIR}/collections/{collection_id}.h5'
     collection = mdt.get_collection_metadata(filename)
     if is_read_permitted(user_id, collection):
         return mdt.get_dataset_paths(filename)
@@ -372,8 +381,7 @@ def create_collection(user_id, sample_ids, new_data, sortBy='baseSampleId'):
     for filename in filenames:
         if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
             raise AuthException(f'User {user_id} is not permitted to access file {filename}')
-    print('h5merge:\n')
-    h5merge.h5_merge(filenames, outfilename, reserved_paths=['/x'], sortBy=sortBy) 
+    h5merge.h5_merge(filenames, outfilename, reserved_paths=['/x'], sortBy=sortBy)
     #TODO: allow samples aligned at 'x' with NaN padding
     print('update_metadata:\n')
     return mdt.update_metadata(outfilename, new_data)
@@ -382,10 +390,10 @@ def create_collection(user_id, sample_ids, new_data, sortBy='baseSampleId'):
 def delete_collection(user_id, collection_id):
     collection_info = mdt.get_collection_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5')
     if is_write_permitted(user_id, collection_info):
-        os.remove(DATADIR + '/collections/' + str(collection_id) + '.h5')
+        os.remove(f'{DATADIR}/collections/{collection_id}.h5')
         db.query_db('delete from CollectionMemberships where collectionId=?;', [str(collection_id)])
         return {'message': 'collection ' + str(collection_id) + ' removed'}
-    raise AuthException('User %s not authorized to modify collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not permitted to modify collection {collection_id}')
 
 
 # TODO: workflows
@@ -654,19 +662,19 @@ def get_sample_group(user_id, group_id):
 
 
 def create_sample_group(user_id, data):
-    db.query_db('insert into SampleGroups (name, description, createdBy, owner, groupPermissions, allPermissions, userGroup)'
-                ' values (?, ?, ?, ?, ?, ?, ?);',
+    db.query_db('insert into SampleGroups (name, description, createdBy, owner, groupPermissions, allPermissions, userGroup, uploadWorkflowId)'
+                ' values (?, ?, ?, ?, ?, ?, ?, ?);',
                 [str(data['name']), str(data['description']), str(user_id), str(user_id), str(data['groupPermissions']),
-                 str(data['allPermissions']), str(data['userGroup'])],
+                 str(data['allPermissions']), str(data['userGroup']), 'None'], # workflow id is optional
                 True)
     return db.query_db('select id, * from SampleGroups where id=last_insert_rowid()', (), True)
 
 
 def update_sample_group(user_id, group_id, new_data):
     sample_group = db.query_db('select * from SampleGroups where id=?;', [str(group_id)], True)
-    valid_keys = ['name', 'description', 'owner', 'groupPermissions', 'allPermissions', 'userGroup']
+    valid_keys = ['name', 'description', 'owner', 'groupPermissions', 'allPermissions', 'userGroup', 'uploadWorkflowId']
     if is_write_permitted(user_id, sample_group):
-        query = 'update UserGroups set ' \
+        query = 'update SampleGroups set ' \
                 + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
                 + ' where id=?;'
         params = []  # TODO: validate params against schema
@@ -674,7 +682,7 @@ def update_sample_group(user_id, group_id, new_data):
         params.append(str(group_id))
         db.query_db(query, params)
         return db.query_db('select * from SampleGroups where id=?;', [str(group_id)], True)
-    raise AuthException('User %s is not permitted to modify group %s' % (str(user_id), str(group_id)))
+    raise AuthException(f'User {user_id} is not permitted to modify group {group_id}')
 
 
 def update_sample_group_attachments(user_id, group_id, sample_ids):
@@ -804,24 +812,13 @@ def start_job(workflow, job, owner):
     files['workflowSource'].seek(0)
     params = {'workflowType': 'CWL', 'workflowTypeVersion': 'v1.0'}
     url = f'{COMPUTESERVER}/api/workflows/v1'
-    print('SEND TO JOBSERVER')
-    print(f'files: {files}')
-    print(f'labels: {labels}')
-    print(f'params: {params}')
-    print(f'url: {url}')
     res = requests.post(url,
                         headers={'Authorization': auth_token},
                         data=params,
                         files=files)
-    print('RESPONSE:')
-    print(res)
     try:
         return res.json()
     except Exception as e:
-        with open(f'{DATADIR}/logs/omics.log', 'a+') as log_file:
-            log_file.write(f'{str(e)}\n')
-            log_file.write(f'{str(request_data)}\n')
-            log_file.write(f'{response.content}')
         raise RuntimeError('Invalid response from job server. Is the server running?')
 
 
@@ -865,6 +862,8 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
     directory = f'{TMPDIR}/{token}'
     os.mkdir(directory)
     metadata_filename = f'{directory}/metadata.json'
+    metadata['sampleGroupName'] = metadata['name']
+    del metadata['name']
     with open(metadata_filename, 'w') as file:
         json.dump(new_metadata, file)
     with open(f'{directory}/wfdata.json', 'w') as file:
@@ -995,7 +994,7 @@ def create_sample_creation_workflow(user_id, input_filenames, metadata):
 def create_jobserver_token():
     token = str(uuid.uuid4())
     while token in os.listdir(f'{TMPDIR}'):
-        token = uuid.uuid4()
+        token = str(uuid.uuid4())
     db.query_db('insert into JobServerTokens (value) values (?)', [str(token)])
     return token
 

@@ -12,7 +12,9 @@ def reference(filename, reference, x_window):
         reference_ind = np.argmax(file['Y'][sub_ind, 0])
         print(reference_ind)
         file['x'][:] = file['x'][:] - reference
+
     
 def scale(filename, frequency):
     with h5py.File(filename, 'r+') as file:
         file['x'][:] = file['x'][:] / frequency
+        file.attrs['units_chemical_shift'] = 'ppm'

@@ -3,6 +3,7 @@ Cython
 flask
 flask-cors
 h5py
+pandas
 itsdangerous
 jinja2
 markupsafe

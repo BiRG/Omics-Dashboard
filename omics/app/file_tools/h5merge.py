@@ -80,7 +80,7 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", rese
 
     # have to handle some attrs differently
     ignored_attrs = ['name', 'description', 'userGroup', 'owner', 'createdBy', 'groupPermissions', 'allPermissions']
-    merge_attrs = [attr for attr in merge_attrs if attr not in ignored_attrs]
+    merge_attrs = set([attr for attr in merge_attrs if attr not in ignored_attrs])
     for attr_key in merge_attrs:
         values = np.array([[file.attrs[attr_key].encode('ascii') if isinstance(file.attrs[attr_key], str) else file.attrs[attr_key] for file in files]])
         np.reshape(values, (1, len(infilenames)))
@@ -96,7 +96,7 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", rese
     
     # Sort everything by the specified sortBy path
     ind = np.argsort(outfile[sortBy])[0,:]
-    for key in (list(merge_attrs) + merge_paths):
+    for key in merge_attrs.intersection(merge_paths):
         if key not in reserved_paths:
             try:
                 outfile[key][:] = np.asarray(outfile[key])[:,ind]

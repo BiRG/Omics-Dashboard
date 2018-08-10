@@ -4,6 +4,7 @@ import shutil
 import sys
 import NMRproc
 import os
+import h5py
 
 frequency = np.float64(sys.argv[len(sys.argv) - 1])
 filenames = sys.argv[1:len(sys.argv) - 1]
