@@ -8,7 +8,7 @@
       <option value="0" selected>None</option>
       {% endif %}
       {% for item in data %}
-      <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}">{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
+      <option value="{{ item['modulePath'] if 'modulePath' in item else item['id']}}" {{ 'selected' if sample_ids and item['id'] in sample_ids}}>{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
       {% endfor %}
     </select>
   </div>
@@ -20,7 +20,7 @@
     <div class="card-body">
         <form id="metadata" action="{{ url_for(endpoint) }}" method="post" enctype="multipart/form-data">
           <div class="form-group">
-		  <label for="nameInput">Name{{' Prefix' if type=='Sample' else ''}}</label>
+		  <label for="nameInput">{{ 'Group ' if type=='Sample' else '' }}Name</label>
             <input type="text" name="name" required="true" id="nameInput" class="form-control" placeholder="Enter name">
           </div>
           <div class="form-group">

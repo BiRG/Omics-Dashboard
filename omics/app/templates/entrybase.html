@@ -1,20 +1,23 @@
 {# The dashboard puts resources belonging to the user front and center#}
 {% extends "base.html" %}
 {% set protectedKeys =  ['owner', 'admins', 'id', 'rowid', 'createdBy', 'groupPermissions','allPermissions', 'userGroup', 'dateModified'] %}
+
+<div class="container">
 {% block content %}
-  <div class="container">
     <div class="page-header">
       <h1 class="display-4">{{ data['name'] }} ({{ type }} {{ data['id'] if 'id' in data else data['rowid'] }})</h1>
       {% if type.lower() == 'collection' %}
         <p>
-          <a class="btn btn-primary" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
+          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
             <i class="fas fa-download"></i> HDF5
           </a>
+          <a class="btn btn-secondary btn-lg" aria-label="Download DataFrame" href="{{ url_for('download_collection', collection_id=data['id'], format='pandas') }}" role="button">
+            <i class="fas fa-download"></i> DataFrame
+          </a>
         </p>
-      </div>
       {% elif type.lower() == 'sample' %}
-        <p class="lead">
-          <a class="btn btn-primary btn-lg" href="{{ url_for('download_sample', sample_id=data['id']) }}" role="button">
+        <p>
+          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('download_sample', sample_id=data['id']) }}" role="button">
             <i class="fas fa-download"></i> HDF5
           </a>
         </p>
@@ -25,7 +28,7 @@
           </a>
         </p>
       {% endif %}
-  </div>
+    </div>
 
   <div class="card mb-3">
     <h4 class="card-header text-white bg-dark">Attributes</h4>
@@ -116,7 +119,9 @@
 
 
 {% endblock %}
+</div>
 {# TODO: allow deletion of nonessential rows #}
+
 {% block scripts %}
   {{ super() }}
   <script type="text/javascript">
@@ -174,21 +179,26 @@
           reqData[$(this).parent().prev().prev().text()] = $(this).parent().prev().text();
       }
       console.log(reqData);
-      $.post(url, JSON.stringify(reqData))
-          .done(function(res) {
-              var key = Object.keys(reqData);
-              var message = 'Changed ' + key + ' to ' + reqData[key];
-              $('#failModalLabel').text('Entry Updated');
-              $('#failModalBody').text(message);
-              $('#failModal').modal();
-          })
-          .fail(function(res){
-              $('#failModalLabel').text('Update Failed');
-	      console.log(res.responseJSON)
-              $('#failModalBody').text(res.responseJSON.message);
-              $('#failModal').modal();
-          });
-
+      $.ajax({
+          type: "POST",
+          data: JSON.stringify(reqData),
+          url: url,
+          contentType: "application/json"
+      }).done(function(res){
+          var key = Object.keys(reqData);
+          var message = 'Changed ' + key + ' to ' + reqData[key];
+          console.log(res);
+          console.log(url);
+          $('#failModalLabel').text('Entry Updated');
+          $('#failModalBody').text(message);
+          $('#failModal').modal();
+      }).fail(function(res){
+          $('#failModalLabel').text('Update Failed');
+          console.log(url);
+          console.log(res);
+          $('#failModalBody').text(res.responseJSON.message);
+          $('#failModal').modal();
+      });
   });
   </script>
 {% endblock %}

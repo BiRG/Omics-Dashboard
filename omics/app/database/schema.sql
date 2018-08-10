@@ -24,8 +24,8 @@ create table if not exists Users (
 /*
  Multiple collections can be attached to an Analysis
  these analyses are stored in the hdf5 file of the collection as a list
- in a veritable Gertrude Stein's Muenster of properly normalized SQL db
- and poorly-implemented homebrew document-oriented db
+ in a veritable Gertrude Stein's Muenster of properly normalized SQL database
+ and poorly-implemented homebrew document-oriented database
  */
 create table if not exists Analyses (
     id integer primary key,
@@ -36,6 +36,22 @@ create table if not exists Analyses (
     groupPermissions text,
     allPermissions text,
     userGroup integer
+);
+
+/*
+  Samples can be grouped while remaining distinct. A collection is a concatenation/merging
+  of samples following a particular order.
+ */
+create table if not exists SampleGroups(
+    id integer primary key,
+    name text,
+    description text,
+    createdBy integer,
+    owner integer,
+    groupPermissions text,
+    allPermissions text,
+    userGroup integer,
+    uploadWorkflowId text
 );
 
 /*
@@ -110,3 +126,8 @@ create table if not exists CollectionMemberships(
     unique(collectionId, analysisId)
 );
 
+create table if not exists SampleGroupMemberships(
+    sampleId integer,
+    sampleGroupId integer,
+    unique(sampleId, sampleGroupId)
+);

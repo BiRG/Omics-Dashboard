@@ -1,3 +1,5 @@
 #!/bin/bash
-source activate serverenv
-uwsgi --ini /app/uwsgi.ini 
+cd /app/database/ && python3 /app/database/initdb.py /data/omics.db
+mkdir -p /data/samples /data/logs /data/collections
+mkdir -p /tmp/uploads
+uwsgi --ini /app/uwsgi.ini
