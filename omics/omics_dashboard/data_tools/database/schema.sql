@@ -1,8 +1,8 @@
 /*Note to future maintainer: this DB isn't normalized very well...*/
 
 /*
- This app uses a relational database with this schema to store users,
- user groups, analyses, 
+ This omics_dashboard uses a relational database with this schema to store users,
+ user groups, analyses.py,
 
  Workflows and modules are read from yml files
  Collection and sample attributes are read from hdf5 files
@@ -23,7 +23,7 @@ create table if not exists Users (
 
 /*
  Multiple collections can be attached to an Analysis
- these analyses are stored in the hdf5 file of the collection as a list
+ these analyses.py are stored in the hdf5 file of the collection as a list
  in a veritable Gertrude Stein's Muenster of properly normalized SQL database
  and poorly-implemented homebrew document-oriented database
  */
@@ -109,7 +109,7 @@ create table if not exists AnalysisMemberships(
 );
 
 /*
- Maps workflows to analyses
+ Maps workflows to analyses.py
  */
 create table if not exists WorkflowMemberships(
     workflowId integer,
@@ -118,7 +118,7 @@ create table if not exists WorkflowMemberships(
 );
 
 /*
- Maps collections to analyses
+ Maps collections to analyses.py
 */
 create table if not exists CollectionMemberships(
     collectionId integer,

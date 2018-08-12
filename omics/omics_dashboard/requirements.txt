@@ -1,3 +1,4 @@
+bcrypt
 click
 Cython
 flask
@@ -15,6 +16,7 @@ werkzeug
 wheel
 numpy
 pyjwt
+pandas
 cachecontrol
 chardet
 flask-swagger-ui

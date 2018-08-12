@@ -658,7 +658,7 @@ paths:
     get:
       tags:
       - Analyses
-      summary: Get a list of analyses
+      summary: Get a list of analyses.py
       security:
       - bearerAuth: []
       responses:

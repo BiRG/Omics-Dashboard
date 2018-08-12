@@ -198,5 +198,5 @@ def get_jobs():
 
 
 if __name__ == '__main__':
-    # app.debug = True
+    # omics_dashboard.debug = True
     app.run()
