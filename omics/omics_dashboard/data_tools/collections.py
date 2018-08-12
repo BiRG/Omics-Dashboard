@@ -1,13 +1,12 @@
 import os
 import shutil
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
-import omics_dashboard.data_tools.file_tools.collection_tools as ct
-from omics_dashboard.data_tools.database import db
+import data_tools.file_tools.metadata_tools as mdt
+import data_tools.file_tools.collection_tools as ct
+from data_tools.database import db
 from typing import List, Dict, Any
-from omics_dashboard.data_tools.util import DATADIR, AuthException, \
-    validate_file, get_next_id
-from omics_dashboard.data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
-from omics_dashboard.data_tools.file_tools.h5_merge import h5_merge
+from data_tools.util import DATADIR, AuthException, validate_file, get_next_id
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.file_tools.h5_merge import h5_merge
 
 
 def get_all_collections() -> List[Dict[str, Any]]:

@@ -13,8 +13,8 @@ import base64
 import uuid
 
 import data_tools.sample_creation
-import omics_dashboard.data_tools as dt
-from omics_dashboard.data_tools.util import DATADIR, TMPDIR
+import data_tools as dt
+from data_tools.util import DATADIR, TMPDIR
 from functools import reduce
 app = Flask(__name__)
 CORS(app)

@@ -1,6 +1,6 @@
 import os
 import h5py
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
+import data_tools.file_tools.metadata_tools as mdt
 
 
 class AuthException(Exception):

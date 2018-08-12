@@ -1,6 +1,6 @@
-from omics_dashboard.data_tools.util import AuthException
-from omics_dashboard.data_tools.users import user_in_user_group, is_user_group_admin
-from omics_dashboard.data_tools.database import db
+from data_tools.util import AuthException
+from data_tools.users import user_in_user_group, is_user_group_admin
+from data_tools.database import db
 from typing import List, Dict, Any
 
 

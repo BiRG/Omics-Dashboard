@@ -1,9 +1,9 @@
 import json
-from omics_dashboard.data_tools.samples import get_sample_metadata
-from omics_dashboard.data_tools.util import AuthException, DATADIR
-from omics_dashboard.data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
-from omics_dashboard.data_tools.database import db
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
+from data_tools.samples import get_sample_metadata
+from data_tools.util import AuthException, DATADIR
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.database import db
+import data_tools.file_tools.metadata_tools as mdt
 from typing import List, Dict, Any
 
 

@@ -1,5 +1,6 @@
 #!/bin/bash
-cd /app/database/ && python3 /app/data_tools/database/initdb.py /data/omics.db
+cd /omics_dashboard/data_tools/database/ && python3 initdb.py /data/omics.db
 mkdir -p /data/samples /data/logs /data/collections /data/workflows
+touch /data/logs/omics.log
 mkdir -p /tmp/uploads
 uwsgi --ini /omics_dashboard/uwsgi.ini

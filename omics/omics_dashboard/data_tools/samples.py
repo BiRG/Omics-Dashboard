@@ -2,9 +2,9 @@
 import os
 import shutil
 from typing import Dict, List, Any
-from omics_dashboard.data_tools.util import DATADIR, AuthException, validate_file, get_next_id
-from omics_dashboard.data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
+import data_tools.file_tools.metadata_tools as mdt
+from data_tools.util import DATADIR, AuthException, validate_file, get_next_id
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
 
 
 def get_all_samples() -> List[Dict]:
@@ -184,3 +184,4 @@ def create_placeholder_samples(data: Dict, count: int) -> List[int]:
     :return:
     """
     return [create_placeholder_sample(data) for _ in range(0, count)]
+

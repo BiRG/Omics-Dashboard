@@ -1,9 +1,9 @@
-from omics_dashboard.data_tools.collections import get_collection
-from omics_dashboard.data_tools.util import AuthException
-from omics_dashboard.data_tools.users import is_read_permitted, is_write_permitted
-from omics_dashboard.data_tools.database import db
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
-from omics_dashboard.data_tools.util import DATADIR
+from data_tools.collections import get_collection
+from data_tools.util import AuthException
+from data_tools.users import is_read_permitted, is_write_permitted
+from data_tools.database import db
+import data_tools.file_tools.metadata_tools as mdt
+from data_tools.util import DATADIR
 from typing import List, Dict, Any
 
 

@@ -4,9 +4,9 @@ from typing import List, Dict, Any
 
 import ruamel.yaml as yaml
 
-from omics_dashboard.data_tools.database import db
-from omics_dashboard.data_tools.users import is_read_permitted, is_write_permitted
-from omics_dashboard.data_tools.util import AuthException, DATADIR
+from data_tools.database import db
+from data_tools.users import is_read_permitted, is_write_permitted
+from data_tools.util import AuthException, DATADIR
 
 
 def get_workflows(user_id: int) -> List[Dict[str, Any]]:

@@ -3,11 +3,9 @@ import os
 
 import jwt
 from typing import List, Dict, Any
-from omics_dashboard.data_tools.collections import get_all_collections
-from omics_dashboard.data_tools.samples import get_all_samples
-from omics_dashboard.data_tools.util import AuthException, DATADIR
-import omics_dashboard.data_tools.file_tools.metadata_tools as mdt
-import omics_dashboard.data_tools.database.db as db
+from data_tools.util import AuthException, DATADIR
+import data_tools.file_tools.metadata_tools as mdt
+import data_tools.database.db as db
 import bcrypt
 from xkcdpass import xkcd_password as xp
 
@@ -135,6 +133,9 @@ def delete_user(current_user_id: int, target_user_id: int) -> Dict[str, str]:
     :param target_user_id:
     :return:
     """
+
+    from data_tools.samples import get_all_samples
+    from data_tools.collections import get_all_collections
     if (current_user_id == target_user_id) or is_admin(current_user_id):
         # delete user from users table and nullify all the ids set based on this user
         db.query_db('delete from Users where id=?;', str(target_user_id))
