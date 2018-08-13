@@ -11,7 +11,10 @@ def get_collection_metadata(filename: str) -> Dict[str, Any]:
         attrs = {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
                  for key, value in infile.attrs.items()}
     collection_id = os.path.splitext(os.path.basename(filename))[0]
-    attrs['id'] = int(collection_id)
+    try:
+        attrs['id'] = int(collection_id)
+    except ValueError:
+        pass  # don't set id if it isn't integer (used for validating files not in the system)
     attrs['dateModified'] = int(os.path.getmtime(filename))
     dims = approximate_dims(filename)
     attrs['maxRowCount'] = dims[0]
@@ -24,7 +27,10 @@ def get_collection_info(filename: str) -> Dict[str, Any]:
     with h5py.File(filename, 'r') as infile:
         collection_info = get_group_info(infile)
     collection_id = os.path.splitext(os.path.basename(filename))[0]
-    collection_info['id'] = int(collection_id)
+    try:
+        collection_info['id'] = int(collection_id)
+    except ValueError:
+        pass  # dont set id if not integer (used for validating files not in the system)
     collection_info.update(collection_info['attrs'])
     del collection_info['attrs']
     collection_info['dateModified'] = int(os.path.getmtime(filename))

@@ -31,6 +31,7 @@ def get_next_id(path: str) -> int:
     ids = [int(os.path.splitext(file)[0]) for file in files]
     return 0 if ids is None else max(ids) + 1
 
+
 DATADIR = os.environ['DATADIR']
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']

@@ -820,6 +820,8 @@ def get_sample(sample_id=None):
             return jsonify(dt.samples.get_sample(user_id, sample_id))
         if request.method == 'POST':
             if 'file' in request.files:
+                print('File upload')
+                print(request.files)
                 filename = os.path.join(app.config['UPLOAD_DIR'], secure_filename(str(uuid.uuid4())))
                 request.files['file'].save(filename)
                 sample_data = dt.samples.upload_sample(user_id, filename, request.form, sample_id)
