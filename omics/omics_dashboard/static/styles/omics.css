@@ -1,0 +1,100 @@
+/*
+Make bootstrap-select work with bootstrap 4 see (comment by grosser):
+https://github.com/silviomoreto/bootstrap-select/issues/1135
+*/
+.dropdown-toggle.btn-default {
+  color: #292b2c;
+  background-color: #fff;
+  border-color: #ccc;
+}
+
+.bootstrap-select.show>.dropdown-menu>.dropdown-menu {
+  display: block;
+}
+
+.bootstrap-select > .dropdown-menu > .dropdown-menu li.hidden{
+  display:none;
+}
+
+.bootstrap-select > .dropdown-menu > .dropdown-menu li a{
+  display: block;
+  width: 100%;
+  padding: 3px 1.5rem;
+  clear: both;
+  font-weight: 400;
+  color: #292b2c;
+  text-align: inherit;
+  white-space: nowrap;
+  background: 0 0;
+  border: 0;
+}
+
+.dropdown-menu > li.active > a {
+  color: #fff !important;
+  background-color: #337ab7 !important;
+}
+
+.bootstrap-select .check-mark::after {
+  content: "✓";
+}
+
+.bootstrap-select button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Make filled out selects be the same size as empty selects */
+.bootstrap-select.btn-group .dropdown-toggle .filter-option {
+  display: inline !important;
+}
+
+/* prevent code blocks from overflowing their containers, will make horiz scroallable*/
+pre code {
+  white-space: pre;
+  overflow-x: auto;
+  display: inline-block;
+  min-width: 100%;
+}
+
+
+/* custom fonts */
+@font-face {
+  font-family: 'Didact Gothic';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
+  url('../webfonts/didact-gothic-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+  url('../webfonts/didact-gothic-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+
+@font-face {
+  font-family: 'Arimo';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Arimo Regular'), local('Arimo-Regular'),
+  url('../webfonts/arimo-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+  url('../webfonts/arimo-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+
+h1, h2, h3, h4, h5, nav, th, button, a {
+  font-family: 'Didact Gothic', sans-serif !important;
+}
+p, div {
+  font-family: 'Arimo', sans-serif !important;
+}
+
+body{
+  margin-bottom: 100px;
+}
+/* A fix for the arrow character looking wrong on FF */
+@-moz-document url-prefix() {
+  select.form-control {
+    padding-right: 25px;
+    background-image: url("static/img/icon-chevron-down-16.png");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 7px) 50%;
+    -moz-appearance: none;
+    appearance: none;
+  }
+}

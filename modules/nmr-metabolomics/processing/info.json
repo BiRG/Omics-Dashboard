@@ -1,4 +1,5 @@
 {
     "name": "NMR Processing",
-    "description": "Modules for processing NMR spectra"
+    "description": "Modules for processing NMR spectra",
+    "package": "NMR Metabolomics"
 }

@@ -1,0 +1,70 @@
+{# A list of things #}
+{% extends "base.html" %}
+{% block content %}
+  <div class="page-header">
+  <h2 class="display-4">
+    {{ type }}
+  </h2>
+  </div>
+  <div class="container-fluid">
+    <table id="entries" class="table table-striped table-bordered" cellspacing="0" width="auto">
+      <thead>
+          <tr>
+          {% for heading in headings.values() %}
+            <th>{{ heading }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in data %}
+          <tr>
+          {% for key in headings.keys() %}
+            <td>
+            {% if key == 'name' or type.lower() == 'jobs' and key == 'id' or key == 'label' and type.lower()=='workflow modules' %}
+              <a href="{{ get_item_link(type, item) }}">{{ item[key] }}</a>
+            {% elif key in USERKEYS %}
+              <a href="{{ get_profile_link(item[key]) }}">{{ get_user_name(item[key]) }}</a>
+            {% elif key=='dateModified' %}
+              {{ datetime.utcfromtimestamp(int(item[key])).strftime('%Y-%m-%dT%H:%M:%SZ') }}
+            {% elif key == 'admin' %}
+              <i class="{{ 'fas fa-check-square' if int(item[key]) else 'fas fa-square' }}"></i><p hidden>{{ item[key] }}</p>
+            {% elif key == 'options' and type.lower() == 'jobs' %}
+              <div class="btn-group" role="group" aria-label="controls">
+                <!--TODO: put option to restart (may need to change jobserver API)-->
+                <button class="btn btn-danger job-cancel-button" id="{{ item['id'] }}" {{ 'disabled' if item['status'] == 'Canceled' }}>
+                  <i class="fas fa-ban" aria-hidden="true" id="cancel-icon"></i>
+                </button>
+              </div>
+            {% else %}
+              {{ item[key] }}
+            {% endif %}
+            </td>
+          {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('#entries').DataTable({'order': [[0, 'desc']]});
+    });
+  </script>
+
+  {% if key == 'options' and type.lower() == 'jobs' %}
+    <script>
+    //send request to jobserver to change job status
+      var url = {{ url_for('jobs.list_jobs') }} + '/' + $(this).attr('id') + '?method=';
+      $('job-cancel-button').click(function() {
+          url = url + 'cancel';
+          $.post(url, function() {
+            window.location.reload(true); //this is theoretically slower than doing a rest request and updating the table,
+              // but we never anticipate much load on one instance of the service
+          });
+      });
+    </script>
+  {% endif %}
+{% endblock %}

@@ -5,15 +5,18 @@ baseCommand:
   - batchparsetxtxy.py
 inputs:
   - id: inputFiles
+    doc: Text files containing data.
     type: File[]
     inputBinding:
       position: 0
   - id: prefix
+    doc: A prefix applied to the "name" field of all files.
     type: string
     inputBinding:
       position: 1
 outputs:
   - id: outputFiles
+    doc: HDF5 files containing the parsed files.
     type: File[]
     outputBinding:
       glob: '*.h5'

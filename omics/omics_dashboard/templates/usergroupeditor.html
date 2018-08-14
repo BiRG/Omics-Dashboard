@@ -1,0 +1,14 @@
+<td class="user-group-editor">
+  <ul>
+    {% for uid in value %}
+    <li><a href="{{ url_for('users.render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
+    {% endfor %}
+  </ul>
+
+{% set groups = get_included_groups(get_user_id()) %}
+  <select class="selectpicker" multiple>
+    {% for user in all_users %}
+    <option value="{{ user['id'] }}" {% if user['id'] in value %}selected="selected"{% endif %}>{{ user['id'] }}: {{ user['name'] }}</option>
+    {% endfor %}
+  </select>
+</td>

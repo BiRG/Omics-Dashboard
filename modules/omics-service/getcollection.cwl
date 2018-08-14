@@ -22,3 +22,4 @@ outputs:
     outputBinding:
       glob: '*.h5'
 label: Get Collection
+doc: Get a collection as an HDF5 file.

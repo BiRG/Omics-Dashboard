@@ -1,0 +1,57 @@
+{% extends 'entrybase.html' %}
+{% block content %}
+  {{ super() }}
+      <div class="card mb-3">
+      <h4 class="card-header text-white bg-dark">Contents</h4>
+      <div class="card-body">
+        <table id="datasets" class="table table-striped table-bordered" cellspacing="0" width="100%">
+          <thead>
+          <tr>
+            <th>Path</th>
+            <th>NumPy dtype</th>
+            <th>Rows</th>
+            <th>Columns</th>
+            <th>Download</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for dataset in datasets %}
+            <tr>
+              <td>{{ dataset['path'] }}</td>
+              <td>{{ dataset['dtype'] }}</td>
+              <td>{{ dataset['rows'] }}</td>
+              <td>{{ dataset['cols'] }}</td>
+              {% if type.lower() == 'collection' %}
+                <td>
+                  <a class="btn btn-primary"
+                     href="{{ url_for('collections_api.download_collection', collection_id=data['id'], path=dataset['path']) }}">
+                    <i class="fas fa-download"></i> CSV
+                  </a>
+                </td>
+              {% else %}
+                <td>
+                  <a class="btn btn-primary"
+                     href="{{ url_for('samples_api.download_sample', sample_id=data['id'], path=dataset['path']) }}">
+                    <i class="fas fa-download"></i> CSV
+                  </a>
+                </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+  {% if is_write_permitted(get_user_id(), data) %}
+    {% include 'dangerzone.html' %}
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+      var table = $('#datasets').DataTable();
+    });
+  </script>
+{% endblock %}
