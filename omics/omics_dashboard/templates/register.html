@@ -11,7 +11,7 @@
         <h4 class="card-header">Welcome to Omics Dashboard</h4>
         <div class="card-body">
           <h6 class="card-subtitle mb-2 text-muted">Create new user account:</h6>
-          <form action="{{ url_for('render_registration', invitation=invitation) }}" method="post">
+          <form action="{{ url_for('browser.render_registration', invitation=invitation) }}" method="post">
             <div class="form-group">
               <label for="emailInput">Email address</label>
               <input type="email" name="email" required="true" id="emailInput" class="form-control" placeholder="example@test.net">

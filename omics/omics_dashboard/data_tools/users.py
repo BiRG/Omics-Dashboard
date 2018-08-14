@@ -264,7 +264,7 @@ def is_read_permitted(user_id: int, record: Dict[str, Any]) -> bool:
     :param record:
     :return:
     """
-    return record['owner'] == user_id \
+    return 'owner' in record and record['owner'] == user_id \
         or is_admin(user_id) \
         or record['allPermissions'] == 'readonly'  \
         or record['allPermissions'] == 'full' \
@@ -279,7 +279,8 @@ def is_write_permitted(user_id: int, record: Dict) -> bool:
     :param record:
     :return:
     """
-    return record['owner'] == user_id \
+    return 'owner' in record and record['owner'] == user_id \
+        or 'email' in record and record['id'] == user_id \
         or is_admin(user_id) \
         or record['allPermissions'] == 'full' \
         or (record['groupPermissions'] == 'full' and user_in_user_group(user_id, record['userGroup']))

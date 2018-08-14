@@ -32,8 +32,8 @@ def render_create_workflow():
         user_id = get_user_id()
         if request.method == 'POST':
             workflow = dt.workflows.create_workflow(user_id, request.form.to_dict())
-            return redirect(url_for('render_workflow', workflow_id=workflow['id']))
-        return render_template('createbase.html', type='Workflow', endpoint='render_create_workflow')
+            return redirect(url_for('workflows.render_workflow', workflow_id=workflow['id']))
+        return render_template('createbase.html', type='Workflow', endpoint='workflows.render_create_workflow')
     except Exception as e:
         return handle_exception_browser(e)
 

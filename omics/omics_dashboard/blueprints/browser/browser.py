@@ -7,7 +7,7 @@ browser = Blueprint('browser', __name__)
 
 @browser.route('/')
 def render_root():
-    return redirect(url_for('render_dashboard'))
+    return redirect(url_for('browser.render_dashboard'))
 
 
 @browser.route('/register', methods=['GET', 'POST'])
@@ -27,13 +27,13 @@ def render_registration():
                 return render_template('register.html', invitation=invitation, error='Passwords do not match')
             new_data = {'email': data['email'], 'password': data['password1'], 'name': data['name']}
             dt.users.register_user(invitation, new_data)
-            return redirect(url_for('browser_login'))
+            return redirect(url_for('browser.browser_login'))
     except Exception as e:
         return render_template('register.html', error=str(e))
 
 
 @browser.route('/login', methods=['GET', 'POST'])
-def browser_login(msg=None, error=None, next_template='render_dashboard'):
+def browser_login(msg=None, error=None, next_template='browser.render_dashboard'):
     try:
         if request.method == 'POST':
             if dt.users.validate_login(request.form['email'], request.form['password']):
@@ -51,7 +51,7 @@ def browser_logout():
     if session.get('logged_in'):
         session['logged_in'] = False
         session['user'] = None
-    return redirect(url_for('browser_login'))
+    return redirect(url_for('browser.browser_login'))
 
 
 @browser.route('/dashboard', methods=['GET'])
@@ -100,7 +100,7 @@ def render_settings():
                 if 'password' in new_data:
                     # invalidate session on password change
                     browser_logout()
-                    return redirect(url_for('browser_login', msg=msg, next_template='render_settings'))
+                    return redirect(url_for('browser.browser_login', msg=msg, next_template='browser.render_settings'))
                 session['user'] = dt.users.get_user(get_user_id())
                 return render_template('settings.html', msg=msg)
     except Exception as e:

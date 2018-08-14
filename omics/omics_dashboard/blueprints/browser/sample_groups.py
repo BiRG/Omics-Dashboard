@@ -45,7 +45,7 @@ def render_sample_group(sample_group_id=None):
                                    samples=samples, sample_headings=sample_headings)
         if request.method == 'DELETE':
             dt.sample_groups.delete_sample_group(user_id, sample_group_id)
-            return redirect(url_for('render_sample_group_list'))
+            return redirect(url_for('sample_groups.render_sample_group_list'))
         if request.method == 'POST':
             dt.sample_groups.update_sample_group(user_id, sample_group_id, request.form)
             data = dt.sample_groups.get_sample_group(user_id, sample_group_id)

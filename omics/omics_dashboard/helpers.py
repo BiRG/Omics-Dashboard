@@ -5,50 +5,51 @@ import jwt
 from flask import url_for, session, request, render_template, redirect, jsonify
 
 import data_tools as dt
+import datetime
 from data_tools.util import LoginError, DATADIR
 log_file_name = f'{DATADIR}/logs/omics.log'
 
 
 def get_item_link(record_type, item):
     if record_type.lower() == 'collections' or record_type.lower() == 'collection':
-        return url_for('render_collection', collection_id=item['id'])
+        return url_for('collections.render_collection', collection_id=item['id'])
     elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
-        return url_for('render_sample', sample_id=item['id'])
+        return url_for('samples.render_sample', sample_id=item['id'])
     elif record_type.lower() == 'sample groups' or record_type.lower() == 'sample group':
-        return url_for('render_sample_group', sample_group_id=item['id'])
+        return url_for('sample_groups.render_sample_group', sample_group_id=item['id'])
     elif record_type.lower() == 'users' or record_type.lower() == 'user':
-        return url_for('render_user_profile', user_id=item['id'])
+        return url_for('users.render_user_profile', user_id=item['id'])
     elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
-        return url_for('render_user_group', group_id=item['id'])
+        return url_for('user_groups.render_user_group', group_id=item['id'])
     elif record_type.lower() == 'analyses.py' or record_type.lower() == 'analysis':
-        return url_for('render_analysis', analysis_id=item['id'])
+        return url_for('analyses.render_analysis', analysis_id=item['id'])
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
-        return url_for('render_workflow', workflow_id=item['id'])
+        return url_for('workflows.render_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
-        return url_for('render_job', job_id=item['id'])
+        return url_for('jobs.render_job', job_id=item['id'])
     return '#'
 
 
 def get_update_url(record_type, item):
     if record_type.lower() == 'collections' or record_type.lower() == 'collection':
-        return url_for('get_collection', collection_id=item['id'])
+        return url_for('collections_api.get_collection', collection_id=item['id'])
     elif record_type.lower() == 'samples' or record_type.lower() == 'sample':
-        return url_for('get_sample', sample_id=item['id'])
+        return url_for('samples_api.get_sample', sample_id=item['id'])
     elif record_type.lower() == 'sample groups' or record_type.lower() == 'sample group':
-        return url_for('get_sample_group', sample_group_id=item['id'])
+        return url_for('sample_groups_api.get_sample_group', sample_group_id=item['id'])
     elif record_type.lower() == 'analyses.py' or record_type.lower() == 'analysis':
-        return url_for('get_analysis', analysis_id=item['id'])
+        return url_for('analyses_api.get_analysis', analysis_id=item['id'])
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
-        return url_for('get_workflow', workflow_id=item['id'])
+        return url_for('workflows_api.get_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
-        return url_for('render_job', job_id=item['id'])
+        return url_for('jobs_api.render_job', job_id=item['id'])
     elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
-        return url_for('get_user_group', group_id=item['id'])
+        return url_for('user_groups_api.get_user_group', group_id=item['id'])
     return '#'
 
 
 def get_profile_link(user_id):
-    return url_for('render_user_profile', user_id=user_id)
+    return url_for('users.render_user_profile', user_id=user_id)
 
 
 def get_user_id():
@@ -76,10 +77,10 @@ def handle_exception_browser(e):
         error_title = "403 Forbidden"
         return render_template('error.html', fa_type='fa-ban', error_msg=error_msg, error_title=error_title), 403
     if e is LoginError:
-        return redirect(url_for('browser_login'))
+        return redirect(url_for('browser.browser_login'))
     error_msg = str(e)
     if error_msg.lower() == 'not logged in':
-        return redirect(url_for('browser_login'))
+        return redirect(url_for('browser.browser_login'))
     tb = traceback.format_exc()
     error_title = '500 Internal Server Error'
     log_exception(500, e, tb)

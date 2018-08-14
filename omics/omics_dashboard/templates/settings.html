@@ -13,7 +13,7 @@
         <h3 class="card-header">Update Profile</h3>
         <div class="card-body">
         <p class="card-subtitle">Enter new values (leave empty to keep the same)</p>
-        <form action="{{ url_for('render_settings') }}" method="post">
+        <form action="{{ url_for('browser.render_settings') }}" method="post">
           <div class="form-group">
           <label for="emailInput">Email Address</label>
             <input type="email" name="email" id="emailInput" class="form-control" placeholder="{{ session['user']['email'] }}">
@@ -86,7 +86,7 @@
         <h3 class="card-header">Change User Password</h3>
         <div class="card-body">
           <p class="card-subtitle">Change the password associated with an email<p>
-          <form action="{{ url_for('render_settings') }}" method="post">
+          <form action="{{ url_for('browser.render_settings') }}" method="post">
             <div class="form-group">
               <label for="changeEmailInput">User Email Address</label>
               <input type="email" name="changeEmail" id="changeEmailInput" class="form-control" placeholder="{{ session['user']['email'] }}">
@@ -135,8 +135,8 @@
     new Clipboard('#copy-button');
     //Call the api to get a new invitation on click
     $("#generateInvitation").click(function() {
-      $.getJSON('{{ url_for('get_invitation') }}', null, function(data){
-        $("#invitation").val(window.location.host + '{{ url_for('render_registration') }}' + '?invitation=' + data.value)
+      $.getJSON('{{ url_for('browser.get_invitation') }}', null, function(data){
+        $("#invitation").val(window.location.host + '{{ url_for('browser.render_registration') }}' + '?invitation=' + data.value)
       });
     });
     $(function(){

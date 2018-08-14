@@ -106,7 +106,7 @@
 <script>
   $('#sample').on('change', function(){
       var reqData = {'samples': $(this).val()};
-      var url = '{{url_for('get_common_attributes')}}';
+      var url = '{{url_for('samples_api.get_common_attributes')}}';
       $.post(url, JSON.stringify(reqData))
           .done(function(res) {
 	      $('#sortBy').find('option').remove().end();

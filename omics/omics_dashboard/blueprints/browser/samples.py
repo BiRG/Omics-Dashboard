@@ -31,7 +31,7 @@ def render_sample(sample_id=None):
             return render_template('collectionentry.html', type='Sample', data=data, datasets=datasets)
         if request.method == 'DELETE':
             dt.samples.delete_sample(get_user_id(), sample_id)
-            return redirect(url_for('render_sample_list'))
+            return redirect(url_for('samples.render_sample_list'))
         if request.method == 'POST':
             dt.samples.update_sample(get_user_id(), sample_id, request.form)
             data = dt.samples.get_sample_metadata(get_user_id(), sample_id)
@@ -57,7 +57,7 @@ def render_upload_sample():
             dt.sample_groups.update_sample_group_attachments(user_id, sample_group['id'], workflow_data['outputIds'])
             job = dt.jobserver_control.start_job(workflow_data['workflow'], workflow_data['job'], user_id)
             dt.sample_groups.update_sample_group(user_id, sample_group['id'], {'uploadWorkflowId': job['id']})
-            return redirect(url_for('render_sample_group', sample_group_id=sample_group['id']))
-        return render_template('createbase.html', type='Sample', endpoint='render_upload_sample')
+            return redirect(url_for('sample_groups.render_sample_group', sample_group_id=sample_group['id']))
+        return render_template('createbase.html', type='Sample', endpoint='samples.render_upload_sample')
     except Exception as e:
         return handle_exception_browser(e)

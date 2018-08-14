@@ -24,14 +24,14 @@
               {% if type.lower() == 'collection' %}
                 <td>
                   <a class="btn btn-primary"
-                     href="{{ url_for('download_collection', collection_id=data['id'], path=dataset['path']) }}">
+                     href="{{ url_for('collections_api.download_collection', collection_id=data['id'], path=dataset['path']) }}">
                     <i class="fas fa-download"></i> CSV
                   </a>
                 </td>
               {% else %}
                 <td>
                   <a class="btn btn-primary"
-                     href="{{ url_for('download_sample', sample_id=data['id'], path=dataset['path']) }}">
+                     href="{{ url_for('samples_api.download_sample', sample_id=data['id'], path=dataset['path']) }}">
                     <i class="fas fa-download"></i> CSV
                   </a>
                 </td>

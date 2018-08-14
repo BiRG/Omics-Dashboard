@@ -8,16 +8,16 @@
       <h1 class="display-4">{{ data['name'] }} ({{ type }} {{ data['id'] if 'id' in data else data['rowid'] }})</h1>
       {% if type.lower() == 'collection' %}
         <p>
-          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('download_collection', collection_id=data['id']) }}" role="button">
+          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('collections_api.download_collection', collection_id=data['id']) }}" role="button">
             <i class="fas fa-download"></i> HDF5
           </a>
-          <a class="btn btn-secondary btn-lg" aria-label="Download DataFrame" href="{{ url_for('download_collection', collection_id=data['id'], format='pandas') }}" role="button">
+          <a class="btn btn-secondary btn-lg" aria-label="Download DataFrame" href="{{ url_for('collections_api.download_collection', collection_id=data['id'], format='pandas') }}" role="button">
             <i class="fas fa-download"></i> DataFrame
           </a>
         </p>
       {% elif type.lower() == 'sample' %}
         <p>
-          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('download_sample', sample_id=data['id']) }}" role="button">
+          <a class="btn btn-primary btn-lg" aria-label="Download HDF5" href="{{ url_for('samples_api.download_sample', sample_id=data['id']) }}" role="button">
             <i class="fas fa-download"></i> HDF5
           </a>
         </p>
@@ -51,14 +51,14 @@
           <td class="attribute-key">{{ key }}</td>
 	  {% endif %}
           {% if key in USERKEYS %}
-          <td class="attribute-value"><a href="{{ url_for('render_user_profile', user_id=value) }}">{{ get_user_name(value) }}</a></td>
+          <td class="attribute-value"><a href="{{ url_for('users.render_user_profile', user_id=value) }}">{{ get_user_name(value) }}</a></td>
           {% elif key=='users' and type.lower() == 'user group' %}
 	    {% include 'usergroupeditor.html' %}
 	  {% elif key == 'admins' %}
 	  <td class="admin-list">
 	    <ul>
 	    {% for uid in value %}
-	      <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
+	      <li><a href="{{ url_for('users.render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
 	    {% endfor %}
 	    </ul>
 	  </td>
@@ -145,14 +145,14 @@
                   $('#failModal').modal();
               },
               success: function(){
-                  window.location.replace('{{ url_for('render_dashboard') }}');
+                  window.location.replace('{{ url_for('browser.render_dashboard') }}');
               }
           });
       }
   });
 
   $('#elevateButton').click(function(){
-      var url = '{{ url_for('edit_user', user_id=data['id']) }}';
+      var url = '{{ url_for('users_api.edit_user', user_id=data['id']) }}';
       $.post(url, JSON.stringify({"admin": "1"}))
           .done(function(res){
               var message = 'Elevated user';

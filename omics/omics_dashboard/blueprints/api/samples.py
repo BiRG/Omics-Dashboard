@@ -49,7 +49,8 @@ def get_common_attributes():
         data = request.get_json(force=True)
         samples = [dt.samples.get_sample(user_id, sample_id) for sample_id in data['samples']]
         protected_keys = ['allPermissions', 'createdBy', 'datasets', 'description', 'groupPermissions',
-                          'groups', 'id', 'name', 'owner', 'parser', 'path', 'preproc', 'userGroup']
+                          'groups', 'id', 'name', 'owner', 'parser', 'path', 'preproc', 'userGroup', 'maxRowCount',
+                          'maxColCount']
         common_keys = [item for item in samples[0].keys()
                        if item not in protected_keys and all([item in sample for sample in samples])]
         return jsonify(common_keys)
@@ -92,7 +93,7 @@ def parse_sample():
         data['createdBy'] = user_id
         workflow_data = dt.sample_creation.create_sample_creation_workflow(user_id, [filename], data)
         dt.jobserver_control.start_job(workflow_data['workflow_filename'], workflow_data['job'], user_id)
-        return redirect(url_for('list_jobs'))
+        return redirect(url_for('jobs.list_jobs'))
     except Exception as e:
         return handle_exception(e)
 

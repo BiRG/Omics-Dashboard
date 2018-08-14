@@ -22,7 +22,7 @@ def render_user_group(group_id=None):
         user_id = get_user_id()
         if request.method == 'DELETE':
             dt.user_groups.delete_user_group(user_id, group_id)
-            return redirect(url_for('render_user_group_list'))
+            return redirect(url_for('user_groups.render_user_group_list'))
         user_group = dt.user_groups.get_user_group(group_id)
         del user_group['members']
         return render_template('entry.html', type='User Group', data=user_group, all_users=dt.users.get_users())
@@ -40,8 +40,8 @@ def render_create_user_group():
             user_group = dt.user_groups.create_user_group(user_id, request.form.to_dict())
             for other_user_id in other_user_ids:
                 dt.user_groups.attach_user(user_id, other_user_id, user_group['id'])
-            return redirect(url_for('render_user_group', group_id=user_group['id']))
+            return redirect(url_for('user_groups.render_user_group', group_id=user_group['id']))
         return render_template('createbase.html', type='User Group', users=dt.users.get_users(),
-                               endpoint='render_create_user_group')
+                               endpoint='user_groups.render_create_user_group')
     except Exception as e:
         return handle_exception_browser(e)

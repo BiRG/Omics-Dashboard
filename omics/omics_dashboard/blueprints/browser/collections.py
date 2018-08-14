@@ -31,7 +31,7 @@ def render_collection(collection_id=None):
             return render_template('collectionentry.html', type='Collection', data=data, datasets=datasets)
         if request.method == 'DELETE':
             dt.collections.delete_collection(get_user_id(), collection_id)
-            return redirect(url_for('render_sample_list'))
+            return redirect(url_for('samples.render_sample_list'))
         if request.method == 'POST':
             dt.collections.update_collection(get_user_id(), collection_id, request.form)
             data = dt.collections.get_collection_metadata(get_user_id(), collection_id)
@@ -54,14 +54,16 @@ def render_create_collection():
             del form_data['sortBy']
             data = dt.collections.create_collection(get_user_id(), sample_ids, form_data, sort_by=sort_by)
             collection_id = data['id']
-            return redirect(url_for('render_collection', collection_id=collection_id))
+            return redirect(url_for('collections.render_collection', collection_id=collection_id))
         if request.method == 'GET':
             if request.args.get('sampleIds', ''):
                 sample_ids = [int(token) for token in request.args.get('sampleIds').strip('"').split(',')]
                 print(sample_ids)
-                return render_template('createbase.html', type='Collection', endpoint='render_create_collection',
+                return render_template('createbase.html', type='Collection',
+                                       endpoint='collections.render_create_collection',
                                        sample_ids=sample_ids)
 
-            return render_template('createbase.html', type='Collection', endpoint='render_create_collection')
+            return render_template('createbase.html', type='Collection',
+                                   endpoint='collections.render_create_collection')
     except Exception as e:
         return handle_exception_browser(e)

@@ -1,7 +1,7 @@
 <td class="user-group-editor">
   <ul>
     {% for uid in value %}
-    <li><a href="{{ url_for('render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
+    <li><a href="{{ url_for('users.render_user_profile', user_id=uid) }}">{{ get_user_name(uid) }}</a></li>
     {% endfor %}
   </ul>
 

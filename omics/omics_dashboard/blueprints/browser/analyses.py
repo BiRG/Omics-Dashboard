@@ -25,9 +25,9 @@ def render_create_analysis():
             analysis = dt.analyses.create_analysis(user_id, request.form.to_dict())
             for collection_id in collection_ids:
                 dt.analyses.attach_collection(user_id, analysis['id'], collection_id)
-            return redirect(url_for('render_analysis', analysis_id=analysis['id']))
+            return redirect(url_for('analyses.render_analysis', analysis_id=analysis['id']))
         return render_template('createbase.html', type='Analysis', groups=dt.user_groups.get_user_groups(),
-                               endpoint='render_create_analysis')
+                               endpoint='analyses.render_create_analysis')
     except Exception as e:
         return handle_exception_browser(e)
 
