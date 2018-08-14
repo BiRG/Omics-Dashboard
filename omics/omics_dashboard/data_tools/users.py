@@ -3,6 +3,7 @@ import os
 
 import jwt
 from typing import List, Dict, Any
+
 from data_tools.util import AuthException, DATADIR
 import data_tools.file_tools.metadata_tools as mdt
 import data_tools.database.db as db
@@ -292,3 +293,7 @@ def get_read_permitted_records(user_id: int, records: List[Dict[str, Any]]) -> L
     :return:
     """
     return [record for record in records if is_read_permitted(user_id, record)]
+
+
+def get_user_name(user_id):
+    return get_user(user_id)['name']

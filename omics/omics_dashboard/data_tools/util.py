@@ -36,3 +36,8 @@ DATADIR = os.environ['DATADIR']
 TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
 COMPUTESERVER = os.environ['COMPUTESERVER']
 MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
+UPLOADDIR = f'{TMPDIR}/uploads'
+
+
+class LoginError(Exception):
+    pass
