@@ -27,3 +27,14 @@ def get_job(job_id=None):
         return jsonify(dt.jobserver_control.get_job(job_id))
     except Exception as e:
         return handle_exception(e)
+
+
+@jobs_api.route('/<job_id>/metadata')
+def get_chart_metadata(job_id=None):
+    """
+    Get a JSON string containing the javascript object used in the Gantt chart
+    :param job_id:
+    :return:
+    """
+    return jsonify(dt.jobserver_control.get_job_chart_metadata(job_id))
+

@@ -1,5 +1,13 @@
 {# The dashboard puts resources belonging to the user front and center#}
 {% extends "entrybase.html" %}
+{% block head %}
+  {{ super() }}
+
+{% if type.lower() == 'job' %}
+{% include 'jobchart.html' %}
+{% endif %}
+
+{% endblock %}
 {% block styles %}
   {{ super() }}
   {% if type.lower() == 'sample group' %}
@@ -16,11 +24,18 @@
   {% if type.lower() == 'analysis' %}
     {% include 'collectiontable.html' %}
   {% elif type.lower() == 'job' %}
-    {% include 'joblog.html' %}
+    <div class="card mb-3">
+      <h4 class="card-header text-white bg-dark">Progress</h4>
+      <div class="card-body">
+        <div id="chart_div"></div>
+      </div>
+    </div>
   {% elif type.lower() == 'sample group' %}
     {% include 'sampletable.html' %}
+  {% elif type.lower() == 'workflow module' %}
+    {% include 'modulecontents.html' %}
   {% endif %}
-  {% if is_write_permitted(get_user_id(), data) %}
+  {% if is_write_permitted(get_user_id(), data) and type.lower() not in ['job', 'workflow module'] %}
     {% include 'dangerzone.html' %}
   {% endif %}
 {% endblock %}

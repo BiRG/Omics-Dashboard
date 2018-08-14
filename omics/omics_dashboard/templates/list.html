@@ -20,7 +20,7 @@
           <tr>
           {% for key in headings.keys() %}
             <td>
-            {% if key == 'name' %}
+            {% if key == 'name' or type.lower() == 'jobs' and key == 'id' or key == 'label' and type.lower()=='workflow modules' %}
               <a href="{{ get_item_link(type, item) }}">{{ item[key] }}</a>
             {% elif key in USERKEYS %}
               <a href="{{ get_profile_link(item[key]) }}">{{ get_user_name(item[key]) }}</a>

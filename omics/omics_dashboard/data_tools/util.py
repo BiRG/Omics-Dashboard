@@ -32,11 +32,11 @@ def get_next_id(path: str) -> int:
     return 0 if ids is None else max(ids) + 1
 
 
-DATADIR = os.environ['DATADIR']
-TMPDIR = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
-COMPUTESERVER = os.environ['COMPUTESERVER']
-MODULEDIR = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
-UPLOADDIR = f'{TMPDIR}/uploads'
+DATADIR: str = os.environ['DATADIR']
+TMPDIR: str = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
+COMPUTESERVER: str = os.environ['COMPUTESERVER']
+MODULEDIR: str = os.environ['MODULEDIR'] if 'MODULEDIR' in os.environ else DATADIR + '/modules'
+UPLOADDIR: str = f'{TMPDIR}/uploads'
 
 
 class LoginError(Exception):

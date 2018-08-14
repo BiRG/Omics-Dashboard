@@ -1,12 +1,12 @@
 import os
-import sys
 from typing import List, Dict, Any
 
 import ruamel.yaml as yaml
+import json
 
 from data_tools.database import db
 from data_tools.users import is_read_permitted, is_write_permitted
-from data_tools.util import AuthException, DATADIR
+from data_tools.util import AuthException, DATADIR, MODULEDIR
 
 
 def get_workflows(user_id: int) -> List[Dict[str, Any]]:
@@ -89,23 +89,37 @@ def delete_workflow(user_id: int, workflow_id: int) -> Dict[str, str]:
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
-def get_modules(path: str) -> List[Dict[str, Any]]:
+def get_modules() -> List[Dict[str, Any]]:
     """
     Get available modules for use in workflows.
-    :param path:
     :return:
     """
-    # parse the module descriptions
-    yaml_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))
-                  and os.path.splitext(f)[-1] == '.cwl']
-    # output will include label.
-    out = []
-    for f in yaml_files:
-        try:
-            out.append(get_module(os.path.join(path, f)))
-        except yaml.YAMLError as e:
-            sys.stderr.write(f'Error parsing CWL module {f}: {e}')
-    return out
+    modules = []
+    for directory, subdirectories, files in os.walk(MODULEDIR):
+        dir_info = {}
+        if 'info.json' in files:
+            dir_info = json.load(open(os.path.join(MODULEDIR, directory, 'info.json')))
+        if 'name' not in dir_info:
+            dir_info['name'] = directory
+        main_package = dir_info['package'] if 'package' in dir_info else None
+        package = dir_info['name'] if 'name' in dir_info else None
+        package_description = dir_info['description'] if 'description' in dir_info else None
+        for file in files:
+            if os.path.splitext(file)[1] == '.cwl':
+                path = os.path.join(MODULEDIR, directory, file)
+                tool_def = get_module(path)
+                module = {
+                    'packageName': dir_info['name'],
+                    'label': tool_def['label'] if 'label' in tool_def else '',
+                    'description': tool_def['doc'] if 'doc' in tool_def else '',
+                    'package': main_package,
+                    'path': tool_def['modulePath'],
+                    'subPackage': package,
+                    'subPackageDescription': package_description,
+                    'toolDefinition': tool_def
+                }
+                modules.append(module)
+    return modules
 
 
 # noinspection PyTypeChecker

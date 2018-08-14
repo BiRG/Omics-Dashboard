@@ -27,6 +27,8 @@ def get_item_link(record_type, item):
         return url_for('workflows.render_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
         return url_for('jobs.render_job', job_id=item['id'])
+    elif record_type.lower() == 'workflow module' or record_type.lower() == 'workflow modules':
+        return url_for('workflows.render_workflow_module_list', path=item['path'])
     return '#'
 
 
@@ -42,7 +44,7 @@ def get_update_url(record_type, item):
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
         return url_for('workflows_api.get_workflow', workflow_id=item['id'])
     elif record_type.lower() == 'job' or record_type.lower() == 'jobs':
-        return url_for('jobs_api.render_job', job_id=item['id'])
+        return url_for('jobs_api.get_job', job_id=item['id'])
     elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
         return url_for('user_groups_api.get_user_group', group_id=item['id'])
     return '#'

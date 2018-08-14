@@ -9,7 +9,7 @@ jobs = Blueprint('jobs', __name__, url_prefix='/jobs')
 def render_job_list():
     try:
         data = dt.jobserver_control.get_jobs()
-        headings = {'id': 'ID', 'name': 'Name', 'state': 'State', 'owner': 'Owner'}
+        headings = {'id': 'Name', 'type': 'Type', 'status': 'Status', 'owner': 'Owner'}
         return render_template('list.html', data=data, headings=headings, type='Jobs')
     except Exception as e:
         return handle_exception_browser(e)
@@ -19,7 +19,7 @@ def render_job_list():
 def render_job(job_id=None):
     try:
         job = dt.jobserver_control.get_job(job_id)
-
-        return render_template('entry.html', data=job, type="Job")
+        chart_data = dt.jobserver_control.get_job_chart_metadata(job_id)
+        return render_template('entry.html', data=job, type="Job", chart_data=chart_data)
     except Exception as e:
         return handle_exception_browser(e)

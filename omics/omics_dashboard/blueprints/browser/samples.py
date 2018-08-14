@@ -55,7 +55,7 @@ def render_upload_sample():
             sample_group = dt.sample_groups.create_sample_group(user_id, metadata)
             workflow_data = dt.sample_creation.create_sample_creation_workflow(user_id, filenames, metadata)
             dt.sample_groups.update_sample_group_attachments(user_id, sample_group['id'], workflow_data['outputIds'])
-            job = dt.jobserver_control.start_job(workflow_data['workflow'], workflow_data['job'], user_id)
+            job = dt.jobserver_control.start_job(workflow_data['workflow'], workflow_data['job'], user_id, 'upload')
             dt.sample_groups.update_sample_group(user_id, sample_group['id'], {'uploadWorkflowId': job['id']})
             return redirect(url_for('sample_groups.render_sample_group', sample_group_id=sample_group['id']))
         return render_template('createbase.html', type='Sample', endpoint='samples.render_upload_sample')

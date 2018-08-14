@@ -10,10 +10,10 @@ inputs:
       position: 0
   - id: authToken
     type: String
-    inputBinding
+    inputBinding:
       position: 1
 outputs:
   - id: responses
     type: stdout
-
 label: Post Collections(s)
+doc: Upload an HDF5 file as a new collection.

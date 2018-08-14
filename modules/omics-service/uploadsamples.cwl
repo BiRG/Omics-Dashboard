@@ -31,5 +31,5 @@ inputs:
 outputs:
   - id: responses
     type: stdout
-
 label: Upload Sample(s)
+doc: Replace a sample file with an HDF5 file.
