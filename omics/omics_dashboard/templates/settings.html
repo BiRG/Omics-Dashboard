@@ -135,7 +135,7 @@
     new Clipboard('#copy-button');
     //Call the api to get a new invitation on click
     $("#generateInvitation").click(function() {
-      $.getJSON('{{ url_for('browser.get_invitation') }}', null, function(data){
+      $.getJSON('{{ url_for('api.get_invitation') }}', null, function(data){
         $("#invitation").val(window.location.host + '{{ url_for('browser.render_registration') }}' + '?invitation=' + data.value)
       });
     });
