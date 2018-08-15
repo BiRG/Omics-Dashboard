@@ -89,16 +89,17 @@ def delete_workflow(user_id: int, workflow_id: int) -> Dict[str, str]:
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
-def get_modules() -> List[Dict[str, Any]]:
+def get_modules(module_path: str=None) -> List[Dict[str, Any]]:
     """
     Get available modules for use in workflows.
     :return:
     """
+    module_path = MODULEDIR if module_path is None else module_path
     modules = []
-    for directory, subdirectories, files in os.walk(MODULEDIR):
+    for directory, subdirectories, files in os.walk(module_path):
         dir_info = {}
         if 'info.json' in files:
-            dir_info = json.load(open(os.path.join(MODULEDIR, directory, 'info.json')))
+            dir_info = json.load(open(os.path.join(module_path, directory, 'info.json')))
         if 'name' not in dir_info:
             dir_info['name'] = directory
         main_package = dir_info['package'] if 'package' in dir_info else None
@@ -106,7 +107,7 @@ def get_modules() -> List[Dict[str, Any]]:
         package_description = dir_info['description'] if 'description' in dir_info else None
         for file in files:
             if os.path.splitext(file)[1] == '.cwl':
-                path = os.path.join(MODULEDIR, directory, file)
+                path = os.path.join(module_path, directory, file)
                 tool_def = get_module(path)
                 module = {
                     'packageName': dir_info['name'],
