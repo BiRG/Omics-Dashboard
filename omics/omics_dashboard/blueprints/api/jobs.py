@@ -38,3 +38,12 @@ def get_chart_metadata(job_id=None):
     """
     return jsonify(dt.jobserver_control.get_job_chart_metadata(job_id))
 
+
+@jobs_api.route('/submit', methods=['POST'])
+def submit_job():
+    try:
+        user_id = get_user_id()
+        body = request.get_json(force=True)
+        dt.jobserver_control.start_job(body['workflow'], body['job'], user_id, 'analysis')
+    except Exception as e:
+        return handle_exception(e)
