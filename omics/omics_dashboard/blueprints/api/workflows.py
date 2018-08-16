@@ -38,3 +38,11 @@ def get_workflow(workflow_id=None):
     except Exception as e:
         return handle_exception(e)
 
+
+@workflows_api.route('/workflows/create')
+def create_workflow():
+    try:
+        user_id = get_user_id()
+        return jsonify(dt.workflows.create_workflow(user_id, request.get_json()))
+    except Exception as e:
+        return handle_exception(e)

@@ -7,6 +7,7 @@ import json
 from data_tools.database import db
 from data_tools.users import is_read_permitted, is_write_permitted
 from data_tools.util import AuthException, DATADIR, MODULEDIR
+workflow_template = {}
 
 
 def get_workflows(user_id: int) -> List[Dict[str, Any]]:
@@ -68,8 +69,9 @@ def create_workflow(user_id: int, data: Dict[str, Any]):
                  str(data['allPermissions']), str(data['userGroup'])],
                 True)
     workflow = db.query_db('select * from Workflows where id=last_insert_rowid()', (), True)
-    # TODO: Create a workflow file
-    # TODO: write the basic workflow definition to the file
+    filename = f'{DATADIR}/workflows/{workflow["id"]}.cwl'
+    workflow_data = data['workflow'] if 'workflow' in data else workflow_template
+    yaml.safe_dump(workflow_data, open(filename, 'w'))
     return workflow
 
 
