@@ -16,4 +16,5 @@ RUN ln -s /docker/docker /usr/bin/docker
 ADD tools/*.py /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.py
 ADD cromwell.conf /
+RUN cat /cromwell.conf | sed -E "s|(password = )\"(.*)\"|\1\"$MYSQL_PASSWORD\"|g" > /cromwell.conf
 ENTRYPOINT ["java", "-Dconfig.file=/cromwell.conf", "-jar", "cromwell-34.jar", "server"]
