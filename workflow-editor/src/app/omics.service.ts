@@ -17,13 +17,13 @@ export class OmicsService {
   getModules() {
     return this.http.get(`${baseUrl}/api/workflow_modules`, httpOptions);
   }
-  getWorkflows(): Observable<Workflow[]> {
+  getWorkflows(): Observable<any[]> {
     return this.http.get<Workflow[]>(`${baseUrl}/api/workflows`, httpOptions);
   }
   getModule(path: string) {
     return this.http.get(`${baseUrl}/api/workflow_modules`, {headers: httpOptions.headers, params: {'path': path}});
   }
-  getWorkflow(id: number): Observable<Workflow> {
+  getWorkflow(id: number): Observable<any> {
     return this.http.get<Workflow>(`${baseUrl}/api/workflows/${id}`);
   }
   createWorkflow(workflow: Workflow) {

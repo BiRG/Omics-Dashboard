@@ -13,7 +13,8 @@ import {WorkflowComponent} from './workflow/workflow.component';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./app.component.css'],
+  providers: [OmicsService]
 })
 export class AppComponent {
   @ViewChild(WorkflowComponent) wfComponent: WorkflowComponent;

@@ -5,5 +5,5 @@
 
 export const environment = {
   production: false,
-  omicsUrl: 'https://birg.cs.wright.edu/omics'
+  omicsUrl: 'https://helix.cs.wright.edu/omics'
 };
