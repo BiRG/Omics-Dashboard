@@ -41,14 +41,14 @@ def update_analysis(user_id: int, analysis_id: int, new_data: Dict[str, Any]) ->
     analysis = db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
     valid_keys = ['name', 'description', 'owner', 'groupPermissions', 'allPermissions', 'userGroup']
     if is_write_permitted(user_id, analysis):
-        query = 'update Analyses set ' \
-                + ','.join([f' {key} = ?' for key, value in new_data.items() if key in valid_keys]) \
-                + ' where id=?;'
-        params = []  # will throw if parameters are not valid
-        [params.append(str(value)) for value in new_data.values()]
-        params.append(str(analysis_id))
-        db.query_db(query, params)
-        return db.query_db('select * from Analyses where id=?;', [str(analysis_id)], True)
+        params = [str(value) for key, value in new_data.items() if key in valid_keys]
+        if len(params) > 0:
+            query = 'update Analyses set ' \
+                    + ','.join([f' {key} = ?' for key in new_data.keys() if key in valid_keys]) \
+                    + ' where id=?;'
+            params.append(str(analysis_id))
+            db.query_db(query, params)
+        return get_analysis(user_id, analysis_id)
     raise AuthException(f'User {user_id} is not permitted to modify analysis {analysis_id}')
 
 

@@ -2,6 +2,7 @@ FROM python:3.7-slim
 RUN mkdir -p /usr/share/man/man1
 RUN apt -y update && apt -y install wget openjdk-8-jre-headless 
 RUN apt -y update && apt -y install build-essential gcc gfortran
+RUN apt -y update && apt -y install mysql-client
 RUN pip install --upgrade pip
 ADD requirements.txt .
 RUN pip install -r requirements.txt
