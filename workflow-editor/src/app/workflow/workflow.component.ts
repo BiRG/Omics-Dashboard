@@ -13,9 +13,10 @@ import {WorkflowWrapper} from '../workflow-wrapper';
 })
 export class WorkflowComponent implements OnInit {
   constructor(private workflow: Workflow) {}
-
+  svgRoot: any;
   ngOnInit() {
     window['wf'] = this.workflow;
+    this.svgRoot = document.getElementById('svg') as any;
   }
   addStep(wfModule: any) {
     const wrapper = new WorkflowWrapper(this.workflow.model);

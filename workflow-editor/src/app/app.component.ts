@@ -1,4 +1,4 @@
-import {Component, ViewChild} from '@angular/core';
+import {Component, OnInit, ViewChild} from '@angular/core';
 import {WorkflowFactory} from 'cwlts/models';
 import {Workflow} from 'cwl-svg';
 import {SVGArrangePlugin} from 'cwl-svg';
@@ -19,9 +19,9 @@ import {WorkflowComponent} from './workflow/workflow.component';
 export class AppComponent {
   @ViewChild(WorkflowComponent) wfComponent: WorkflowComponent;
   constructor(private omicsService: OmicsService) {
-    const svgRoot = document.getElementById('svg') as any;
-    this.omicsService.getWorkflow(1).subscribe(wfData => {
-      const wf = WorkflowFactory.from(wfData);
+    const svgRoot = this.wfComponent.svgRoot;
+    this.omicsService.getWorkflow(1).subscribe(res => {
+      const wf = WorkflowFactory.from(res.workflow);
       const workflow = new Workflow({
         model: wf,
         svgRoot: svgRoot,

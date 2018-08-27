@@ -7,7 +7,8 @@ import {Observable} from 'rxjs';
 const baseUrl = environment.omicsUrl;
 
 const httpOptions = {
-  headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+  headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+  withCredentials: true
 };
 
 @Injectable()
@@ -21,10 +22,10 @@ export class OmicsService {
     return this.http.get<Workflow[]>(`${baseUrl}/api/workflows`, httpOptions);
   }
   getModule(path: string) {
-    return this.http.get(`${baseUrl}/api/workflow_modules`, {headers: httpOptions.headers, params: {'path': path}});
+    return this.http.get(`${baseUrl}/api/workflow_modules`, {headers: httpOptions.headers, withCredentials: true, params: {'path': path}});
   }
   getWorkflow(id: number): Observable<any> {
-    return this.http.get<Workflow>(`${baseUrl}/api/workflows/${id}`);
+    return this.http.get<Workflow>(`${baseUrl}/api/workflows/${id}`, httpOptions);
   }
   createWorkflow(workflow: Workflow) {
     const req_body = {

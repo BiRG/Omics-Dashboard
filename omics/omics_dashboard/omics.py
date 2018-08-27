@@ -54,7 +54,7 @@ app.register_blueprint(users)
 app.register_blueprint(workflows)
 
 
-CORS(app)
+CORS(app, supports_credentials=True)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 app.permanent_session_lifetime = 86400  # sessions expire in 24h

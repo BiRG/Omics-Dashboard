@@ -7,7 +7,7 @@ import { NavbarComponent } from './navbar/navbar.component';
 import { ModuleSelectorComponent } from './module-selector/module-selector.component';
 import { ModuleAccordianComponent } from './module-accordian/module-accordian.component';
 import { ModuleAccordianElementComponent } from './module-accordian-element/module-accordian-element.component';
-import {HttpClientModule} from '@angular/common/http';
+import {HttpClientModule, HttpClientXsrfModule} from '@angular/common/http';
 
 @NgModule({
   declarations: [
