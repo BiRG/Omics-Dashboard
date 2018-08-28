@@ -45,9 +45,11 @@ def render_collection(collection_id=None):
 def render_create_collection():
     try:
         if request.method == 'POST':
+            print(request.form)
             form_data = request.form.to_dict()
             with open('/data/logs/omics.log', 'a+') as log_file:
                 log_file.write(f'form_data:\n{form_data}\n')
+            print(request.form.getlist('sample'))
             sample_ids = [int(sample_id) for sample_id in request.form.getlist('sample')]
             del form_data['sample']
             sort_by = form_data['sortBy']
