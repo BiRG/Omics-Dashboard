@@ -58,7 +58,6 @@ def render_create_collection():
         if request.method == 'GET':
             if request.args.get('sampleIds', ''):
                 sample_ids = [int(token) for token in request.args.get('sampleIds').strip('"').split(',')]
-                print(sample_ids)
                 return render_template('createbase.html', type='Collection',
                                        endpoint='collections.render_create_collection',
                                        sample_ids=sample_ids)

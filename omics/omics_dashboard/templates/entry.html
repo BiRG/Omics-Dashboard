@@ -35,7 +35,7 @@
   {% elif type.lower() == 'workflow module' or type.lower() == 'workflow' %}
     {% include 'workflowcontents.html' %}
   {% endif %}
-  {% if is_write_permitted(get_user_id(), data) and type.lower() not in ['job', 'workflow module'] %}
+  {% if type.lower() not in ['job', 'workflow module'] and is_write_permitted(get_user_id(), data) %}
     {% include 'dangerzone.html' %}
   {% endif %}
 {% endblock %}
