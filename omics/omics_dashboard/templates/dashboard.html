@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% block content %}
   {{ super() }}
-  <div class="container">
+  <div class="container-fluid" style="padding: 2%;">
     <div class="jumbotron">
       <h1 class="display-3">Hello {{ session['user']['name'] }}!</h1>
       <p class="lead">Select an option from the menu above.</p>

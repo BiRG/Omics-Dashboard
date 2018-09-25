@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Workflow } from 'cwl-svg';
+import {WorkflowData} from './workflow-data';
+import {WorkflowModuleData} from './workflow-module-data';
+import {WorkflowModel} from 'cwlts/models';
 import {environment} from '../environments/environment';
 import {Observable} from 'rxjs';
 
@@ -15,41 +17,43 @@ const httpOptions = {
 export class OmicsService {
 
   constructor(private http: HttpClient) { }
-  getModules() {
-    return this.http.get(`${baseUrl}/api/workflow_modules`, httpOptions);
+  getModules(): Observable<WorkflowModuleData[]> {
+    return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflow_modules`, httpOptions);
   }
   getWorkflows(): Observable<any[]> {
-    return this.http.get<Workflow[]>(`${baseUrl}/api/workflows`, httpOptions);
+    return this.http.get<WorkflowData[]>(`${baseUrl}/api/workflows`, httpOptions);
   }
-  getModule(path: string) {
-    return this.http.get(`${baseUrl}/api/workflow_modules`, {headers: httpOptions.headers, withCredentials: true, params: {'path': path}});
+  getModule(path: string): Observable<WorkflowModuleData> {
+    return this.http.get<WorkflowModuleData>(`${baseUrl}/api/workflow_modules`,
+      {headers: httpOptions.headers, withCredentials: true, params: {'path': path}});
   }
-  getWorkflow(id: number): Observable<any> {
-    return this.http.get<Workflow>(`${baseUrl}/api/workflows/${id}`, httpOptions);
+  getWorkflow(id: number): Observable<WorkflowData> {
+    return this.http.get<WorkflowData>(`${baseUrl}/api/workflows/${id}`, httpOptions);
   }
-  createWorkflow(workflow: Workflow) {
+  createWorkflow(workflowModel: WorkflowModel) {
     const req_body = {
-      name: workflow.model.label,
-      description: workflow.model.description,
+      name: workflowModel.label,
+      description: workflowModel.description,
       groupPermissions: 'full',
       allPermissions: 'readonly',
       userGroup: -1,
-      workflow: workflow.model.serialize()
+      workflow: workflowModel.serialize()
     };
-    return this.http.post<Workflow>(`${baseUrl}/api/workflows/create`, req_body, httpOptions);
+    return this.http.post(`${baseUrl}/api/workflows/create`, req_body, httpOptions);
   }
-  updateWorkflow(id: number, workflow: Workflow) {
+  updateWorkflow(id: number, workflowModel: WorkflowModel) {
     const req_body = {
-      name: workflow.model.label,
-      description: workflow.model.description,
-      workflow: workflow.model.serialize()
+      name: workflowModel.label,
+      description: workflowModel.description,
+      workflow: workflowModel.serialize()
     };
-    return this.http.post<Workflow>(`${baseUrl}/api/workflows/${id}`, req_body, httpOptions);
+    return this.http.post(`${baseUrl}/api/workflows/${id}`, req_body, httpOptions);
   }
-  submitJob(workflow: Workflow, job: Object) {
+  submitJob(workflowModel: WorkflowModel, job: Object) {
     // job should satisfy workflow inputs
+    // this should be handled by the omics service?
     const req_body = {
-      workflow: workflow.model.serialize(),
+      workflow: workflowModel.serialize(),
       job: job
     };
     return this.http.post(`${baseUrl}/jobs/submit`, req_body, httpOptions);

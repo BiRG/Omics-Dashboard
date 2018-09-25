@@ -72,7 +72,7 @@ create table if not exists Workflows(
     id integer primary key,
     name text,
     description text,
-    owner text,
+    owner integer,
     createdBy integer,
     userGroup integer,
     groupPermissions text,

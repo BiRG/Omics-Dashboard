@@ -91,7 +91,7 @@ body{
 @-moz-document url-prefix() {
   select.form-control {
     padding-right: 25px;
-    background-image: url("/icon-chevron-down-16.png");
+    background-image: url("../img/icon-chevron-down-16.png");
     background-repeat: no-repeat;
     background-position: calc(100% - 7px) 50%;
     -moz-appearance: none;
