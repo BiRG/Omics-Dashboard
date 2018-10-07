@@ -35,6 +35,7 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
     new_metadata['name'] = f'PLACEHOLDER <{prefix}>'
     output_ids = create_placeholder_samples(new_metadata, len(input_filenames))
     del new_metadata['name']
+    print(new_metadata)
     workflow = {
         'cwlVersion': 'v1.0',
         'class': 'Workflow',
@@ -152,7 +153,8 @@ def get_preprocessing_modules() -> List[Dict[str, Any]]:
     Get modules used for the preprocessing step of the sample upload process
     :return:
     """
-    return get_modules(f'{MODULEDIR}/sample-processing')
+    modules = get_modules(f'{MODULEDIR}/sample-processing')
+    return modules
 
 
 def get_parsing_modules() -> List[Dict[str, Any]]:
@@ -160,4 +162,5 @@ def get_parsing_modules() -> List[Dict[str, Any]]:
     Get the modules which may be used for the parsing step of the sample upload process
     :return:
     """
-    return get_modules(f'{MODULEDIR}/sample-parsing')
+    modules = get_modules(f'{MODULEDIR}/sample-parsing')
+    return modules

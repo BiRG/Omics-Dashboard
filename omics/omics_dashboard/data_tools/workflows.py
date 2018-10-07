@@ -9,6 +9,19 @@ from data_tools.users import is_read_permitted, is_write_permitted
 from data_tools.util import AuthException, DATADIR, MODULEDIR
 
 
+def get_workflow_template(name: str, description: str, workflow_id: int) -> Dict[str, Any]:
+    return {
+        'class': 'Workflow',
+        'cwlVersion': 'v1.0',
+        'label': name,
+        'doc': description,
+        'id': f'workflow{workflow_id}',
+        'inputs': [],
+        'outputs': [],
+        'steps': []
+    }
+
+
 def get_workflows(user_id: int) -> List[Dict[str, Any]]:
     """
     Get a list of available saved workflows.
@@ -16,6 +29,8 @@ def get_workflows(user_id: int) -> List[Dict[str, Any]]:
     :return:
     """
     results = db.query_db('select * from Workflows;')
+    for result in results:
+        result['workflow'] = yaml.safe_load(open(f'{DATADIR}/workflows/{result["id"]}.cwl', 'r'))
     return [result for result in results if is_read_permitted(user_id, result)]
 
 
@@ -28,6 +43,7 @@ def get_workflow(user_id: int, workflow_id: int) -> Dict[str, Any]:
     """
     result = db.query_db('select * from Workflows where id=?;', [str(workflow_id)], True)
     if is_read_permitted(user_id, result):
+        result['workflow'] = yaml.safe_load(open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'r'))
         return result
     raise AuthException('User %s is not permitted to access analysis %s' % (str(user_id), str(workflow_id)))
 
@@ -40,17 +56,35 @@ def update_workflow(user_id: int, workflow_id: int, new_data: Dict[str, Any]) ->
     :param new_data:
     :return:
     """
-    analysis = db.query_db('select * from Workflows where id=?;', str(workflow_id), True)
+    workflow = db.query_db('select * from Workflows where id=?;', str(workflow_id), True)
     valid_keys = ['name', 'description', 'groupPermissions', 'allPermissions', 'userGroup']
-    if is_write_permitted(user_id, analysis):
-        query = 'update Analyses set ' \
-                + ','.join([' %s = ?' % key for key, value in new_data.items() if key in valid_keys]) \
-                + ' where id=?;'
-        params = []
-        [params.append(str(value)) for key, value in new_data.values() if key in valid_keys]
-        params.append(str(workflow_id))
-        db.query_db(query, params)
-        return db.query_db('select * from Workflows where id=?;', [str(workflow_id)], True)
+    print(f'new_data: {new_data}')
+    if is_write_permitted(user_id, workflow):
+        print('write permitted')
+        params = [str(value) for key, value in new_data.items() if key in valid_keys]
+        if len(params) > 0:
+            print('params different')
+            query = 'update Workflows set ' \
+                    + ','.join([f' {key} = ?' for key, value in new_data.items() if key in valid_keys]) \
+                    + ' where id=?;'
+            params.append(str(workflow_id))
+            print(f'query: {query}, params: {params}')
+            db.query_db(query, params)
+        if 'workflow' in new_data:
+            print('workflow in new_data')
+            with open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'w') as file:
+                yaml.safe_dump(new_data['workflow'], file)
+        if 'description' in new_data:
+            print('description in new_data')
+            workflow_data = yaml.safe_load(open(f'{DATADIR}/workflows/{workflow_id}.cwl'))
+            workflow_data['doc'] = new_data['description']
+            yaml.safe_dump(workflow_data, open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'w'))
+        if 'name' in new_data:
+            print('name in new_data')
+            workflow_data = yaml.safe_load(open(f'{DATADIR}/workflows/{workflow_id}.cwl'))
+            workflow_data['label'] = new_data['name']
+            yaml.safe_dump(workflow_data, open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'w'))
+        return get_workflow(user_id, workflow_id)
     raise AuthException('User %s is not permitted to modify analysis %s' % (str(user_id), str(workflow_id)))
 
 
@@ -68,8 +102,11 @@ def create_workflow(user_id: int, data: Dict[str, Any]):
                  str(data['allPermissions']), str(data['userGroup'])],
                 True)
     workflow = db.query_db('select * from Workflows where id=last_insert_rowid()', (), True)
-    # TODO: Create a workflow file
-    # TODO: write the basic workflow definition to the file
+    filename = f'{DATADIR}/workflows/{workflow["id"]}.cwl'
+    workflow_data = data['workflow'] if 'workflow' in data else get_workflow_template(workflow['name'],
+                                                                                      workflow['description'],
+                                                                                      workflow['id'])
+    yaml.safe_dump(workflow_data, open(filename, 'w'))
     return workflow
 
 
@@ -105,16 +142,18 @@ def get_modules(module_path: str=None) -> List[Dict[str, Any]]:
         main_package = dir_info['package'] if 'package' in dir_info else None
         package = dir_info['name'] if 'name' in dir_info else None
         package_description = dir_info['description'] if 'description' in dir_info else None
-        for file in files:
-            if os.path.splitext(file)[1] == '.cwl':
-                path = os.path.join(module_path, directory, file)
+        print('reading files')
+        print(files)
+        for filename in files:
+            if os.path.splitext(filename)[1] == '.cwl':
+                path = os.path.join(module_path, directory, filename)
                 tool_def = get_module(path)
                 module = {
                     'packageName': dir_info['name'],
                     'label': tool_def['label'] if 'label' in tool_def else '',
                     'description': tool_def['doc'] if 'doc' in tool_def else '',
                     'package': main_package,
-                    'path': tool_def['modulePath'],
+                    'path': path,
                     'subPackage': package,
                     'subPackageDescription': package_description,
                     'toolDefinition': tool_def

@@ -1,9 +1,7 @@
 from flask import render_template, request, redirect, url_for, jsonify, Blueprint
 
 import data_tools as dt
-from helpers import get_user_id, handle_exception_browser
-import ruamel.yaml as yaml
-from io import StringIO
+from helpers import get_user_id, handle_exception_browser, DATADIR
 
 workflows = Blueprint('workflows', __name__)
 
@@ -24,7 +22,10 @@ def render_workflow(workflow_id=None):
     try:
         user_id = get_user_id()
         workflow = dt.workflows.get_workflow(user_id, workflow_id)
-        return render_template('entry.html', type='Workflow', data=workflow)
+        with open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'r') as file:
+            workflow_contents = file.read()
+        del workflow['workflow']
+        return render_template('entry.html', type='Workflow', data=workflow, workflow_contents=workflow_contents)
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -54,7 +55,7 @@ def render_workflow_module_list():
             module['path'] = path
             return render_template('entry.html', type='Workflow Module',
                                    data=module,
-                                   module_contents=module_contents)
+                                   workflow_contents=module_contents)
         modules = dt.workflows.get_modules()
         headings = {
             'label': 'Label',

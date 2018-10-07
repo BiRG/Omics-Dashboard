@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Create {{ type }}{% endblock %}
-{% macro selector(select_id, label, data, multiple=True)  %}
+{% macro selector(select_id, label, data, multiple=True, value_key='id')  %}
   <div class="form-group">
     <label for="{{ select_id }}">{{ label }}</label>
     <select id="{{ select_id }}" name="{{ select_id }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if multiple }}>
@@ -8,7 +8,7 @@
       <option value="0" selected>None</option>
       {% endif %}
       {% for item in data %}
-      <option value="{{ item['path'] if select_id==preproc or select_id==paser else item['id'] }}" {{ 'selected' if sample_ids and item['id'] in sample_ids}}>{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
+      <option value="{{ item[value_key] }}" {{ 'selected' if sample_ids and item['id'] in sample_ids}}>{{ item['label'] if 'label' in item else str(item['id']) + ': ' + item['name'] }}</option>
       {% endfor %}
     </select>
   </div>
@@ -48,10 +48,12 @@
 	    <input type="file" class="file form-control" data-show-upload="false" data-show-preview="false" data-show-remove="false" aria-label="Filename" id="fileInput" name="files" multiple>
 	  </div>
           {% with data=get_parsing_modules() %}
-            {{ selector('parser', 'File Type (Parser)', data, multiple=False) }}
+	    <!--{{ str(data) }}-->
+            {{ selector('parser', 'File Type (Parser)', data, multiple=False, value_key='path') }}
           {% endwith %}
           {% with data=get_preprocessing_modules() %}
-            {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False) }}
+	    <!--{{ str(data) }}-->
+            {{ selector('preproc', 'Data Type (Preprocessor)', data, multiple=False, value_key='path') }}
           {% endwith %}
         {% elif type == 'User Group' %}
           {% with data=users %}

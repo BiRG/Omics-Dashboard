@@ -6,10 +6,11 @@ from flask import request, jsonify, make_response, send_from_directory, Blueprin
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
+import data_tools.file_tools.metadata_tools as mdt
 from data_tools.util import DATADIR, UPLOADDIR
 from helpers import get_user_id, handle_exception
 collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collections')
-
+import shutil
 
 @collections_api.route('/', methods=['GET', 'POST'])
 def list_collections():
@@ -82,6 +83,12 @@ def upload_collection():
                 collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
                 file.write(collection_file_data)
                 del new_data['file']
+            # Apply required attributes
+            shutil.copyfile(filename, '/data/test.h5')
+            collection_data = mdt.get_collection_info(filename)
+            collection_data = mdt.update_metadata(filename, {"owner": user_id})
+            if 'userGroup' not in collection_data:
+                collection_data = mdt.update_metadata(filename, {'userGroup': -1})
         if dt.util.validate_file(filename):
             collection_data = dt.collections.upload_collection(user_id, filename, new_data)
             return jsonify(collection_data)

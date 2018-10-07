@@ -8,11 +8,12 @@ user_groups_api = Blueprint('user_groups_api', __name__, url_prefix='/api/user_g
 @user_groups_api.route('/', methods=['GET', 'POST'])
 def list_user_groups():
     try:
-        get_user_id()
+        user_id = get_user_id()
         if request.method == 'GET':
-            return jsonify({})
+            return jsonify(dt.user_groups.get_user_groups())
         if request.method == 'POST':
-            return jsonify({})
+            data = request.get_json(force=True)
+            return jsonify(dt.user_groups.create_user_group(user_id, data))
     except Exception as e:
         return handle_exception(e)
 

@@ -153,7 +153,7 @@
                   $('#failModal').modal();
               },
               success: function(){
-                  window.location.replace('{{ url_for('browser.render_dashboard') }}');
+                  window.location.replace('{{ url_for("browser.render_dashboard") }}');
               }
           });
       }

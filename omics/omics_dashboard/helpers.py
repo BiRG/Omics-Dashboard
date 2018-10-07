@@ -21,7 +21,7 @@ def get_item_link(record_type, item):
         return url_for('users.render_user_profile', user_id=item['id'])
     elif record_type.lower() == 'user group' or record_type.lower() == 'user groups':
         return url_for('user_groups.render_user_group', group_id=item['id'])
-    elif record_type.lower() == 'analyses.py' or record_type.lower() == 'analysis':
+    elif record_type.lower() == 'analyses' or record_type.lower() == 'analysis':
         return url_for('analyses.render_analysis', analysis_id=item['id'])
     elif record_type.lower() == 'workflow' or record_type.lower() == 'workflows':
         return url_for('workflows.render_workflow', workflow_id=item['id'])
