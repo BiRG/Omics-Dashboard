@@ -7,6 +7,7 @@ import traceback
 import data_tools.sample_creation
 import data_tools as dt
 from data_tools.users import get_user_name
+from data_tools.user_groups import get_user_group_name
 from data_tools.util import UPLOADDIR
 
 from helpers import get_item_link, get_update_url, get_profile_link, get_user_id, log_exception
@@ -105,6 +106,7 @@ app.jinja_env.globals.update(get_samples=dt.samples.get_samples)
 app.jinja_env.globals.update(get_analyses=dt.analyses.get_analyses)
 app.jinja_env.globals.update(get_collections=dt.collections.get_collections)
 app.jinja_env.globals.update(get_user_name=get_user_name)
+app.jinja_env.globals.update(get_user_group_name=get_user_group_name)
 app.jinja_env.globals.update(datetime=datetime.datetime)
 app.jinja_env.globals.update(get_item_link=get_item_link)
 app.jinja_env.globals.update(int=int)

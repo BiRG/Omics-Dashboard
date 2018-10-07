@@ -1,6 +1,6 @@
 {# The dashboard puts resources belonging to the user front and center#}
 {% extends "base.html" %}
-{% set protectedKeys =  ['owner', 'admins', 'id', 'rowid', 'createdBy', 'groupPermissions','allPermissions', 'userGroup', 'dateModified', 'uploadWorkfowId'] %}
+{% set protectedKeys =  ['owner', 'admins', 'id', 'rowid', 'maxRowCount', 'maxColCount', 'createdBy', 'groupPermissions','allPermissions', 'userGroup', 'dateModified', 'uploadWorkfowId'] %}
 
 <div class="container">
 {% block content %}
@@ -83,10 +83,14 @@
     {% elif key=='timing' and type.lower() == 'job' %}
     {% elif key == 'uploadWorkflowId' %}
       <td class="attribute-value"><a href="{{ url_for('jobs.render_job', job_id=value) }}">{{ value }}</a></td>
-    {% elif key == 'userGroup' and get_user_id() == data['owner'] %}
-      <td class="user-group-select">
-        {% include 'usergroupselector.html' %}
-      </td>
+    {% elif key == 'userGroup' %}
+      {% if get_user_id() == data['owner'] %}
+        <td class="user-group-select">
+          {% include 'usergroupselector.html' %}
+        </td>
+      {% else %}
+        <td class="attribute-value"><a href="{{ url_for('user_groups.render_user_group', group_id=value) }}">{{ get_user_group_name(value) }}</a></td>
+      {% endif %}
     {% else %}
     <td class="attribute-value" contenteditable="{{ 'true' if key not in protectedKeys and type.lower() != 'job' and is_write_permitted(get_user_id(), data) else 'false'}}">{{ value }}</td>
     {% endif %}
@@ -153,7 +157,7 @@
                   $('#failModal').modal();
               },
               success: function(){
-                  window.location.replace('{{ url_for('browser.render_dashboard') }}');
+                  window.location.replace('{{ url_for("browser.render_dashboard") }}');
               }
           });
       }
