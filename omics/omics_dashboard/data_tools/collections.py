@@ -186,7 +186,7 @@ def create_collection(user_id: int,
     for filename in filenames:
         if not is_read_permitted(user_id, mdt.get_collection_metadata(filename)):
             raise AuthException(f'User {user_id} is not permitted to access file {filename}')
-    h5_merge(filenames, outfilename, reserved_paths=['/x'], sort_by=sort_by)
+    h5_merge(filenames, outfilename, orientation="vert", reserved_paths=['/x'], sort_by=sort_by)
     # TODO: allow samples aligned at 'x' with NaN padding
     print('update_metadata:\n')
     return mdt.update_metadata(outfilename, new_data)

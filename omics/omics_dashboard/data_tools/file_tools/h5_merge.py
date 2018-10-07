@@ -32,13 +32,13 @@ def get_range(files: List[h5py.File], path: str) -> (int, int):
 
 
 def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", reserved_paths: list=list(),
-             sort_by: str= 'baseSampleId', align_at: str=None) -> None:
+             sort_by: str='baseSampleId', align_at: str=None) -> None:
     """Merge a list of hdf5 files into a single file"""
     files = [h5py.File(filename, "r", driver="core") for filename in infilenames]
 
     # collect all common paths between the files
-    dim_ind = 0 if orientation == "horiz" else 1
-    concat_axis = 1 if orientation == "horiz" else 0
+    dim_ind = 1
+    concat_axis = 0
 
     paths = set()
     for file in files:
@@ -89,17 +89,21 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", rese
     for attr_key in merge_attrs:
         values = np.array([[file.attrs[attr_key].encode('ascii')
                             if isinstance(file.attrs[attr_key], str) else file.attrs[attr_key] for file in files]])
-        np.reshape(values, (1, len(infilenames)))
-        outfile.create_dataset(attr_key, data=values, maxshape=(1, None))
+        values = np.transpose(values)
+        np.reshape(values, (len(infilenames), 1))
+        print(values.shape)
+        outfile.create_dataset(attr_key, data=values, maxshape=(None, 1))
     # create a dataset which stores sample ids
     base_sample_ids = np.array([[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in infilenames]])
     # unicode datasets are not supported by all software using hdf5
     base_sample_names = np.array([[file.attrs['name'].encode('ascii')
                                  if isinstance(file.attrs['name'], str) else file.attrs['name'] for file in files]])
-    np.reshape(base_sample_ids, (1, len(infilenames)))
-    np.reshape(base_sample_names, (1, len(infilenames)))
-    outfile.create_dataset('baseSampleId', data=base_sample_ids, maxshape=(1, None))
-    outfile.create_dataset('baseSampleName', data=base_sample_names, maxshape=(1, None))
+    base_sample_ids = np.transpose(base_sample_ids)
+    base_sample_names = np.transpose(base_sample_names)
+    np.reshape(base_sample_ids, (len(infilenames), 1))
+    np.reshape(base_sample_names, (len(infilenames), 1))
+    outfile.create_dataset('baseSampleId', data=base_sample_ids, maxshape=(None, 1))
+    outfile.create_dataset('baseSampleName', data=base_sample_names, maxshape=(None, 1))
     
     # Sort everything by the specified sortBy path
     ind = np.argsort(outfile[sort_by])[0, :]

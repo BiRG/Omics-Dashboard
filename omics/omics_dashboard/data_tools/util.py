@@ -16,6 +16,8 @@ def validate_file(path: str) -> bool:
     if h5py.is_hdf5(path):
         required_attrs = {'owner', 'name', 'description', 'groupPermissions', 'allPermissions', 'userGroup'}
         return required_attrs.issubset(set(mdt.get_collection_info(path).keys()))
+    else:
+        print("not HDF5")
     return False
 
 

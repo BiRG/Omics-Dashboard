@@ -142,16 +142,18 @@ def get_modules(module_path: str=None) -> List[Dict[str, Any]]:
         main_package = dir_info['package'] if 'package' in dir_info else None
         package = dir_info['name'] if 'name' in dir_info else None
         package_description = dir_info['description'] if 'description' in dir_info else None
-        for file in files:
-            if os.path.splitext(file)[1] == '.cwl':
-                path = os.path.join(module_path, directory, file)
+        print('reading files')
+        print(files)
+        for filename in files:
+            if os.path.splitext(filename)[1] == '.cwl':
+                path = os.path.join(module_path, directory, filename)
                 tool_def = get_module(path)
                 module = {
                     'packageName': dir_info['name'],
                     'label': tool_def['label'] if 'label' in tool_def else '',
                     'description': tool_def['doc'] if 'doc' in tool_def else '',
                     'package': main_package,
-                    'path': tool_def['modulePath'],
+                    'path': path,
                     'subPackage': package,
                     'subPackageDescription': package_description,
                     'toolDefinition': tool_def

@@ -25,6 +25,7 @@ def parseTxtXY(filename):
         splitNumeric = [s.split('\t') for s in rawdata if s[0] == '-' or ord(s[0]) in range(ord('0'), ord('9'))]
         splitMetadata = [s[1:].replace("\n", "").split(':') for s in rawdata if s[0] == '$']
         data = np.asarray(splitNumeric).astype(np.double)
+        data = np.transpose(data) # vertical in the input, horizontal in output
         metadataKeys = [line[0] for line in splitMetadata]
         metadataValues = [processMetadataValue(line) for line in splitMetadata]
         metadata = dict(zip(metadataKeys, metadataValues))
@@ -37,8 +38,8 @@ def saveSampleFile(filename, numData, metadata):
     # clean metadata of empty entries:
     metadata = {key: value for key, value in metadata.items() if value != ''}
     with h5py.File(filename, 'w') as outfile:
-        outfile.create_dataset('x', data=numData[:, 0].astype(np.double)[:, None])
-        outfile.create_dataset('Y', data=numData[:, 1:].astype(np.double))
+        outfile.create_dataset('x', data=numData[0, :].astype(np.double)[None, :])
+        outfile.create_dataset('Y', data=numData[1:, :].astype(np.double))
         for key, value in metadata.items():
             if isinstance(value, str):
                 outfile.attrs[key] = np.string_(value)
