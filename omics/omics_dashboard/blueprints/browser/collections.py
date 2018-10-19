@@ -49,7 +49,8 @@ def render_create_collection():
             with open('/data/logs/omics.log', 'a+') as log_file:
                 log_file.write(f'form_data:\n{form_data}\n')
             sample_ids = [int(sample_id) for sample_id in request.form.getlist('sample')]
-            del form_data['sample']
+            if 'sample' in form_data:
+                del form_data['sample']
             sort_by = form_data['sortBy']
             del form_data['sortBy']
             data = dt.collections.create_collection(get_user_id(), sample_ids, form_data, sort_by=sort_by)
