@@ -32,6 +32,16 @@ def get_user_group(group_id: int) -> Dict[str, Any]:
     return user_group
 
 
+def get_user_group_name(group_id: int) -> str:
+    """
+    Get just the name of a user group. Used by the entry.html template.
+    :param group_id:
+    :return:
+    """
+    user_group = db.query_db('select name from UserGroups where id=?;', [str(group_id)], True)
+    return user_group['name']        
+
+
 def create_user_group(user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a new user group.
