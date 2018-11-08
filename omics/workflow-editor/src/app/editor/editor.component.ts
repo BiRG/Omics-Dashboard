@@ -3,8 +3,8 @@ import {CommandLineToolModel, WorkflowFactory} from 'cwlts/models';
 import { Workflow, SVGArrangePlugin, SVGNodeMovePlugin, SVGPortDragPlugin,
   SVGEdgeHoverPlugin, SelectionPlugin, ZoomPlugin, DeletionPlugin} from 'cwl-svg';
 import {OmicsService} from '../omics.service';
-import {WorkflowModuleData} from '../workflow-module-data';
 import { ActivatedRoute, NavigationStart } from '@angular/router';
+import {WorkflowModuleData} from '../workflow-module-data';
 @Component({
   selector: 'app-editor',
   templateUrl: './editor.component.html',

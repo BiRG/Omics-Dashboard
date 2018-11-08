@@ -29,7 +29,7 @@ passlib
 pyparsing
 rdflib
 rdflib-jsonld
-requests
+requests>=2.20.0
 shellescape
 typing
 urllib3
