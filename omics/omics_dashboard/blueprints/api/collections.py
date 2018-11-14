@@ -12,6 +12,7 @@ from helpers import get_user_id, handle_exception
 collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collections')
 import shutil
 
+
 @collections_api.route('/', methods=['GET', 'POST'])
 def list_collections():
     try:
@@ -25,7 +26,7 @@ def list_collections():
         return handle_exception(e)
 
 
-@collections_api.route('/<collection_id>', methods=['GET', 'POST', 'DELETE'])
+@collections_api.route('/<collection_id>', methods=['GET', 'POST', 'PATCH', 'DELETE'])
 def get_collection(collection_id=None):
     try:
         user_id = get_user_id()
@@ -34,6 +35,14 @@ def get_collection(collection_id=None):
         if request.method == 'POST':
             new_data = request.get_json(force=True)
             return jsonify(dt.collections.update_collection(user_id, collection_id, new_data))
+        if request.method == 'PATCH':
+            # We can have requests to change values in arrays here
+            # we need "path", "i" and "j" parameters and "newValue" in the body.
+            if 'path' in request.args and 'i' in request.args and 'j' in request.args:
+                val = request.get_json(force=True)['newValue']
+                path, i, j = request.args.get('path'), request.args.get('i'), request.args.get('j')
+                dt.collections.update_collection_array(user_id, collection_id, path, i, j, val)
+                return jsonify({'message': f'Changed value of {path}[{i}, {j}] in collection {collection_id} to {val}'})
         if request.method == 'DELETE':
             return jsonify(dt.collections.delete_collection(user_id, collection_id))
     except Exception as e:
@@ -45,7 +54,8 @@ def download_collection(collection_id=None):
     try:
         user_id = get_user_id()
         if request.args.get('format', '') == 'pandas':
-            out = dt.collections.download_collection_dataframe(user_id, collection_id)
+            single_column = True if request.args.get('singleColumn', '') == 'true' else False
+            out = dt.collections.download_collection_dataframe(user_id, collection_id, single_column)
             response = make_response(out['csv'])
             response.headers['Content-Disposition'] = out['cd']
             response.mimetype = 'text/csv'
