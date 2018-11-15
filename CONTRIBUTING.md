@@ -22,7 +22,7 @@ Pull requests are the best way to propose changes to the codebase (we use [Githu
 6. Issue that pull request!
 
 ## Any contributions you make will be under the GNU Affero General Public License
-In short, when you submit code changes, your submissions are understood to be under the same [AGPL v3](https://choosealicense.com/licenses/agpl-3.0/) that covers the project. Feel free to contact the maintainers if that's a concern.
+In short, when you submit code changes, your submissions are understood to be under the same [AGPL v3](https://choosealicense.com/licenses/agpl-3.0/) that covers the project. Feel free to contact the maintainers if that's a concern. See the "License" section of [README.md](https://github.com/BiRG/Omics-Dashboard/blob/master/README.md) for more information.
 
 ## Code Style
 All python code submitted to the project should follow [PEP-8](https://www.python.org/dev/peps/pep-0008/).
