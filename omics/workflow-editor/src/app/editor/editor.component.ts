@@ -49,4 +49,9 @@ export class EditorComponent implements OnInit {
       window['wf'] = this.workflow;
     });
   }
+
+  moduleRequested(event: any) {
+    console.log(event);
+    console.log(this.wfModules[event.packageName][event.moduleInd]);
+  }
 }
