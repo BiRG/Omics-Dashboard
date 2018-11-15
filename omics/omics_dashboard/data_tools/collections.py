@@ -24,7 +24,7 @@ def get_collections(user_id: int) -> List[Dict[str, Any]]:
     :param user_id:
     :return:
     """
-    paths = [DATADIR + '/collections/' + file for file in os.listdir(DATADIR + '/collections/')]
+    paths = [f'{DATADIR}/collections/{file}' for file in os.listdir(f'{DATADIR}/collections/')]
     collection_info = [mdt.get_collection_info(path) for path in paths]
     return get_read_permitted_records(user_id, collection_info)
 
@@ -35,7 +35,7 @@ def get_all_collection_metadata(user_id: int) -> List[Dict[str, Any]]:
     :param user_id:
     :return:
     """
-    paths = [DATADIR + '/collections/' + file for file in os.listdir(DATADIR + '/collections/')]
+    paths = [f'{DATADIR}/collections/{file}' for file in os.listdir(f'{DATADIR}/collections/')]
     collection_info = [mdt.get_collection_metadata(path) for path in paths]
     return get_read_permitted_records(user_id, collection_info)
 
@@ -50,7 +50,7 @@ def get_collection_metadata(user_id: int, collection_id: int) -> Dict[str, Any]:
     collection_info = mdt.get_collection_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5')
     if is_read_permitted(user_id, collection_info):
         return collection_info
-    raise AuthException('User %s is not authorized to view collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not authorized to view collection {collection_id}')
 
 
 def get_collection(user_id: int, collection_id: int) -> Dict[str, Any]:
@@ -63,7 +63,7 @@ def get_collection(user_id: int, collection_id: int) -> Dict[str, Any]:
     collection_info = mdt.get_collection_info(DATADIR + '/collections/' + str(collection_id) + '.h5')
     if is_read_permitted(user_id, collection_info):
         return collection_info
-    raise AuthException('User %s is not authorized to view collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not authorized to view collection {collection_id}')
 
 
 def update_collection(user_id: int, collection_id: int, new_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,10 +74,29 @@ def update_collection(user_id: int, collection_id: int, new_data: Dict[str, Any]
     :param new_data:
     :return:
     """
-    collection_info = mdt.get_collection_info(DATADIR + '/collections/' + str(collection_id) + '.h5')
+    collection_info = mdt.get_collection_info(f'{DATADIR}/collections/{collection_id}.h5')
     if is_write_permitted(user_id, collection_info):
         return mdt.update_metadata(DATADIR + '/collections/' + str(collection_id) + '.h5', new_data)
-    raise AuthException('User %s is not permitted to modifiy collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not permitted to modifiy collection {collection_id}')
+
+
+def update_collection_array(user_id: int, collection_id: int, path: str, i: int, j: int, val):
+    """
+    Update one point of one array in a collection
+    :param user_id:
+    :param collection_id:
+    :param path:
+    :param i:
+    :param j:
+    :param val:
+    :return:
+    """
+    filename = f'{DATADIR}/collections/{collection_id}.h5'
+    collection_info = mdt.get_collection_info(filename)
+    if is_write_permitted(user_id, collection_info):
+        ct.update_array(filename, path, i, j, val)
+        return collection_info
+    raise AuthException(f'User {user_id} is not permitted to modify collection {collection_id}.')
 
 
 def upload_collection(user_id: int, filename: str, new_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -137,18 +156,21 @@ def download_collection_dataset(user_id: int, collection_id: int, path: str) -> 
     raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 
-def download_collection_dataframe(user_id: int, collection_id: int) -> Dict[str, str]:
+def download_collection_dataframe(user_id: int, collection_id: int, single_column: bool = False,
+                                  data_format: str = 'csv', json_orient: str = 'records') -> Dict[str, any]:
     """
     If the user is allowed to read a collection, get the contents required to send a file containing the collection
     as a pandas dataframe as CSV
     :param user_id:
     :param collection_id:
+    :param single_column: whether to only include single-column attributes in dataframe
     :return:
     """
     filename = f'{DATADIR}/collections/{collection_id}.h5'
     collection = mdt.get_collection_metadata(filename)
     if is_read_permitted(user_id, collection):
-        return {'csv': ct.get_dataframe(filename), 'cd': f'attachment; filename={collection_id}.csv'}
+        return {data_format: ct.get_dataframe(filename, single_column, data_format, json_orient),
+                'cd': f'attachment; filename={collection_id}.{data_format}'}
     raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 
@@ -163,7 +185,7 @@ def list_collection_paths(user_id: int, collection_id: int) -> List[str]:
     collection = mdt.get_collection_metadata(filename)
     if is_read_permitted(user_id, collection):
         return mdt.get_dataset_paths(filename)
-    raise AuthException('User %s is not permitted to access collection %s' % (str(user_id), str(collection_id)))
+    raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 
 def create_collection(user_id: int,
