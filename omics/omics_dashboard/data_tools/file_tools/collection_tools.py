@@ -1,10 +1,13 @@
 import h5py
 import numpy as np
 import pandas as pd
+import json
 from io import StringIO
+from typing import Dict, Union
 
 
-def get_dataframe(filename: str, single_column: bool = False) -> str:
+def get_dataframe(filename: str, single_column: bool = False, data_format='csv', json_orient='records') \
+        -> Union[str, Dict[str, any]]:
     """Get a string containing a CSV of a pandas dataframe of a collection"""
     """Note: this requires that there be datasets /Y and /x corresponding to an x-axis and y-values for that axis"""
     # TODO: make this not require datasets called /x and /Y
@@ -27,14 +30,18 @@ def get_dataframe(filename: str, single_column: bool = False) -> str:
                     pass
             else:
                 df[key] = np.asarray(file[key])
-
-    df.to_csv(buf)
-    return buf.getvalue()
+    if data_format == 'json':
+        df.to_json(buf, orient=json_orient)
+    else:
+        df.to_csv(buf)
+    return json.loads(buf.getvalue()) if data_format == 'json' else buf.getvalue()
 
 
 def update_array(filename: str, path: str, i: int, j: int, val):
     with h5py.File(filename, 'r+') as file:
         print(f'update_array i={i},j={j},val={val}')
+        print(type(val))
+        print(file[path].dtype.type)
         if len(file[path].shape) == 1:
             file[path][int(i)] = val
         else:

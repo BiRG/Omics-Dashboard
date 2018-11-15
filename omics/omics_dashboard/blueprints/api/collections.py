@@ -1,6 +1,7 @@
 import base64
 import os
 import uuid
+import json
 
 from flask import request, jsonify, make_response, send_from_directory, Blueprint
 from werkzeug.utils import secure_filename
@@ -41,6 +42,7 @@ def get_collection(collection_id=None):
             if 'path' in request.args and 'i' in request.args and 'j' in request.args:
                 val = request.get_json(force=True)['newValue']
                 path, i, j = request.args.get('path'), request.args.get('i'), request.args.get('j')
+                print(f'Path: {path}, i: {i}, j: {j}')
                 dt.collections.update_collection_array(user_id, collection_id, path, i, j, val)
                 return jsonify({'message': f'Changed value of {path}[{i}, {j}] in collection {collection_id} to {val}'})
         if request.method == 'DELETE':
@@ -55,10 +57,20 @@ def download_collection(collection_id=None):
         user_id = get_user_id()
         if request.args.get('format', '') == 'pandas':
             single_column = True if request.args.get('singleColumn', '') == 'true' else False
-            out = dt.collections.download_collection_dataframe(user_id, collection_id, single_column)
-            response = make_response(out['csv'])
-            response.headers['Content-Disposition'] = out['cd']
-            response.mimetype = 'text/csv'
+            data_format = request.args.get('dataFormat') if 'dataFormat' in request.args else 'csv'
+            if data_format not in {'json', 'csv'}:
+                raise ValueError(f'Improper data format {data_format}')
+            json_orient = request.args.get('orient') if 'orient' in request.args else 'records'
+            out = dt.collections.download_collection_dataframe(user_id, collection_id, single_column, data_format, json_orient)
+            as_attachment = request.args.get('asAttachment') if 'asAttachment' in request.args else 'true'
+            if as_attachment == 'false':
+                response = jsonify({'dataFrame': out[data_format]})
+            else:
+                if data_format == 'json':
+                    out['json'] = json.dumps(out['json'])
+                response = make_response(out[data_format])
+                response.headers['Content-Disposition'] = out['cd']
+                response.mimetype = f'text/{data_format}'
             return response
         if request.args.get('path', ''):
             path = request.args.get('path', '')
@@ -68,7 +80,7 @@ def download_collection(collection_id=None):
             response.mimetype = 'text/csv'
             return response
         out = dt.collections.download_collection(user_id, collection_id)
-        return send_from_directory('%s/collections' % DATADIR, out['filename'], as_attachment=True)
+        return send_from_directory(f'{DATADIR}/collections', out['filename'], as_attachment=True)
     except Exception as e:
         return handle_exception(e)
 

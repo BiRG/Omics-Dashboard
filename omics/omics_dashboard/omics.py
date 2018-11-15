@@ -117,7 +117,8 @@ app.jinja_env.globals.update(get_user_id=get_user_id)
 app.jinja_env.globals.update(get_update_url=get_update_url)
 app.jinja_env.globals.update(get_included_groups=dt.user_groups.get_included_groups)
 app.jinja_env.globals.update(BRAND=os.environ['BRAND'] if 'BRAND' in os.environ else '')
-
+app.jinja_env.globals.update(enumerate=enumerate)
+app.jinja_env.globals.update(zip=zip)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

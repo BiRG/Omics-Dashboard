@@ -156,7 +156,8 @@ def download_collection_dataset(user_id: int, collection_id: int, path: str) -> 
     raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 
-def download_collection_dataframe(user_id: int, collection_id: int, single_column: bool = False) -> Dict[str, str]:
+def download_collection_dataframe(user_id: int, collection_id: int, single_column: bool = False,
+                                  data_format: str = 'csv', json_orient: str = 'records') -> Dict[str, any]:
     """
     If the user is allowed to read a collection, get the contents required to send a file containing the collection
     as a pandas dataframe as CSV
@@ -168,7 +169,8 @@ def download_collection_dataframe(user_id: int, collection_id: int, single_colum
     filename = f'{DATADIR}/collections/{collection_id}.h5'
     collection = mdt.get_collection_metadata(filename)
     if is_read_permitted(user_id, collection):
-        return {'csv': ct.get_dataframe(filename, single_column), 'cd': f'attachment; filename={collection_id}.csv'}
+        return {data_format: ct.get_dataframe(filename, single_column, data_format, json_orient),
+                'cd': f'attachment; filename={collection_id}.{data_format}'}
     raise AuthException(f'User {user_id} is not permitted to access collection {collection_id}')
 
 

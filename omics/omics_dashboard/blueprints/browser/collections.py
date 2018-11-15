@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for, Blueprint
 
 import data_tools as dt
 from helpers import get_user_id, handle_exception_browser
+from data_tools.file_tools import collection_tools as ct
 collections = Blueprint('collections', __name__, url_prefix='/collections')
 
 
@@ -28,7 +29,11 @@ def render_collection(collection_id=None):
         if request.method == 'GET':
             data = dt.collections.get_collection_metadata(get_user_id(), collection_id)
             datasets = dt.collections.list_collection_paths(user_id, collection_id)
-            return render_template('collectionentry.html', type='Collection', data=data, datasets=datasets)
+            metadata_fields = dt.collections.download_collection_dataframe(user_id, collection_id, True, 'json', 'split')['json']
+            column_headings = ['ID'] + metadata_fields['columns']
+            values = [[ind] + row for ind, row in zip(metadata_fields['index'], metadata_fields['data'])]
+            return render_template('collectionentry.html', type='Collection', data=data, datasets=datasets,
+                                   column_headings=column_headings, values=values)
         if request.method == 'DELETE':
             dt.collections.delete_collection(get_user_id(), collection_id)
             return redirect(url_for('samples.render_sample_list'))
