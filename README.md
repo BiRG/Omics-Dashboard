@@ -1,6 +1,8 @@
 # Omics Dashboard
 
-A web-based LIMS and pipelining tool for systems biology workflows
+A web-based LIMS and pipelining tool for systems biology workflows.
+
+Omics Dashboard consists of a web service for managing data and workflows, and the [Cromwell workflow engine](https://github.com/broadinstitute/cromwell) from @broadinstitute for executing CWL (and eventually WDL) workflows.
 
 ## Getting Started
 Omics Dashboard can be deployed in several ways. The easiest way is via [Docker Compose](https://docs.docker.com/compose/).
