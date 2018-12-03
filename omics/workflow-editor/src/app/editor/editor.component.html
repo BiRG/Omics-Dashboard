@@ -6,13 +6,13 @@
   <div class="collapse navbar-collapse" id="navbarNavDropdown">
     <ul class="navbar-nav ml-auto">
       <div class="btn-group mr-2" role="group">
-        <button class="btn btn-info"><i class="fas fa-sync"></i> Reset</button>
+        <button (click)="onResetClicked()" class="btn btn-info"><i class="fas fa-sync"></i> Reset</button>
       </div>
       <div class="btn-group mr-2" role="group">
-        <button class="btn btn-secondary"><i class="fas fa-arrow-alt-circle-up"></i> Update</button>
+        <button (click)="onUpdateClicked()" class="btn btn-secondary"><i class="fas fa-arrow-alt-circle-up"></i> Update</button>
       </div>
       <div class="btn-group mr-2" role="group">
-        <button class="btn btn-success"><i class="fas fa-cogs"></i> Submit Job</button>
+        <button (click)="onSubmitClicked()" class="btn btn-success"><i class="fas fa-cogs"></i> Submit Job</button>
       </div>
     </ul>
   </div>

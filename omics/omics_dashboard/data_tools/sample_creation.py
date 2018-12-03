@@ -62,7 +62,7 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
                     'type': 'int'
                 },
                 {
-                    'id': 'authToken',
+                    'id': 'omicsAuthToken',
                     'type': 'string'
                 },
                 {
@@ -126,7 +126,7 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
                             {'id': 'omicsUrl',
                              'source': 'omicsUrl'},
                             {'id': 'authToken',
-                             'source': 'authToken'}
+                             'source': 'omicsAuthToken'}
                         ],
                     'out': [{'id': 'responses'}]
                 }

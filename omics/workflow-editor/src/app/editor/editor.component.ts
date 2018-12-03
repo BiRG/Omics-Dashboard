@@ -51,12 +51,55 @@ export class EditorComponent implements OnInit {
   }
 
   moduleRequested(event: any) {
-    console.log(event);
-    console.log(this.wfModules[event.packageName][event.moduleInd]);
-    const step = this.wfModules[event.packageName][event.moduleInd].toolDefinition;
-    this.workflow.model.addStepFromProcess(step);
-    for (let step of this.workflow.model.steps) {
-      step.in.forEach(input => this.workflow.model.includePort(input));
+    const newStep = this.wfModules[event.packageName][event.moduleInd].toolDefinition;
+    this.workflow.model.addStepFromProcess(newStep);
+    for (const step of this.workflow.model.steps) {
+      step.in.forEach(input => {
+        this.workflow.model.includePort(input);
+        if (input.id === 'omicsAuthToken') {
+          const tokenInput = this.workflow.model.inputs.find(elem => elem.id === 'omicsAuthToken');
+          if (tokenInput === undefined) {
+            this.workflow.model.createInputFromPort(input);
+          } else {
+            this.workflow.model.connect(tokenInput, input);
+          }
+        }
+        if (input.id === 'omicsUrl') {
+          const urlInput = this.workflow.model.inputs.find(elem => elem.id === 'omicsUrl');
+          if (urlInput === undefined) {
+            this.workflow.model.createInputFromPort(input);
+          } else {
+            this.workflow.model.connect(urlInput, input);
+          }
+        }
+      });
     }
   }
+
+  onResetClicked() {
+    this.omicsService.getWorkflow(this.workflowId).subscribe(res => {
+      this.workflow = new Workflow({
+        model: WorkflowFactory.from(res.workflow as any),
+        svgRoot: this.svgRoot,
+        plugins: [
+          new SVGArrangePlugin(),
+          new SVGEdgeHoverPlugin(),
+          new SVGNodeMovePlugin(),
+          new SVGPortDragPlugin(),
+          new SelectionPlugin(),
+          new DeletionPlugin(),
+          new ZoomPlugin()
+        ]
+      });
+    });
+  }
+
+  onUpdateClicked() {
+    this.omicsService.updateWorkflow(this.workflowId, this.workflow.model).subscribe();
+  }
+
+  onSubmitClicked() {
+    console.log('onSubmitClicked');
+  }
+
 }

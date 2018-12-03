@@ -12,7 +12,7 @@ inputs:
     type: string
     inputBinding:
       position: 1
-  - id: authToken
+  - id: omicsAuthToken
     type: string
     inputBinding:
       position: 2

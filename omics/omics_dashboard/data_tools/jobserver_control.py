@@ -139,3 +139,18 @@ def get_job_chart_metadata(job_id: str) -> str:
           f'?expandSubWorkflows=true&includeKeys={"&includeKeys=".join(include_keys)}'
     response = requests.get(url)
     return response.json()
+
+
+def prepare_workflow(workflow: Dict[str, any]) -> Dict[str, any]:
+    workflow['inputs'].append(
+        {
+            'id': 'omicsAuthToken',
+            'type': 'string'
+        },
+        {
+            'id': 'omicsUrl',
+            'type': 'string'
+        }
+    )
+    for step in workflow['steps']:
+        for
