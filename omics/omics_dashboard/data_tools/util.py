@@ -1,6 +1,8 @@
 import os
 import h5py
 import data_tools.file_tools.metadata_tools as mdt
+from data_tools.user_groups import get_user_groups
+from data_tools.users import get_users
 
 
 class AuthException(Exception):
@@ -15,7 +17,11 @@ def validate_file(path: str) -> bool:
     """
     if h5py.is_hdf5(path):
         required_attrs = {'owner', 'name', 'description', 'groupPermissions', 'allPermissions', 'userGroup'}
-        return required_attrs.issubset(set(mdt.get_collection_info(path).keys()))
+        user_ids = {user['id'] for user in get_users()}
+        user_group_ids = {user_group['id'] for user_group in get_user_groups()}
+        collection_info = mdt.get_collection_info(path)
+        collection_keys = set(collection_info.keys())
+        return required_attrs.issubset(collection_keys) and (collection_info['owner'] in user_ids) and (collection_info['userGroup'] in user_group_ids)
     else:
         print("not HDF5")
     return False

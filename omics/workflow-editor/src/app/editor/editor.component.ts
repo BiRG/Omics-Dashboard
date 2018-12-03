@@ -13,7 +13,7 @@ import {WorkflowModuleData} from '../workflow-module-data';
 })
 export class EditorComponent implements OnInit {
   svgRoot: any;
-  workflow: any;
+  workflow: Workflow;
   wfModules: {[key: string]: WorkflowModuleData[]} = {};
   uniquePackages: Set<string>;
   workflowId: number;
@@ -53,5 +53,10 @@ export class EditorComponent implements OnInit {
   moduleRequested(event: any) {
     console.log(event);
     console.log(this.wfModules[event.packageName][event.moduleInd]);
+    const step = this.wfModules[event.packageName][event.moduleInd].toolDefinition;
+    this.workflow.model.addStepFromProcess(step);
+    for (let step of this.workflow.model.steps) {
+      step.in.forEach(input => this.workflow.model.includePort(input));
+    }
   }
 }
