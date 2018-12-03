@@ -13,7 +13,7 @@ from xkcdpass import xkcd_password as xp
 
 def hash_password(password: str) -> str:
     """
-    Hash a password using bcrpyt and get the hasehd password as a str
+    Hash a password using bcrpyt and get the hashed password as a str
     :param password:
     :return:
     """

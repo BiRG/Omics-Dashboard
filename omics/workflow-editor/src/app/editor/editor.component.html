@@ -22,8 +22,8 @@
     <ngb-accordion [closeOthers]="true" style="width: 100%; position: absolute" [addButton]="false">
       <ngb-panel *ngFor="let packageName of uniquePackages" title="{{ packageName }}">
         <ng-template ngbPanelContent>
-          <ngb-accordion [closeOthers]="true" [addButton]="true">
-            <ngb-panel *ngFor="let wfModule of wfModules[packageName]" title="{{wfModule.label }}" style="width: 100%; position: absolute">
+          <ngb-accordion [closeOthers]="true" [addButton]="true" (moduleRequested)="moduleRequested($event)">
+            <ngb-panel *ngFor="let wfModule of wfModules[packageName]; let moduleInd = index" packageName="{{ packageName }}" moduleInd="{{ moduleInd }}" title="{{wfModule.label }}" style="width: 100%; position: absolute">
               <ng-template ngbPanelContent>
                 <b>Description</b>: {{ wfModule.description }}
                 <br>

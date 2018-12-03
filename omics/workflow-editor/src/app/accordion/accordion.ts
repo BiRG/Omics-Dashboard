@@ -13,6 +13,7 @@ import {
 import {isString} from 'util';
 
 import {NgbAccordionConfig} from './accordion-config';
+import { AngularDraggableModule} from 'angular2-draggable';
 
 let nextId = 0;
 
@@ -49,6 +50,9 @@ export class NgbPanel implements AfterContentChecked {
    *  If not provided, it will be auto-generated.
    */
   @Input() id = `ngb-panel-${nextId++}`;
+
+  @Input() packageName: string;
+  @Input() moduleInd: number;
 
   /**
    * A flag telling if the panel is currently open
@@ -112,7 +116,7 @@ export interface NgbPanelChangeEvent {
   exportAs: 'ngbAccordion',
   host: {'class': 'accordion', 'role': 'tablist', '[attr.aria-multiselectable]': '!closeOtherPanels'},
   template: `
-    <ng-template ngFor let-panel [ngForOf]="panels">
+    <ng-template ngFor let-panel [ngForOf]="panels" let-panelInd="index">
       <div class="card">
         <div role="tab" id="{{panel.id}}-header" [class]="'card-header ' + (panel.type ? 'bg-'+panel.type: type ? 'bg-'+type : '')">
           <h5 class="mb-0">
@@ -120,7 +124,9 @@ export interface NgbPanelChangeEvent {
               [class.collapsed]="!panel.isOpen" [attr.aria-expanded]="panel.isOpen" [attr.aria-controls]="panel.id">
               {{panel.title}}<ng-template [ngTemplateOutlet]="panel.titleTpl?.templateRef"></ng-template>
             </button>
-            <button *ngIf="addButton" id="{{panel.id}}-add-button" class="btn btn-outline-primary float-right">
+            <button *ngIf="addButton"
+                    (click)="onAddButtonClick($event)"
+                    id="{{ panelInd }}-add-button" class="btn btn-outline-primary float-right">
               <i class="fas fa-plus"></i>
             </button>
           </h5>
@@ -132,8 +138,7 @@ export interface NgbPanelChangeEvent {
           </div>
         </div>
       </div>
-    </ng-template>
-  `
+    </ng-template>`
 })
 export class NgbAccordion implements AfterContentChecked {
   @Input() addButton: boolean;
@@ -166,11 +171,20 @@ export class NgbAccordion implements AfterContentChecked {
    */
   @Output() panelChange = new EventEmitter<NgbPanelChangeEvent>();
 
+  @Output() moduleRequested: EventEmitter<any> = new EventEmitter();
+
   constructor(config: NgbAccordionConfig) {
     this.type = config.type;
     this.closeOtherPanels = config.closeOthers;
     this.addButton = config.addButton;
   }
+
+  onAddButtonClick(event):  void {
+    const moduleInd: number = event.target.id.split('-')[0];
+    const packageName: string = this.panels.toArray()[moduleInd].packageName;
+    this.moduleRequested.emit({packageName, moduleInd});
+  }
+
 
   /**
    * Checks if a panel with a given id is expanded or not.
