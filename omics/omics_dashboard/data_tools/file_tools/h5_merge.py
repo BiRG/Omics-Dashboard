@@ -84,7 +84,7 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", rese
                                    maxshape=(None, None))
 
     # have to handle some attrs differently
-    ignored_attrs = ['name', 'description', 'userGroup', 'owner', 'createdBy', 'groupPermissions', 'allPermissions']
+    ignored_attrs = ['name', 'description']
     merge_attrs = set([attr for attr in merge_attrs if attr not in ignored_attrs])
     for attr_key in merge_attrs:
         values = np.array([[file.attrs[attr_key].encode('ascii')
@@ -102,8 +102,8 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str="horiz", rese
     base_sample_names = np.transpose(base_sample_names)
     np.reshape(base_sample_ids, (len(infilenames), 1))
     np.reshape(base_sample_names, (len(infilenames), 1))
-    outfile.create_dataset('baseSampleId', data=base_sample_ids, maxshape=(None, 1))
-    outfile.create_dataset('baseSampleName', data=base_sample_names, maxshape=(None, 1))
+    outfile.create_dataset('base_sample_id', data=base_sample_ids, maxshape=(None, 1))
+    outfile.create_dataset('base_sample_name', data=base_sample_names, maxshape=(None, 1))
     
     # Sort everything by the specified sortBy path
     ind = np.argsort(outfile[sort_by])[0, :]

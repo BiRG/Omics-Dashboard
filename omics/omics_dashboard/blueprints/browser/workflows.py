@@ -1,7 +1,7 @@
-from flask import render_template, request, redirect, url_for, jsonify, Blueprint
+from flask import render_template, request, redirect, url_for, Blueprint
 
 import data_tools as dt
-from helpers import get_user_id, handle_exception_browser, DATADIR
+from helpers import get_user_id, get_current_user, handle_exception_browser
 
 workflows = Blueprint('workflows', __name__)
 
@@ -9,8 +9,8 @@ workflows = Blueprint('workflows', __name__)
 @workflows.route('/workflows', methods=['GET', 'POST'])
 def render_workflow_list():
     try:
-        user_id = get_user_id()
-        workflow_list = dt.workflows.get_workflows(user_id)
+        user = get_current_user()
+        workflow_list = [workflow.to_dict() for workflow in dt.workflows.get_workflows(user)]
         headings = {'id': 'id', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
         return render_template('list.html', data=workflow_list, headings=headings, type='Workflows')
     except Exception as e:
@@ -20,12 +20,13 @@ def render_workflow_list():
 @workflows.route('/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
 def render_workflow(workflow_id=None):
     try:
-        user_id = get_user_id()
-        workflow = dt.workflows.get_workflow(user_id, workflow_id)
-        with open(f'{DATADIR}/workflows/{workflow_id}.cwl', 'r') as file:
+        user = get_current_user()
+        workflow = dt.workflows.get_workflow(user, workflow_id)
+        with open(workflow.filename, 'r') as file:
             workflow_contents = file.read()
         del workflow['workflow']
-        return render_template('entry.html', type='Workflow', data=workflow, workflow_contents=workflow_contents)
+        return render_template('entry.html', type='Workflow', data=workflow.to_dict(),
+                               workflow_contents=workflow_contents)
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -36,7 +37,7 @@ def render_create_workflow():
         user_id = get_user_id()
         if request.method == 'POST':
             workflow = dt.workflows.create_workflow(user_id, request.form.to_dict())
-            return redirect(url_for('workflows.render_workflow', workflow_id=workflow['id']))
+            return redirect(url_for('workflows.render_workflow', workflow_id=workflow.id))
         return render_template('createbase.html', type='Workflow', endpoint='workflows.render_create_workflow')
     except Exception as e:
         return handle_exception_browser(e)
