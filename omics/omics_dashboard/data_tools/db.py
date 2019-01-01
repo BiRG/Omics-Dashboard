@@ -1,16 +1,36 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask_sqlalchemy import event
-import ruamel.yaml as yaml
-import json
-import os
-import data_tools.file_tools.metadata_tools as mdt
-db = SQLAlchemy()
 """
 The to_dict methods only act recursively one way for some relationships to prevent infinite loops
 Analysis provides Collection and Workflow metadata but Collection and Workflow provide only Analysis ids
 SampleGroup provides Sample metadata but Sample provides only SampleGroup ids
 UserGroup provides User metadata but User provides only UserGroup ids
 """
+from flask_sqlalchemy import Model, SQLAlchemy, event
+from sqlalchemy.ext.declarative import declared_attr
+import sqlalchemy as sa
+import ruamel.yaml as yaml
+import json
+import os
+import data_tools.file_tools.metadata_tools as mdt
+
+
+class Base(Model):
+    __abstract_ = True
+    id = sa.Column(sa.Integer, primary_key=True)
+    created_on = sa.Column(sa.DateTime, default=sa.func.now())
+    updated_on = sa.Column(sa.DateTime, default=sa.func.now(), onupdate=sa.func.now())
+    group_can_read = False
+    group_can_write = False
+    all_can_read = False
+    all_can_write = False
+    owner_id = None
+    user_group_id = None
+
+    def to_dict(self):
+        return {'id': self.id}
+
+
+db = SQLAlchemy(model_class=Base)
+
 # Tables that represent relations only
 user_group_membership = db.Table('user_group_membership', db.Model.metadata,
                                  db.Column('user_id', db.Integer,
@@ -73,23 +93,7 @@ workflow_analysis_membership = db.Table('workflow_analysis_membership', db.Model
                                                   primary_key=True))
 
 
-class Base(db.Model):
-    __abstract_ = True
-    id = db.Column(db.Integer, primary_key=True)
-    created_on = db.Column(db.DateTime, default=db.func.now())
-    updated_on = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
-    group_can_read = False
-    group_can_write = False
-    all_can_read = False
-    all_can_write = False
-    owner_id = None
-    user_group_id = None
-
-    def to_dict(self):
-        return {'id': self.id}
-
-
-class User(Base):
+class User(db.Model):
     __tablename__ = 'user'
     email = db.Column(db.String, nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
@@ -99,7 +103,7 @@ class User(Base):
     user_groups = db.relationship('UserGroup', secondary=user_group_membership, back_populates='members')
     admin_user_groups = db.relationship('UserGroup', secondary=user_group_admin, back_populates='admins')
 
-    owner_id = Base.id
+    owner_id = db.synonym('id')
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
 
@@ -109,23 +113,22 @@ class User(Base):
             'email': self.email,
             'admin': self.admin,
             'active': self.active,
-            'group_ids': [group.id for group in self.groups],
-            'admin_group_ids': [group.id for group in self.admin_groups]
+            'group_ids': [group.id for group in self.user_groups],
+            'admin_group_ids': [group.id for group in self.admin_user_groups]
         }
         if not sanitized:
             dict_rep['password'] = self.password
         return dict_rep
 
 
-class UserGroup(Base):
+class UserGroup(db.Model):
     __tablename__ = 'user_group'
-    id = db.Column(db.Integer, primary_key=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    name = db.Column(db.String)
+    name = db.Column(db.String, nullable=False)
     description = db.Column(db.String)
 
-    members = db.relationship('User', secondary=user_group_membership, back_populates='groups')
-    admins = db.relationship('User', secondary=user_group_admin, back_populates='admin_groups')
+    members = db.relationship('User', secondary=user_group_membership, back_populates='user_groups')
+    admins = db.relationship('User', secondary=user_group_admin, back_populates='admin_user_groups')
 
     group_can_read = True
     group_can_write = False
@@ -138,7 +141,7 @@ class UserGroup(Base):
     sample_groups = db.relationship('SampleGroup', back_populates='user_group')
     workflows = db.relationship('Workflow', back_populates='user_group')
 
-    user_group_id = id  # make it belong to itself...
+    user_group_id = db.synonym('id')  # make it belong to itself...
 
     def to_dict(self):
         return {
@@ -151,22 +154,27 @@ class UserGroup(Base):
         }
 
 
-class OmicsRecord(Base):
+class OmicsRecordMixin(object):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     description = db.Column(db.String)
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    @declared_attr
+    def creator_id(cls): return db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    @declared_attr
+    def owner_id(cls): return db.Column(db.Integer, db.ForeignKey('user.id'))
 
     group_can_read = db.Column(db.Boolean, default=True)
     group_can_write = db.Column(db.Boolean, default=True)
     all_can_read = db.Column(db.Boolean, default=True)
     all_can_write = db.Column(db.Boolean, default=False)
 
-    user_group_id = db.Column(db.Integer, db.ForeignKey('user_group.id'))
+    @declared_attr
+    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'))
 
 
-class FileRecord(OmicsRecord):
+class FileRecordMixin(object):
     filename = db.Column(db.String)
     file_type = db.Column(db.String, default='hdf5')
 
@@ -191,7 +199,7 @@ class FileRecord(OmicsRecord):
         return{}
 
 
-class Analysis(OmicsRecord):
+class Analysis(OmicsRecordMixin, FileRecordMixin, db.Model):
     __tablename__ = 'analysis'
 
     collections = db.relationship('Collection', secondary=collection_analysis_membership, back_populates='analyses')
@@ -215,7 +223,7 @@ class Analysis(OmicsRecord):
         }
 
 
-class Sample(FileRecord):
+class Sample(OmicsRecordMixin, FileRecordMixin, db.Model):
     __tablename__ = 'sample'
     user_group = db.relationship('UserGroup', back_populates='samples')
     sample_groups = db.relationship('SampleGroup', secondary=sample_group_membership, back_populates='samples')
@@ -238,7 +246,7 @@ class Sample(FileRecord):
         }
 
 
-class SampleGroup(OmicsRecord):
+class SampleGroup(OmicsRecordMixin, FileRecordMixin, db.Model):
     __tablename__ = 'sample_group'
     user_group = db.relationship('UserGroup', back_populates='sample_groups')
     samples = db.relationship('Sample', secondary=sample_group_membership, back_populates='sample_groups')
@@ -259,7 +267,7 @@ class SampleGroup(OmicsRecord):
         }
 
 
-class Collection(FileRecord):
+class Collection(FileRecordMixin, OmicsRecordMixin, db.Model):
     __tablename__ = 'collection'
     user_group = db.relationship('UserGroup', back_populates='collections')
     analyses = db.relationship('Analysis', secondary=collection_analysis_membership, back_populates='collections')
@@ -282,7 +290,7 @@ class Collection(FileRecord):
         }
 
 
-class Workflow(FileRecord):
+class Workflow(FileRecordMixin, OmicsRecordMixin, db.Model):
     __tablename__ = 'workflow'
     workflow_language = db.Column(db.String, default='cwl')
     file_type = db.Column(db.String, default='yaml')
@@ -318,11 +326,11 @@ class Workflow(FileRecord):
         }
 
 
-class Invitation(Base):
+class Invitation(db.Model):
     __tablename__ = 'invitation'
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     value = db.Column(db.String)
-    owner_id = creator_id
+    owner_id = db.synonym('creator_id')
 
     def to_dict(self):
         return {
@@ -332,7 +340,7 @@ class Invitation(Base):
         }
 
 
-class JobserverToken(Base):
+class JobserverToken(db.Model):
     __tablename__ = 'job_server_token'
     value = db.Column(db.String)
 
@@ -343,7 +351,7 @@ class JobserverToken(Base):
         }
 
 
-@event.listens_for(FileRecord, 'after_delete')
+@event.listens_for(FileRecordMixin, 'after_delete')
 def receive_after_delete(mapper, connection, target):
     """
     Triggered when a record with a 'filename' field is deleted. Will delete the file on the filesystem.

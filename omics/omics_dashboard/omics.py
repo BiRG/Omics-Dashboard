@@ -36,16 +36,18 @@ from blueprints.browser.users import users
 from blueprints.browser.workflows import workflows
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite://{DATADIR}/omics.db'
-db.init_app(app)
-db.create_all()
-if User.query.filter_by(admin=True).first() is None:
-    db.session.add(User(email='admin@admin.admin', name='Addison Minh',
-                        password=bcrypt.hashpw(bytes('password', 'utf-8'), bcrypt.gensalt()).decode('utf-8'),
-                        admin=True,
-                        active=True))
-    db.session.commit()
-    print('No admin user found. Created default admin user {email: "admin@admin.admin", password: "password"}')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATADIR}/omics.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+with app.app_context():
+    db.init_app(app)
+    db.create_all()
+    if User.query.filter_by(admin=True).first() is None:
+        db.session.add(User(email='admin@admin.admin', name='Addison Minh',
+                            password=bcrypt.hashpw(bytes('password', 'utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                            admin=True,
+                            active=True))
+        db.session.commit()
+        print('No admin user found. Created default admin user {email: "admin@admin.admin", password: "password"}')
 
 app.register_blueprint(analyses_api)
 app.register_blueprint(api)

@@ -56,7 +56,7 @@ def get_profile_link(user_id):
 
 def get_user_id():
     if session.get('logged_in'):
-        return session['user'].id
+        return session['user']['id']
     # check for authorization header
     if 'Authorization' in request.headers:
         auth_header = request.headers.get('Authorization')
@@ -75,7 +75,7 @@ def get_user_id():
 
 def get_current_user():
     if session.get('logged_in'):
-        return session['user']
+        return dt.db.User.query.filter_by(id=session['user']['id']).first()
     if 'Authorization' in request.headers:
         auth_header = request.headers.get('Authorization')
         # Header should be in format "JWT <>" or "Bearer <>"

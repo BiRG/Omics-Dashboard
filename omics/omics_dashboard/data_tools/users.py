@@ -8,6 +8,7 @@ from data_tools.util import AuthException, DATADIR
 import bcrypt
 from xkcdpass import xkcd_password as xp
 from data_tools.db import User, UserGroup, Invitation, Base, db
+from flask_sqlalchemy import Model
 
 
 def hash_password(password: str) -> str:
@@ -54,7 +55,7 @@ def get_user(user: User, target_user_id: int) -> User:
     :param target_user_id:
     :return:
     """
-    target_user = User.query(id=target_user_id).first()
+    target_user = User.query.filter_by(id=target_user_id).first()
     if is_read_permitted(user, target_user):
         return target_user
     raise AuthException(f'User with id {target_user_id} does not exist or is not visible to {user.email}')
@@ -66,7 +67,7 @@ def get_user_by_email(email: str) -> User:
     :param email:
     :return:
     """
-    return User.query(email=email).first()
+    return User.query.filter_by(email=email).first()
 
 
 def get_user_password_hash(email: str) -> str:
@@ -232,7 +233,7 @@ def is_user_group_admin(user: User, group: UserGroup) -> bool:
     return user in group.admins
 
 
-def is_read_permitted(user: User, record: Base) -> bool:
+def is_read_permitted(user: User, record: Any) -> bool:
     """
     Check if a user is allowed to read from this record. A user is allowed to read from a record if they are
     1. The user is the owner of the record
@@ -246,7 +247,7 @@ def is_read_permitted(user: User, record: Base) -> bool:
     return user.admin or (record.group_can_read and user in record.user_group.members) or record.all_can_read
 
 
-def is_write_permitted(user: User, record: Base) -> bool:
+def is_write_permitted(user: User, record: Any) -> bool:
     """
     Check if a record can be read by a user
     :param user:
@@ -258,7 +259,7 @@ def is_write_permitted(user: User, record: Base) -> bool:
            or record.all_can_write
 
 
-def get_read_permitted_records(user: User, records: List[Base]) -> List[Base]:
+def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     """
     Get all the records in the list records which the user is allowed to read
     :param user:
