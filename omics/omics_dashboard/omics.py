@@ -3,12 +3,15 @@ import os
 from flask_cors import CORS
 import datetime
 import traceback
+import bcrypt
 
 import data_tools.sample_creation
 import data_tools as dt
 from data_tools.users import get_user_name
 from data_tools.user_groups import get_user_group_name
 from data_tools.util import UPLOADDIR
+from data_tools.db import db, User
+from data_tools.util import DATADIR
 
 from helpers import get_item_link, get_update_url, get_profile_link, get_user_id, log_exception
 
@@ -33,6 +36,18 @@ from blueprints.browser.users import users
 from blueprints.browser.workflows import workflows
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATADIR}/omics.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+with app.app_context():
+    db.init_app(app)
+    db.create_all()
+    if User.query.filter_by(admin=True).first() is None:
+        db.session.add(User(email='admin@admin.admin', name='Addison Minh',
+                            password=bcrypt.hashpw(bytes('password', 'utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                            admin=True,
+                            active=True))
+        db.session.commit()
+        print('No admin user found. Created default admin user {email: "admin@admin.admin", password: "password"}')
 
 app.register_blueprint(analyses_api)
 app.register_blueprint(api)
@@ -85,14 +100,14 @@ def internal_error(e):
     log_exception(500, e)
     return jsonify({'message': 'uncaught internal error occurred'})
 
-
+# This is for the old database interface, not the SQLAlchemy ORM
 # close database connection at close
-@app.teardown_appcontext
-def close_connection(exception):
-    log_exception(500, exception, traceback.format_exc(exception))
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+# @app.teardown_appcontext
+# def close_connection(exception):
+#    log_exception(500, exception, traceback.format_exc(exception))
+#    db = getattr(g, '_database', None)
+#    if db is not None:
+#        db.close()
 
 
 # Jinja2 template globals

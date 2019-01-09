@@ -2,7 +2,11 @@
 <div class="card mb-3">
     <h4 class="card-header text-white bg-dark">Metadata Fields</h4>
     <div class="card-body">
+
+        {% if is_write_permitted(get_user_id(), data)  %}
+        <h6 class="card-subtitle text-muted">You have permission to edit this collection.</h6>
         <h6 class="card-subtitle text-muted">Attributes will update when the table cell is un-focused.</h6>
+        {% endif %}
         <div class="container">
             <table id="recordMetadata" class="table table-striped table-bordered" cellspacing="0" width="auto">
                 <thead>
@@ -23,7 +27,7 @@
                 {% for i, row in enumerate(values) %}
                     <tr id ="tr-{{ row[0] }}">
                         {% for item, heading in zip(row, column_headings) %}
-                            <td contenteditable="true" class="recordtd" id="{{ data['id'] }},{{ i }},{{ heading }}">{{ item }}</td>
+                            <td contenteditable="{{ 'true' if is_write_permitted(get_user_id(), data) else 'false' }}" class="recordtd" id="{{ data['id'] }},{{ i }},{{ heading }}">{{ item }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}

@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, Blueprint
 
 import data_tools as dt
-from helpers import get_user_id, handle_exception_browser
+from helpers import get_user_id, get_current_user, handle_exception_browser
 analyses = Blueprint('analyses', __name__, url_prefix='/analyses')
 
 
@@ -11,7 +11,8 @@ def render_analysis_list():
         user_id = get_user_id()
         analysis_list = dt.analyses.get_analyses(user_id)
         headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
-        return render_template('list.html', data=analysis_list, headings=headings, type='Analyses')
+        return render_template('list.html', data=[analysis.to_dict() for analysis in analysis_list],
+                               headings=headings, type='Analyses')
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -19,14 +20,15 @@ def render_analysis_list():
 @analyses.route('/create', methods=['GET', 'POST'])
 def render_create_analysis():
     try:
-        user_id = get_user_id()
+        user = get_current_user()
         if request.method == 'POST':
             collection_ids = [int(collection_id) for collection_id in request.form.getlist('collection')]
-            analysis = dt.analyses.create_analysis(user_id, request.form.to_dict())
+            analysis = dt.analyses.create_analysis(user, request.form.to_dict())
             for collection_id in collection_ids:
-                dt.analyses.attach_collection(user_id, analysis['id'], collection_id)
+                dt.analyses.attach_collection(user, analysis['id'], dt.collections.get_collection(user, collection_id))
             return redirect(url_for('analyses.render_analysis', analysis_id=analysis['id']))
-        return render_template('createbase.html', type='Analysis', groups=dt.user_groups.get_user_groups(),
+        return render_template('createbase.html', type='Analysis',
+                               groups=[user_group.to_dict() for user_group in dt.user_groups.get_user_groups(user)],
                                endpoint='analyses.render_create_analysis')
     except Exception as e:
         return handle_exception_browser(e)

@@ -8,10 +8,14 @@ inputs:
     type: File[]
     inputBinding:
       position: 0
-  - id: authToken
-    type: String
+  - id: omicsUrl
+    type: string
     inputBinding:
       position: 1
+  - id: omicsAuthToken
+    type: String
+    inputBinding:
+      position: 2
 outputs:
   - id: responses
     type: stdout

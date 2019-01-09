@@ -64,12 +64,31 @@ def get_user_id():
         try:
             token = auth_header.split(' ')[1]
             # if this is invalid, jwt.decode will throw. So no need to check password
-            user = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
+            user_data = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
+            user = dt.db.User.query.filter_by(id=user_data['id'])
             if user is not None:
-                return user['id']
+                return user.id
         except:
             raise LoginError('not authenticated')
     raise LoginError('Not logged in')
+
+
+def get_current_user():
+    if session.get('logged_in'):
+        return dt.db.User.query.filter_by(id=session['user']['id']).first()
+    if 'Authorization' in request.headers:
+        auth_header = request.headers.get('Authorization')
+        # Header should be in format "JWT <>" or "Bearer <>"
+        try:
+            token = auth_header.split(' ')[1]
+            # if this is invalid, jwt.decode will throw. So no need to check password
+            user_data = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
+            user = dt.db.User.query.filter_by(id=user_data['id']).first()
+            if user is not None:
+                return user
+        except:
+            raise LoginError('not authenticated')
+    raise LoginError('not authenticated')
 
 
 def handle_exception_browser(e):

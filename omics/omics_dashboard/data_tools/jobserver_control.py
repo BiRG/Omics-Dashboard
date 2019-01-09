@@ -7,12 +7,12 @@ from typing import Dict, Any, List
 import requests
 from ruamel import yaml as yaml
 
-from data_tools.database import db
-from data_tools.users import get_jwt_by_id, is_admin
+from data_tools.db import JobserverToken, User, Workflow, db
+from data_tools.users import get_jwt
 from data_tools.util import AuthException, COMPUTESERVER, TMPDIR
 
 
-def start_job(workflow: Dict[str, Any], job: Dict[str, Any], owner: int, wf_type: str) -> Dict[str, Any]:
+def start_job(workflow: Dict[str, Any], job: Dict[str, Any], owner: User) -> Dict[str, Any]:
     """
     Start a new job on the Cromwell job server
     :param workflow:
@@ -21,9 +21,9 @@ def start_job(workflow: Dict[str, Any], job: Dict[str, Any], owner: int, wf_type
     :param wf_type: Either 'upload' or 'analysis'
     :return:
     """
-    auth_token = get_jwt_by_id(owner)
+    auth_token = get_jwt(owner)
     job['authToken'] = auth_token
-    labels = json.dumps({'owner': str(owner), 'type': wf_type})
+    labels = json.dumps({'owner_id': str(owner.id), 'type': wf_type})
     files = {'workflowSource': StringIO(),
              'workflowInputs': StringIO(),
              'labels': labels}
@@ -76,21 +76,21 @@ def get_job(job_id: str) -> Dict[str, Any]:
     return job_data
 
 
-def cancel_job(user_id: int, job_id: str) -> Dict[str, Any]:
+def cancel_job(user: User, job_id: str) -> Dict[str, Any]:
     """
     Abort a running job on the Cromwell job server.
-    :param user_id:
+    :param user:
     :param job_id:
     :return:
     """
     data = json.loads(requests.get(f'{COMPUTESERVER}/api/workflows/v1/{job_id}/labels'))
-    if data['owner'] == user_id or is_admin(user_id):
+    if data['owner_id'] == user.id or user.admin:
         response = requests.post(f'{COMPUTESERVER}/api/workflows/v1/{job_id}/abort')
         return response.json()
-    raise AuthException(f'User {user_id} is not authorized to resume job {job_id}')
+    raise AuthException(f'User {user.email} is not authorized to resume job {job_id}')
 
 
-def resume_job(user_id: int, job_id: str) -> Dict[str, Any]:
+def resume_job(user: User, job_id: str) -> Dict[str, Any]:
     """
     Release the hold on a job on the Cromwell job server.
     :param user_id:
@@ -98,13 +98,13 @@ def resume_job(user_id: int, job_id: str) -> Dict[str, Any]:
     :return:
     """
     data = json.loads(requests.get(f'{COMPUTESERVER}/api/workflows/v1/{job_id}/labels'))
-    if data['owner'] == user_id or data['owner'] < 0 or is_admin(user_id):
+    if data['owner'] == user.id or data['owner_id'] < 0 or user.admin:
         response = requests.post(f'{COMPUTESERVER}/api/workflows/v1/{job_id}/releaseHold')
         return response.json()
-    raise AuthException(f'User {user_id} is not authorized to resume job {job_id}')
+    raise AuthException(f'User {user.email} is not authorized to resume job {job_id}')
 
 
-def create_jobserver_token() -> str:
+def create_jobserver_token() -> JobserverToken:
     """
     Create a "jobserver token"
 
@@ -112,10 +112,11 @@ def create_jobserver_token() -> str:
     that the jobserver can consume can be placed.
     :return:
     """
-    token = str(uuid.uuid4())
-    while token in os.listdir(f'{TMPDIR}'):
-        token = str(uuid.uuid4())
-    db.query_db('insert into JobServerTokens (value) values (?)', [str(token)])
+    token = JobserverToken(value=str(uuid.uuid4()))
+    while token.value in os.listdir(f'{TMPDIR}'):
+        token = JobserverToken(value=str(uuid.uuid4()))
+    db.session.add(token)
+    db.session.commit()
     return token
 
 
@@ -125,7 +126,7 @@ def check_jobserver_token(token: str) -> bool:
     :param token:
     :return:
     """
-    return db.query_db('select * from JobServerTokens where value = ?', [str(token)]) is not None
+    return JobserverToken.query.filter_by(value=token).first() is not None
 
 
 def get_job_chart_metadata(job_id: str) -> str:
@@ -139,3 +140,22 @@ def get_job_chart_metadata(job_id: str) -> str:
           f'?expandSubWorkflows=true&includeKeys={"&includeKeys=".join(include_keys)}'
     response = requests.get(url)
     return response.json()
+
+
+def prepare_workflow(workflow: Dict[str, any]) -> Dict[str, any]:
+    """
+    Insert server-related parameters to workflow job
+    :param workflow:
+    :return:
+    """
+    workflow['inputs'].append(
+        {
+            'id': 'omicsAuthToken',
+            'type': 'string'
+        },
+        {
+            'id': 'omicsUrl',
+            'type': 'string'
+        }
+    )
+    # TODO: do it

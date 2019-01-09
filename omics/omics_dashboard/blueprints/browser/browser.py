@@ -37,7 +37,7 @@ def browser_login(msg=None, error=None, next_template='browser.render_dashboard'
     try:
         if request.method == 'POST':
             if dt.users.validate_login(request.form['email'], request.form['password']):
-                session['user'] = dt.users.get_user_by_email(request.form['email'])
+                session['user'] = dt.users.get_user_by_email(request.form['email']).to_dict()
                 session['logged_in'] = True
                 return redirect(url_for(next_template))
             error = 'Invalid email/password'

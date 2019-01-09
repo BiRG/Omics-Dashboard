@@ -5,7 +5,8 @@ from flask import request, session, jsonify, Blueprint, url_for
 
 import data_tools as dt
 from data_tools.util import TMPDIR
-from helpers import get_user_id, handle_exception
+import helpers
+from helpers import handle_exception
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
@@ -39,7 +40,7 @@ def logout():
 def jwt_authenticate():
     credentials = request.get_json(force=True)
     if dt.users.validate_login(credentials['email'], credentials['password']):
-        token = dt.users.get_jwt(credentials['email'], credentials['password'])
+        token = dt.users.get_jwt_by_email(credentials['email'], credentials['password'])
         return jsonify({'token': str(token)}), 200
     return jsonify({"message": "authentication failed"}), 403
 
@@ -47,8 +48,8 @@ def jwt_authenticate():
 @api.route('/invite', methods=['GET'])
 def get_invitation():
     try:
-        user_id = get_user_id()
-        return jsonify(dt.users.create_invitation(user_id))
+        user = helpers.get_current_user()
+        return jsonify(dt.users.create_invitation(user))
     except Exception as e:
         return handle_exception(e)
 
@@ -56,22 +57,22 @@ def get_invitation():
 @api.route('/finalize', methods=['POST'])
 def finalize_job():
     try:
-        user_id = get_user_id()
+        user = helpers.get_current_user()
         body = request.get_json(force=True)
-        token = body['wfToken']
+        token = body['wf_token']
         path = f'{TMPDIR}/{token}'
         info = json.load(open(f'{path}/wfdata.json', 'r'))
-        if dt.jobserver_control.check_jobserver_token(token) and dt.users.is_write_permitted(user_id, info):
+        if dt.jobserver_control.check_jobserver_token(token) and dt.users.is_write_permitted(user, info):
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
         return handle_exception(e)
 
 
-@api.route('/currentuser')
+@api.route('/current_user')
 def get_current_user():
     try:
-        user_id = get_user_id()
-        return jsonify(dt.users.get_user(user_id)), 200
+        user = helpers.get_current_user()
+        return jsonify(user.to_dict()), 200
     except Exception as e:
         return handle_exception(e)

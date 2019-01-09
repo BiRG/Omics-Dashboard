@@ -7,6 +7,7 @@ import '@ng-bootstrap/ng-bootstrap';
 import {NgbAccordionModule} from './accordion/accordion.module';
 import {Router, RouterModule, Routes} from '@angular/router';
 import { EditorComponent } from './editor/editor.component';
+import { AngularDraggableModule } from 'angular2-draggable';
 
 const appRoutes: Routes = [
   {
@@ -24,6 +25,7 @@ const appRoutes: Routes = [
     BrowserModule,
     HttpClientModule,
     NgbAccordionModule,
+    AngularDraggableModule,
     RouterModule.forRoot(appRoutes)
   ],
   providers: [],
