@@ -38,7 +38,7 @@
 	    <div class="form-group">
 	      <label for="sortBy">Sort By</label>
 	      <select id="sortBy" name="sortBy" class="form-control selectpicker" data-live-search="true">
-	        <option value="baseSampleId" selected>baseSampleId</option>
+	        <option value="base_sample_id" selected>base_sample_id</option>
 	      </select>
 	    </div>
           {% endwith %}
@@ -113,8 +113,8 @@
           .done(function(res) {
 	      $('#sortBy').find('option').remove().end();
 	      $('#sortBy').append($('<option>', {
-	          value: 'baseSampleId',
-		  text: 'baseSampleId'
+	          value: 'base_sample_id',
+		  text: 'base_sample_id'
 	      }));
 	      for (val in res){
 	          $('#sortBy').append($('<option>', {
@@ -127,8 +127,8 @@
 	  .fail(function(res) {
 	      $('#sortBy').find('option').remove().end();
 	      $('#sortBy').append($('<option>', {
-	          value: 'baseSampleId',
-		  text: 'baseSampleId'
+	          value: 'base_sample_id',
+		  text: 'base_sample_id'
 	      }));
 	      $('#sortBy').selectpicker('refresh');
 	  });

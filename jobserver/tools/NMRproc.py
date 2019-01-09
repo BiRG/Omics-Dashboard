@@ -16,5 +16,5 @@ def reference(filename, reference, x_window):
     
 def scale(filename, frequency):
     with h5py.File(filename, 'r+') as file:
-        file['x'][:] = file['x'][:] / frequency
+        file['x'][:] = (file['x'][:] / frequency)*1e6
         file.attrs['units_chemical_shift'] = 'ppm'

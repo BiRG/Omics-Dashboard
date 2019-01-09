@@ -15,7 +15,7 @@ def get_dataframe(filename: str, single_column: bool = False, data_format='csv',
     with h5py.File(filename, 'r') as file:
         index = np.asarray(file['baseSampleId']).flatten() if 'baseSampleId' in file else [i for i in range(0, file['Y'].shape[0])]
         additional_columns = [key for key in file.keys() if key != 'baseSampleId'
-                              and file[key].shape[0] == file['Y'].shape[0]
+            and (file[key].shape[0] == file['Y'].shape[0] if 'Y' in file else False)
                               and (len(file[key].shape) == 1 or len(file[key].shape) == 2 and file[key].shape[1] == 1)]
         df = pd.DataFrame(index=index) if single_column else pd.DataFrame(data=np.asarray(file['/Y']),
                                                                           columns=np.asarray(file['/x']).flatten().tolist(),

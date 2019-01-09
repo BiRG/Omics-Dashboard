@@ -4,6 +4,7 @@ Cython
 flask
 flask-cors
 h5py
+scipy
 pandas
 itsdangerous
 jinja2
