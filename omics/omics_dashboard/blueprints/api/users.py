@@ -12,7 +12,7 @@ def list_users():
         if request.method == 'POST':
             data = request.get_json(force=True)
             return jsonify(dt.users.create_user(user, data).to_dict())
-        return jsonify([user.to_dict() for user in dt.users.get_users()])
+        return jsonify([target_user.to_dict() for target_user in dt.users.get_users(user)])
     except Exception as e:
         return handle_exception(e)
 
@@ -21,7 +21,7 @@ def list_users():
 def edit_user(user_id=None):
     try:
         current_user = get_current_user()
-        target_user = dt.users.get_user(user_id)
+        target_user = dt.users.get_user(current_user, user_id)
         if request.method == 'GET':
             return jsonify(target_user.to_dict())
         if request.method == 'POST':

@@ -110,6 +110,7 @@ class User(db.Model):
     def to_dict(self, sanitized=True):
         dict_rep = {
             'id': self.id,
+            'name': self.name,
             'email': self.email,
             'admin': self.admin,
             'active': self.active,

@@ -21,7 +21,7 @@ def send_ok():
 def login():
     credentials = request.get_json(force=True)
     if dt.users.validate_login(credentials['email'], credentials['password']):
-        session['user'] = dt.users.get_user_by_email(credentials['email'])
+        session['user'] = dt.users.get_user_by_email(credentials['email']).to_dict()
         session['logged_in'] = True
         return jsonify(session['user']), 200
     else:
@@ -76,3 +76,25 @@ def get_current_user():
         return jsonify(user.to_dict()), 200
     except Exception as e:
         return handle_exception(e)
+
+
+@api.route('/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.get_json(force=True)
+        if 'invitation' not in data:
+            raise ValueError('No invitation code provided.')
+        if request.method == 'POST':
+            change_password = not (data['password1'] == '' and data['password2'] == '')
+            valid_passwords = data['password1'] == data['password2'] if change_password else False
+            if not valid_passwords:
+                raise ValueError('Passwords do not match.')
+            new_user = dt.users.register_user(data['invitation'],
+                                              {'email': data['email'],
+                                               'password': data['password1'],
+                                               'name': data['name']
+                                               })
+            return jsonify(new_user.to_dict())
+    except Exception as e:
+        return handle_exception(e)
+
