@@ -4,7 +4,7 @@
   {{ super() }}
 
 {% if type.lower() == 'job' %}
-{% include 'jobchart.html' %}
+{% include 'components/jobchart.html' %}
 {% endif %}
 
 {% endblock %}
@@ -36,7 +36,7 @@
     {% include 'workflowcontents.html' %}
   {% endif %}
   {% if type.lower() not in ['job', 'workflow module'] and is_write_permitted(get_user_id(), data) %}
-    {% include 'dangerzone.html' %}
+    {% include 'components/dangerzone.html' %}
   {% endif %}
 {% endblock %}
 {% block scripts %}

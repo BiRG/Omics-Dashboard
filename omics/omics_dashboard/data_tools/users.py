@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from data_tools.util import AuthException, DATADIR
 import bcrypt
 from xkcdpass import xkcd_password as xp
-from data_tools.db import User, UserGroup, Invitation, Base, db
+from data_tools.db import User, UserGroup, UserInvitation, Base, db
 from flask_sqlalchemy import Model
 
 
@@ -106,7 +106,7 @@ def register_user(invitation_string: str, data: Dict) -> User:
     """
     if User.query.filter_by(email=data['email']).count():
         raise ValueError('This email is already in use!')
-    invitation = Invitation.query.filter_by(value=invitation_string).first()
+    invitation = UserInvitation.query.filter_by(value=invitation_string).first()
     if invitation is not None:
         user = User(email=data['email'], name=data['name'], admin=data['admin'],
                     active=True, password=hash_password(data['password']))
@@ -161,7 +161,7 @@ def delete_user(current_user: User, target_user: User) -> Dict[str, Any]:
     raise AuthException(f'User {current_user.email} does not have permissions to delete user {target_user.email}')
 
 
-def create_invitation(user: User) -> Invitation:
+def create_invitation(user: User) -> UserInvitation:
     """
     Create an invitation string for a new user. The user_id most correspond to an admin user
     :param user:
@@ -169,7 +169,7 @@ def create_invitation(user: User) -> Invitation:
     """
     if user.admin:
         invite_string = xp.generate_xkcdpassword(xp.generate_wordlist(valid_chars='[a-z]'), numwords=3, delimiter='_')
-        invitation = Invitation(creator_id=user.id, value=invite_string)
+        invitation = UserInvitation(creator_id=user.id, value=invite_string)
         db.session.add(invitation)
         db.session.commit()
         return invitation

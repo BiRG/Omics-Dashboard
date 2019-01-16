@@ -327,8 +327,8 @@ class Workflow(FileRecordMixin, OmicsRecordMixin, db.Model):
         }
 
 
-class Invitation(db.Model):
-    __tablename__ = 'invitation'
+class UserInvitation(db.Model):
+    __tablename__ = 'user_invitation'
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     value = db.Column(db.String)
     owner_id = db.synonym('creator_id')
@@ -363,4 +363,3 @@ def receive_after_delete(mapper, connection, target):
     :return:
     """
     os.remove(target.filename)
-

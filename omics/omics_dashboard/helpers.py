@@ -96,7 +96,7 @@ def handle_exception_browser(e):
         log_exception(403, e)
         error_msg = str(e)
         error_title = "403 Forbidden"
-        return render_template('error.html', fa_type='fa-ban', error_msg=error_msg, error_title=error_title), 403
+        return render_template('pages/error.html', fa_type='fa-ban', error_msg=error_msg, error_title=error_title), 403
     if e is LoginError:
         return redirect(url_for('browser.browser_login'))
     error_msg = str(e)
@@ -105,7 +105,7 @@ def handle_exception_browser(e):
     tb = traceback.format_exc()
     error_title = '500 Internal Server Error'
     log_exception(500, e, tb)
-    return render_template('error.html', fa_type='fa-exclamation-circle', tb=tb, error_msg=error_msg,
+    return render_template('pages/error.html', fa_type='fa-exclamation-circle', tb=tb, error_msg=error_msg,
                            error_title=error_title), 500
 
 

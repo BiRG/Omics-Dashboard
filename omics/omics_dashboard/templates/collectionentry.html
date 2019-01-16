@@ -44,7 +44,7 @@
       </div>
   {% include 'metadatatable.html' %}
   {% if is_write_permitted(get_user_id(), data) %}
-    {% include 'dangerzone.html' %}
+    {% include 'components/dangerzone.html' %}
   {% endif %}
 {% endblock %}
 {% block scripts %}
