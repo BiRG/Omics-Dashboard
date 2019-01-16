@@ -75,7 +75,7 @@ def get_current_user():
         user = helpers.get_current_user()
         return jsonify(user.to_dict()), 200
     except Exception as e:
-        return handle_exception(e)
+        return jsonify({'message': 'Not logged in'}), 401
 
 
 @api.route('/register', methods=['POST'])
@@ -97,4 +97,3 @@ def register_user():
             return jsonify(new_user.to_dict())
     except Exception as e:
         return handle_exception(e)
-
