@@ -18,7 +18,7 @@ def list_users():
 
 
 @users_api.route('/<user_id>', methods=['GET', 'POST', 'DELETE'])
-def edit_user(user_id=None):
+def get_user(user_id=None):
     try:
         current_user = get_current_user()
         target_user = dt.users.get_user(current_user, user_id)

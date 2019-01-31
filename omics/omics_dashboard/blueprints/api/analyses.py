@@ -13,7 +13,7 @@ def list_analyses():
         return handle_exception(e)
 
 
-@analyses_api.route('/attach/<analysis_id>', methods=['POST'])
+@analyses_api.route('/attach/<analysis_id>', methods=['POST', 'DELETE'])
 def attach_collection(analysis_id=None):
     try:
         user = get_current_user()
@@ -23,12 +23,11 @@ def attach_collection(analysis_id=None):
             collections = [dt.collections.get_collection(user, collection_id)
                            for collection_id in data['collection_ids']]
             for collection in collections:
-                dt.analyses.attach_collection(user, analysis, collection)
+                if request.method == 'POST':
+                    dt.analyses.attach_collection(user, analysis, collection)
+                if request.method == 'DELETE':
+                    dt.analyses.detach_collection(user, analysis, collection)
             return jsonify(analysis.to_dict())
-        elif 'collection_id' in data:
-            collection = dt.collections.get_collection(user, data['collection_id'])
-            dt.analyses.attach_collection(user, analysis, collection)
-            return analysis.to_dict()
         else:
             raise ValueError('No collection id(s) specified')
     except Exception as e:

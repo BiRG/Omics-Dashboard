@@ -10,6 +10,7 @@ services:
       - data:/data
       - ${MODULEDIR}:/modules
       - jobserverexecution:/cromwell-executions
+      - tmp:/tmp  
     container_name: omics_omics
   jobserver:
     build: jobserver

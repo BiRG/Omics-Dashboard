@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 import data_tools as dt
 from data_tools.util import DATADIR, UPLOADDIR
-from helpers import get_current_user, handle_exception
+from helpers import get_current_user, handle_exception, process_input_dict
 samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
 
 
@@ -23,21 +23,27 @@ def list_samples():
 def get_sample(sample_id=None):
     try:
         user = get_current_user()
+        sample = dt.samples.get_sample(user, sample_id)
         if request.method == 'GET':
-            return jsonify(dt.samples.get_sample(user, sample_id).to_dict())
+            return jsonify(sample.to_dict())
         if request.method == 'POST':
             if 'file' in request.files:
                 print('File upload')
                 print(request.files)
                 filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
                 request.files['file'].save(filename)
-                sample_data = dt.samples.upload_sample(user, filename, request.form, sample_id)
+                if dt.util.validate_file(filename):
+                    dt.samples.upload_sample(user, filename, process_input_dict(request.form), sample_id)
+                else:
+                    raise ValueError('invalid content type')
             else:
-                sample_data = dt.samples.update_sample(user, sample_id, request.get_json(force=True))
-            return jsonify(sample_data)
+                dt.samples.update_sample(user, sample, process_input_dict(request.get_json(force=True)))
+            return jsonify(sample.to_dict())
         if request.method == 'DELETE':
-            return jsonify(dt.samples.delete_sample(user, sample_id))
+            return jsonify(dt.samples.delete_sample(user, dt.samples.get_sample(user, sample_id)))
     except Exception as e:
+        print(e)
+        print(e.__traceback__)
         return handle_exception(e)
 
 
@@ -66,8 +72,8 @@ def download_sample(sample_id=None):
             response.headers['Content-Disposition'] = out['cd']
             response.mimetype = 'text/csv'
             return response
-        out = dt.samples.download_sample(user, sample)
-        return send_from_directory('%s/samples' % DATADIR, out['filename'], as_attachment=True)
+        directory, filename = os.path.split(sample.filename)
+        return send_from_directory(directory, filename, as_attachment=True)
     except Exception as e:
         return handle_exception(e)
 
@@ -99,7 +105,7 @@ def upload_sample():
         user = get_current_user()
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
-        new_data = request.get_json()
+        new_data = request.get_json(force=True)
         filename = os.path.join(UPLOADDIR, str(uuid.uuid4()))
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')
@@ -113,7 +119,9 @@ def upload_sample():
                 file.write(sample_file_data)
                 del new_data['file']
         if dt.util.validate_file(filename):
+            print('validating')
             sample_data = dt.samples.upload_sample(user, filename, new_data)
+            print('returning')
             return jsonify(sample_data)
         raise ValueError('invalid content type')
     except Exception as e:

@@ -27,10 +27,10 @@ def get_user_group(user_group_id=None):
             return jsonify(user_group.to_dict())
         if request.method == 'POST':
             new_data = request.get_json(force=True)
-            if 'user_ids' in new_data:
-                users = [dt.users.get_user(user_id) for user_id in new_data['user_ids']]
+            if 'member_ids' in new_data:
+                users = [dt.users.get_user(user, user_id) for user_id in new_data['member_ids']]
                 dt.user_groups.update_user_attachments(user, user_group, users)
-            return jsonify(dt.user_groups.update_user_group(user, user_group, new_data))
+            return jsonify(dt.user_groups.update_user_group(user, user_group, new_data).to_dict())
         if request.method == 'DELETE':
             return jsonify(dt.user_groups.delete_user_group(user, user_group))
     except Exception as e:

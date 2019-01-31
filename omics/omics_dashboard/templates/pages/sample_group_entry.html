@@ -1,0 +1,10 @@
+{% extends 'entry.html' %}
+{% from 'components/sample_list.html' import sample_list_scripts, sample_list_table with context %}
+{% block content %}
+  {{ super() }}
+  {{ sample_list_table(page_data.sample_table_data) }}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  {{ sample_list_scripts() }}
+{% endblock %}

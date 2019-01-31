@@ -1,0 +1,83 @@
+{% macro attribute_editor(table_data) %}
+  {# attributes is of the "ListTableData" class #}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">Attributes</h4>
+      <div class="card-body">
+      {% if table_data.editable %}
+        <h6 class="card-subtitle mb-2 text-muted">You have permission to edit this record.</h6>
+      {% endif %}
+        <br>
+        <table id="attributeEditor" class="table table-striped table-bordered" cellspacing="0" width="auto">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Value</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for key, value in table_data.values.items() %}
+            <tr id="{{ value.label }}">
+              <td id="td-key-{{ value.label }}">{{ key }}</td>
+              {% if value.href is not none %}
+              <td class="record-attr-link" id="td-value-{{ value.label }}"><a href="{{ value.href }}">{{ value.value }}</a></td>
+              {% elif value.select_options is not none %}
+              <td class="record-attr-select-parent" id="td-value-{{ value.label }}">
+                <select class="selectpicker record-attr-select" data-attr-key="{{ value.label }}" data-live-search="true" {{ 'multiple' if value.select_multiple}}>
+                {% for option in value.select_options %}
+                  <option value="{{ option.value }}" {{ 'selected' if option.selected }}>{{ option.contents }}</option>
+                {% endfor %}
+                </select>
+              </td>
+              {% else %}
+              <td class="record-attr" data-attr-key={{ value.label }} id="td-value-{{ value.label }}" contenteditable="{{ 'true' if value.editable else 'false' }}">{{ value.value }}</td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro attribute_editor_script(update_url) %}
+    <script>
+        const changedAttributes = {};
+        function saveChanges(){
+            console.log('saveChanges');
+            console.log(changedAttributes);
+            fetch("{{ update_url }}", {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(changedAttributes)
+            }).then(res=>res.json()).then(data=>console.log(data));
+        }
+        $(document).ready(() => {
+            $('#attributeEditor').DataTable({
+                dom: 'Bfrtip',
+                select: false,
+                buttons: [{text: 'Save Changes <i class="far fa-save"></i>', action: saveChanges, className: 'btn-info'}]
+            });
+            $('.record-attr-select').selectpicker();
+            $('.record-attr-select').on('changed.bs.select', (e, clickedIndex, isSelected, previousValue) => {
+                const attributeName = $(e.target).data('attr-key');
+                changedAttributes[attributeName] = $(e.target).val().split(',')
+                    .map(tok => {
+                        try {
+                            return parseInt(tok);
+                        } catch(ParseException) {
+                            return tok;
+                        }
+                    });
+            });
+            // There is not event for contents of <td> changing
+            $('.record-attr').blur((elem) => {
+                changedAttributes[$(elem.target).data('attr-key')] = $(elem.target).text();
+            });
+        });
+    </script>
+{% endmacro %}

@@ -1,15 +1,16 @@
 import os
 import shutil
-import data_tools.file_tools.metadata_tools as mdt
-import data_tools.file_tools.collection_tools as ct
-from data_tools.db import Collection, User, Sample, db
 from typing import List, Dict, Any
-from data_tools.util import DATADIR, AuthException, validate_file
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+
+import data_tools.file_tools.collection_tools as ct
+import data_tools.file_tools.metadata_tools as mdt
+from data_tools.db import Collection, User, Sample, db
 from data_tools.file_tools.h5_merge import h5_merge
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
-def get_all_collections() -> List[Dict[str, Any]]:
+def get_all_collections() -> List[Collection]:
     """
     Get the attributes and dataset information of all collections in the system.
     :return:
@@ -17,7 +18,7 @@ def get_all_collections() -> List[Dict[str, Any]]:
     return Collection.query.all()
 
 
-def get_collections(user: User) -> List[Dict[str, Any]]:
+def get_collections(user: User) -> List[Collection]:
     """
     Get the attributes and dataset information of all collections a user is allowed to read.
     :param user:
@@ -41,7 +42,7 @@ def get_collection_metadata(user: User, collection: Collection) -> Dict[str, Any
     """
     if is_read_permitted(user, collection):
         collection_info = collection.to_dict()
-        for key, value in collection.get_file_metadata():
+        for key, value in collection.get_file_metadata().items():
             if key not in collection_info:  # ensures that database entries take precedence over file attributes
                 collection_info[key] = value
         return collection_info
@@ -66,12 +67,14 @@ def get_collection(user: User, collection_id: int) -> Collection:
     :return:
     """
     collection = Collection.query.filter_by(id=collection_id).first()
+    if collection is None:
+        raise NotFoundException(f'No collection with id {collection_id}')
     if is_read_permitted(user, collection):
         return collection
     raise AuthException(f'User {user.id} is not authorized to view collection {collection.id}')
 
 
-def update_collection(user: User, collection: Collection, new_data: Dict[str, Any]) -> Dict[str, Any]:
+def update_collection(user: User, collection: Collection, new_data: Dict[str, Any]) -> Collection:
     """
     Update collection attributes
     :param user:
@@ -80,16 +83,20 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
     :return:
     """
     if is_write_permitted(user, collection):
+        # file attributes and database attributes should be separated
         for key, value in new_data.items():
-            if key in collection.to_dict() and key is not 'filename':
+            if key in collection.to_dict() and key not in {'filename', 'file_info'}:
                 collection.__setattr__(key, value)
-        mdt.update_metadata(collection.filename, new_data)
+        if 'file_into' in new_data:
+            mdt.update_metadata(collection.filename,
+                                {key: value for key, value in new_data['file_info']})
+        collection.last_editor = user
         db.session.commit()
-        return get_collection_metadata(user, collection)
+        return collection
     raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}')
 
 
-def update_collection_array(user: User, collection: Collection, path: str, i: int, j: int, val) -> Dict[str, Any]:
+def update_collection_array(user: User, collection: Collection, path: str, i: int, j: int, val) -> Collection:
     """
     Update one point of one array in a collection
     :param user:
@@ -102,7 +109,7 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
     """
     if is_write_permitted(user, collection):
         ct.update_array(collection.filename, path, i, j, val)
-        return get_collection_metadata(user, collection)
+        return collection
     raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}.')
 
 
@@ -115,16 +122,16 @@ def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Co
     :return:
     """
     if validate_file(filename):
-        new_collection = Collection(owner_id=user.id)  # leave empty on init
+        new_collection = Collection(owner=user, creator=user, last_editor=user)
         db.session.add(new_collection)
-        db.commit()
+        db.session.commit()
         new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
         shutil.copy(filename, new_collection.filename)
         os.remove(filename)
         new_data['creator_id'] = user.id
         new_data['owner_id'] = user.id
         update_collection(user, new_collection, new_data)  # apply metadata
-        db.commit()
+        db.session.commit()
         return new_collection
     raise Exception('File not valid.')
 
@@ -206,20 +213,45 @@ def create_collection(user: User,
         if not is_read_permitted(user, sample):
             raise AuthException(f'User {user.id} is not permitted to access sample {sample.id}')
     filenames = [sample.filename for sample in samples]
-    new_collection = Collection(owner_id=user.id)
+    new_collection = Collection(owner=user, creator=user, last_editor=user, name=new_data['name'])
     db.session.add(new_collection)
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
-    h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], sort_by=sort_by)
+    h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x', sort_by=sort_by)
     update_collection(user, new_collection, new_data)
     return new_collection
 
 
-def delete_collection(user, collection) -> Dict[str, str]:
+def delete_collection(user: User, collection: Collection) -> Dict[str, str]:
     if is_write_permitted(user, collection):
         collection_id = collection.id
         db.session.delete(collection)
         db.session.commit()  # event will handle file deletion
         return {'message': f'collection {collection_id} removed'}
     raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}')
+
+
+def copy_collection(user: User, collection: Collection) -> Collection:
+    new_collection = Collection(user_group=collection.user_group,
+                                analyses=collection.analyses,
+                                name='Copy of ' + collection.name,
+                                description=collection.description,
+                                group_can_read=collection.group_can_read,
+                                group_can_write=collection.group_can_write,
+                                all_can_read=collection.all_can_read,
+                                all_can_write=collection.all_can_write,
+                                owner=user,
+                                creator=user,
+                                last_editor=user)
+    db.session.add(new_collection)
+    db.session.commit()
+    new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
+    db.session.commit()
+    shutil.copy(collection.filename, new_collection.filename)
+    return new_collection
+
+
+def create_new_label_dataset(user: User, collection: Collection, name: str, data_type: str = 'string'):
+    if is_write_permitted(user, collection):
+        collection.create_label_column(name, data_type)

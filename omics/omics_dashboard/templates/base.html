@@ -12,21 +12,16 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {%- endblock %}
     {% block styles %}
-      <link href="{{ url_for('static', filename='styles/fontawesome-all.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/bootstrap-select.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/bootstrap.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/buttons.bootstrap4.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/fixedColumns.bootstrap4.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/colReorder.bootstrap4.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/select.bootstrap4.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/fileinput.min.css') }}" rel="stylesheet">
-      <link href="{{ url_for('static', filename='styles/omics.css') }}" rel="stylesheet">
+      <link href="https://stackpath.bootstrapcdn.com/bootswatch/4.2.1/flatly/bootstrap.min.css" rel="stylesheet" integrity="sha384-9dACWymWSkhCeCgbjV6xqS20Luu4ue6QnEvr+nMXpPMwIq/OB89AoRh27Flsrxzs" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.5/css/bootstrap-select.min.css" integrity="sha256-+vXzuS+2WfIRKsWKhx57m2MxXLm1lWxXWMvRYvV8EmI=" crossorigin="anonymous" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.5.2/css/fileinput.min.css" integrity="sha256-I+VAS9/TDl2SSZpaEqhJHNB3IlJS7XpUQYqzLAhbpuI=" crossorigin="anonymous" />
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.10.18/b-1.5.4/b-colvis-1.5.4/cr-1.5.0/fc-3.2.5/sl-1.2.6/datatables.min.css"/>
     {%- endblock %}
   </head>
   <body>
 {% block navbar %}
-    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark pb-2">
+    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-primary pb-2">
       <a class="navbar-brand" href="{{ url_for('browser.render_dashboard') }}">
         Omics Dashboard @ {{ BRAND }}
       </a>
@@ -44,7 +39,7 @@
             <div class="dropdown-menu" aria-labelledby="sampleDropdown">
               <a class="dropdown-item" href="{{ url_for('samples.render_sample_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Samples</a>
               <a class="dropdown-item" href="{{ url_for('sample_groups.render_sample_group_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Sample Groups</a>
-              <a class="dropdown-item" href="{{ url_for('samples.render_upload_sample') }}"><i class="fas fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
+              <a class="dropdown-item" href="{{ url_for('sample_groups.render_upload_sample_group') }}"><i class="fas fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
             </div>
           </li>
 
@@ -118,27 +113,28 @@
       </div>
     </nav>
   {%- endblock %}
-  <div id="content" class="container" >
+  <div id="content" class="container page-contents">
+    <br>
+    <h1 class="display-4">
+    {% block headline %}
+    {%- endblock  %}
+    </h1>
     {% block content %}
-    {% endblock %}
+    {%- endblock %}
+    {% block postcontent %}
+    {%- endblock %}
   </div>
   {% block scripts %}
-    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap-select.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.dataTables.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.select.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.fixedColumns.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.buttons.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/buttons.bootstrap4.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dataTables.colReorder.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/fileinput.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/fileinput-theme.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
-    <script type="text/javascript">
-      $(document).ready(function(){
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.bundle.min.js" integrity="sha384-zDnhMsjVZfS3hiP7oCBRmfjkQC4fzxVxFhBx8Hkz2aZX8gEvA/jsP3eXRCvzTofP" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.5/js/bootstrap-select.min.js" integrity="sha256-sPB0bXhTKTOD26cdIyP0IBbjPU55/RfeXgJmbPZmuXc=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.5.2/js/fileinput.min.js" integrity="sha256-A8siB/BVo/zePp8oaRIaeZPPlqKmhVjfUuOQpW8YgAI=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.5.2/themes/fas/theme.min.js" integrity="sha256-iGiji8zeffG0Z8unS5aQwiBXX0LLXwtq4S0VfGQm/yk=" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs4/dt-1.10.18/b-1.5.4/b-colvis-1.5.4/cr-1.5.0/fc-3.2.5/sl-1.2.6/datatables.min.js"></script>
+    <script>
+      $(document).ready(() => {
         $('.selectpicker').selectpicker();
+          $('.data-table').dataTable({order: [[0, 'desc']]});
       });
     </script>
   {%- endblock %}

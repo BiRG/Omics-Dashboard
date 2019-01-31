@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1 class="display-4">Omics Dashboard Help</h1>
+  <h2>Omics Dashboard Core Concepts</h2>
+    <h3>Samples</h3>
+    <p>
+      The lowest level of data organization in Omics Dashbaord is the <em>Sample</em>. A Sample represents the results of
+      one run of your analysis and is created from one file. It is possible for one Sample to represent the data for more
+      than one real-world sample. Samples have <em>attributes</em>, which are scalar values which describe the Sample,
+      and <em>datasets</em>, which are arrays of values of the same type describing the experimental results. Typically,
+      a sample will have a dataset called 'x', which represents the independent variable/abscissa, and a dataset called
+      'Y' which represents the dependent variable/ordinate. There is one universal value for 'x' for all of the Sample,
+      and there will be one row for 'Y' for each real-world sample.
+    </p>
+    <h3>Sample Groups</h3>
+    <p>
+      The Omics Dashboard sample upload process always creates a <em>Sample Group</em>, which is a collection of one or
+      more Samples. Sample Groups exist entirely in the database and do not have their own files.
+    </p>
+    <h3>Collections</h3>
+    <p>
+      The primary unit of data organization in Omics Dashboard is the <em>Collection</em>, which is a single file containing the data
+      from one or more Samples. Collections are typically created from multiple files contained in the same Sample Group,
+      but any combination of Samples may be used to create a Collection. Each row of a collection's 'Y' dataset
+      represents the data for one real-world sample. The creation of Collections from Samples will also result in the creation
+      of 'label columns', which are labels for the rows in 'Y' created from the common attributes of the Samples from
+      which the Collection is created. Label columns may be edited directly from Omics Dashboard. Other datasets are edited
+      via the web-based analysis tool, workflow editor modules, or other Omics Dashboard client software.
+    </p>
+    <h3>Workflow Management</h3>
+    <h3>Interactive Analysis Tool</h3>
+  <h2>Managing Your Account</h2>
+  <h3>Resetting Your Password</h3>
+    <p>If you forget your password, you may ask an administrator to change it for you.</p>
+  <h2>Uploading Samples</h2>
+  <h2>Administration</h2>
+  <h3>Administrator Accounts</h3>
+  <p>
+    Administrators have the power to delete or edit any record in the system, including other user's accounts. You should
+   limit who becomes an administrator. It may be useful to use a separate email address for your administrator and user accounts
+      to prevent accidental deletion or editing of other user's records.
+  </p>
+    <h3>Customizing the Interactive Analysis Tool and Workflow Editor</h3>
+{% endblock %}

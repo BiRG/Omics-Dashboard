@@ -1,16 +1,16 @@
 import base64
+import json
 import os
 import uuid
-import json
 
 from flask import request, jsonify, make_response, send_from_directory, Blueprint
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-import data_tools.file_tools.metadata_tools as mdt
+from data_tools.file_tools.collection_tools import validate_update
 from data_tools.util import DATADIR, UPLOADDIR
 from helpers import get_current_user, handle_exception
-import shutil
+
 collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collections')
 
 
@@ -36,23 +36,39 @@ def list_collections():
 def get_collection(collection_id=None):
     try:
         user = get_current_user()
-        if request.method == 'GET':
-            return jsonify(dt.collections.get_collection(user, collection_id).to_dict())
-
         collection = dt.collections.get_collection(user, collection_id)
-        if request.method == 'POST':
-            new_data = request.get_json(force=True)
-            return jsonify(dt.collections.update_collection(user, collection, new_data))
-        if request.method == 'PATCH':
-            # We can have requests to change values in arrays here
-            # we need "path", "i" and "j" parameters and "newValue" in the body.
-            if 'path' in request.args and 'i' in request.args and 'j' in request.args:
-                val = request.get_json(force=True)['new_value']
-                path, i, j = request.args.get('path'), request.args.get('i'), request.args.get('j')
-                dt.collections.update_collection_array(user, collection, path, i, j, val)
-                return jsonify({'message': f'Changed value of {path}[{i}, {j}] in collection {collection.id} to {val}'})
+        if request.method == 'GET':
+            return jsonify(collection.to_dict())
+
         if request.method == 'DELETE':
             return jsonify(dt.collections.delete_collection(user, collection))
+
+        new_data = request.get_json(force=True)
+
+        if request.method == 'POST':
+            return jsonify(dt.collections.update_collection(user, collection, new_data).to_dict())
+
+        if request.method == 'PATCH':
+            # We can have requests to change values in arrays here contents of request will be {path, i, j, new_value}
+            # or list thereof (POST should be used to update entire arrays).
+            if not isinstance(new_data, list):
+                new_data = [new_data]
+
+            # improperly formatted patch requests will throw error before anything changed
+            for patch_data in new_data:
+                validate_update(collection.filename, patch_data['path'], patch_data['i'],
+                                patch_data['j'] if 'j' in patch_data else None, patch_data['new_value'])
+            message = ''
+            for patch_data in new_data:
+                dt.collections.update_collection_array(user, collection,
+                                                       patch_data['path'],
+                                                       patch_data['i'],
+                                                       patch_data['j'] if 'j' in patch_data else None,
+                                                       patch_data['new_value'])
+                message += (f'Changed value of {patch_data["path"]}[{patch_data["i"]}, '
+                            f'{patch_data["j"] if "j" in patch_data else ""}] to {patch_data["new_value"]}\n')
+            message += f'In collection {collection.id}'
+            return jsonify({'message': message})
     except Exception as e:
         return handle_exception(e)
 
@@ -61,13 +77,14 @@ def get_collection(collection_id=None):
 def download_collection(collection_id=None):
     try:
         user = get_current_user()
+        collection = dt.collections.get_collection(user, collection_id)
         if request.args.get('format', '') == 'pandas':
-            single_column = True if request.args.get('single_column', '') == 'true' else False
+            single_column = request.args.get('single_column', '') == 'true'
             data_format = request.args.get('data_format') if 'data_format' in request.args else 'csv'
             if data_format not in {'json', 'csv'}:
                 raise ValueError(f'Improper data format {data_format}')
             json_orient = request.args.get('orient') if 'orient' in request.args else 'records'
-            out = dt.collections.download_collection_dataframe(user, collection_id, single_column, data_format, json_orient)
+            out = dt.collections.download_collection_dataframe(user, collection, single_column, data_format, json_orient)
             as_attachment = request.args.get('as_attachment') if 'as_attachment' in request.args else 'true'
             if as_attachment == 'false':
                 response = jsonify({'data_frame': out[data_format]})
@@ -80,12 +97,12 @@ def download_collection(collection_id=None):
             return response
         if request.args.get('path', ''):
             path = request.args.get('path', '')
-            out = dt.collections.download_collection_dataset(user, collection_id, path)
+            out = dt.collections.download_collection_dataset(user, collection, path)
             response = make_response(out['csv'])
             response.headers['Content-Disposition'] = out['cd']
             response.mimetype = 'text/csv'
             return response
-        out = dt.collections.download_collection(user, collection_id)
+        out = dt.collections.download_collection(user, collection)
         return send_from_directory(f'{DATADIR}/collections', out['filename'], as_attachment=True)
     except Exception as e:
         return handle_exception(e)
@@ -115,5 +132,17 @@ def upload_collection():
             collection = dt.collections.upload_collection(user, filename, new_data)
             return jsonify(collection.to_dict())
         raise ValueError('invalid content type')
+    except Exception as e:
+        return handle_exception(e)
+
+
+@collections_api.route('/copy/<collection_id>', methods=['GET'])
+def copy_collection(collection_id):
+    """
+    This only takes POST because it does create a record, but it doesn't take any body, so it could also be GET
+    """
+    try:
+        current_user = get_current_user()
+        return jsonify(dt.collections.copy_collection(current_user, dt.collections.get_collection(current_user, collection_id)).to_dict())
     except Exception as e:
         return handle_exception(e)

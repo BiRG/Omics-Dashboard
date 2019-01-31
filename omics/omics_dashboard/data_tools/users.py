@@ -2,9 +2,9 @@ import datetime
 import os
 
 import jwt
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Type
 
-from data_tools.util import AuthException, DATADIR
+from data_tools.util import AuthException, NotFoundException, DATADIR
 import bcrypt
 from xkcdpass import xkcd_password as xp
 from data_tools.db import User, UserGroup, UserInvitation, Base, db
@@ -56,6 +56,8 @@ def get_user(user: User, target_user_id: int) -> User:
     :return:
     """
     target_user = User.query.filter_by(id=target_user_id).first()
+    if target_user is None:
+        raise NotFoundException(f'No user with id {target_user_id}.')
     if is_read_permitted(user, target_user):
         return target_user
     raise AuthException(f'User with id {target_user_id} does not exist or is not visible to {user.email}')
@@ -67,7 +69,10 @@ def get_user_by_email(email: str) -> User:
     :param email:
     :return:
     """
-    return User.query.filter_by(email=email).first()
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        raise NotFoundException(f'No user with email {email}')
+    return user
 
 
 def get_user_password_hash(email: str) -> str:
@@ -76,7 +81,10 @@ def get_user_password_hash(email: str) -> str:
     :param email:
     :return:
     """
-    return User.query.filter_by(email=email).first().password
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        raise NotFoundException(f'No user with email {email}.')
+    return user.password
 
 
 def create_user(current_user: User, data: Dict[str, Any]) -> User:
@@ -110,9 +118,12 @@ def register_user(invitation_string: str, data: Dict) -> User:
     if invitation is not None:
         user = User(email=data['email'], name=data['name'], admin=data['admin'],
                     active=True, password=hash_password(data['password']))
+        if invitation.primary_user_group is not None:
+            user.primary_user_group = invitation.primary_user_group
+            user.user_groups = [invitation.primary_user_group]
         db.session.add(user)
         db.session.delete(invitation)
-        db.commit()
+        db.session.commit()
         return user
     raise ValueError('Incorrect invitation')
 
@@ -132,14 +143,10 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
             if email_count:
                 raise ValueError('This email is already in use!')
         for key, value in new_data.items():
-            if key == 'name':
-                target_user.name = value
-            if key == 'email':
-                target_user.email = value
-            if key == 'admin':
-                target_user.admin = value
             if key == 'password':
                 target_user.password = hash_password(value)
+            elif key in target_user.to_dict():
+                target_user.__setattr__(key, value)
         db.session.commit()
         return target_user
     raise AuthException(f'User {current_user.email} does not have permissions to edit user {target_user.email}')
@@ -161,30 +168,51 @@ def delete_user(current_user: User, target_user: User) -> Dict[str, Any]:
     raise AuthException(f'User {current_user.email} does not have permissions to delete user {target_user.email}')
 
 
-def create_invitation(user: User) -> UserInvitation:
+def create_invitation(user: User, primary_user_group: UserGroup=None) -> UserInvitation:
     """
     Create an invitation string for a new user. The user_id most correspond to an admin user
     :param user:
+    :param primary_user_group:
     :return:
     """
     if user.admin:
         invite_string = xp.generate_xkcdpassword(xp.generate_wordlist(valid_chars='[a-z]'), numwords=3, delimiter='_')
-        invitation = UserInvitation(creator_id=user.id, value=invite_string)
+        invitation = UserInvitation(creator=user, primary_user_group=primary_user_group, value=invite_string)
         db.session.add(invitation)
         db.session.commit()
         return invitation
-    raise AuthException(f'User {user.email} is not an administrator and cannot invite other users.')
+    raise AuthException(f'User {user.email} is not an administrator and cannot view or edit invitations.')
+
+
+def get_invitations(user: User):
+    if user.admin:
+        return UserInvitation.query.all()
+    raise AuthException(f'User {user.email} is not an administrator and cannot view or edit invitations.')
+
+
+def get_invitation(user: User, invitation_id: int) -> UserInvitation:
+    if user.admin:
+        return UserInvitation.query.filter_by(id=invitation_id)
+    raise AuthException(f'User {user.email} is not an administrator and cannot view or edit invitations.')
+
+
+def delete_invitation(user: User, invitation: UserInvitation) -> Dict[str, str]:
+    if user.admin:
+        db.session.remove(invitation)
+        db.session.commit()
+        return {'message': f'Invitation {invitation.id} removed.'}
+    raise AuthException(f'User {user.email} is not an administrator and cannot view or edit invitations.')
 
 
 def validate_login(email: str, password: str) -> User:
     """
     Authenticate a user
     :param email:
-    :param password:
+    :param password: password in plaintext
     :return:
     """
     user = User.query.filter_by(email=email).first()
-    if User is None or not check_password(password, user.password):
+    if user is None or not check_password(password, user.password):
         raise ValueError('Invalid username/password')
     return user
 
@@ -210,7 +238,7 @@ def get_jwt(user: User) -> str:
     """
     user_data = user.to_dict()
     user_data['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
+    return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 
 
 def user_in_user_group(user: User, group: UserGroup) -> bool:
@@ -230,7 +258,7 @@ def is_user_group_admin(user: User, group: UserGroup) -> bool:
     :param group:
     :return:
     """
-    return user in group.admins
+    return user in group.admins or user.admin
 
 
 def is_read_permitted(user: User, record: Any) -> bool:
@@ -244,7 +272,8 @@ def is_read_permitted(user: User, record: Any) -> bool:
     :param record:
     :return:
     """
-    return user.admin or (record.group_can_read and user in record.user_group.members) or record.all_can_read
+    #  TODO: All of this stuff should be done with DB queries rather than loading all elements in memory first
+    return user.admin or record.all_can_read or (record.group_can_read and user in record.user_group.members)
 
 
 def is_write_permitted(user: User, record: Any) -> bool:
@@ -262,11 +291,19 @@ def is_write_permitted(user: User, record: Any) -> bool:
 def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     """
     Get all the records in the list records which the user is allowed to read
+    TODO: Do this at the query level instead of on all()
     :param user:
     :param records:
     :return:
     """
     return [record for record in records if is_read_permitted(user, record)]
+
+
+def get_read_permitted_records1(user: User, model: db.Model):
+    if user.admin:
+        return model.query.all()
+    else:
+        return model.query.filter(model.all_can_read or (model.group_can_read and user.in_(model.user_group.members)))
 
 
 def get_user_name(user: User):

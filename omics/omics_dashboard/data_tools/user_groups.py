@@ -1,4 +1,4 @@
-from data_tools.util import AuthException
+from data_tools.util import AuthException, NotFoundException
 from data_tools.users import is_user_group_admin, get_read_permitted_records
 from data_tools.db import User, UserGroup, db
 from typing import List, Dict, Any
@@ -27,19 +27,11 @@ def get_user_group(user: User, user_group_id: int) -> UserGroup:
     :param user_group_id:
     :return:
     """
-    user_group = UserGroup.query.filter_by(id=user_group_id)
+    user_group = UserGroup.query.filter_by(id=user_group_id).first()
+    if user_group is None:
+        raise NotFoundException(f'No user group with id {user_group_id}')
     if user_group.all_can_read or user in user_group.members:
         return user_group
-
-
-def get_user_group_name(user_group_id: int) -> str:
-    """
-    Get just the name, used by templates.
-    Should deprecate soon.
-    :param user_group_id:
-    :return:
-    """
-    return UserGroup.query.filter_by(id=user_group_id).first().name
 
 
 def create_user_group(user: User, data: Dict[str, Any]) -> UserGroup:
@@ -49,9 +41,18 @@ def create_user_group(user: User, data: Dict[str, Any]) -> UserGroup:
     :param data:
     :return:
     """
-    user_group = UserGroup(owner_id=user.id, creator_id=user.id)
+    if user.id not in data['member_ids']:
+        data['member_ids'].append(user.id)
+    if user.id not in data['admin_ids']:
+        data['admin_ids'].append(user.id)
+    user_group = UserGroup(name=data['name'],
+                           owner=user,
+                           creator=user,
+                           description=data['description'],
+                           members=User.query.filter(User.id.in_(data['member_ids'])).all(),
+                           admins=User.query.filter(User.id.in_(data['admin_ids'])).all())
     db.session.add(user_group)
-    db.commit()
+    db.session.commit()
     update_user_group(user, user_group, data)
     return user_group
 
@@ -147,6 +148,7 @@ def delete_user_group(user: User, user_group: UserGroup) -> Dict[str, str]:
     if is_user_group_admin(user, user_group) or user.admin:
         user_group_id = user_group.id
         db.session.delete(user_group)
+        db.session.commit()
         return {'message': f'User group {user_group_id} deleted.'}
     raise AuthException(f'User {user.email} not permitted to modify user group {user_group.id}')
 

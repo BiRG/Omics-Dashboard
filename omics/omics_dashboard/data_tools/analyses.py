@@ -1,5 +1,5 @@
 from data_tools.util import AuthException
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_read_permitted_records1
 from data_tools.db import Analysis, Collection, User, db
 from typing import List, Dict, Any
 
@@ -10,7 +10,7 @@ def get_analyses(user: User) -> List[Analysis]:
     :param user:
     :return:
     """
-    return get_read_permitted_records(user, Analysis.query.all())
+    return get_read_permitted_records1(user, Analysis)
 
 
 def get_analysis(user: User, analysis_id: int) -> Analysis:
@@ -35,21 +35,29 @@ def update_analysis(user: User, analysis: Analysis, new_data: Dict[str, Any]) ->
     :return:
     """
     if is_write_permitted(user, analysis):
-        for key, value in new_data:
+        for key, value in new_data.items():
             if key is not 'id' and key in analysis.__dict__.keys():
                 analysis.__setattr__(key, value)
+        analysis.last_editor = user
         db.session.commit()
+        return analysis
     raise AuthException(f'User {user.email} is not permitted to modify analysis {analysis.id}')
 
 
-def create_analysis(user: User, data: Dict[str, Any]) -> Analysis:
+def create_analysis(user: User, data: Dict[str, Any], collections: List[Collection] = None) -> Analysis:
     """
     Create a new analysis with the metdata in data
     :param user:
     :param data:
+    :param collections:
     :return:
     """
-    analysis = Analysis(owner_id=user.id)
+    analysis = Analysis(creator=user,
+                        owner=user,
+                        last_editor=user,
+                        name=data['name'])
+    if collections is not None:
+        analysis.collections = collections
     db.session.add(analysis)
     db.session.commit()
     update_analysis(user, analysis, data)

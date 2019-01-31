@@ -61,8 +61,8 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
     
     # if we concat vertically, labels are 1 column
     # if we concat horizontally, labels are 1 row
-    label_shape = (len(infilenames), 1) if orientation=='vert' else (1, len(infilenames))
-    label_maxshape = (None, 1) if orientation=='vert' else (1, None)
+    label_shape = (len(infilenames), 1) if orientation == 'vert' else (1, len(infilenames))
+    label_maxshape = (None, 1) if orientation == 'vert' else (1, None)
 
     paths = set()
     for file in files:
@@ -80,13 +80,15 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
 
     merge_paths = set(
         path for path in paths
-        if path not in alignment_paths and path is not align_at
+        if path not in alignment_paths
         and all(path in file and paths_agree(file, files[0], path, dim_ind) for file in files)
     )
+    merge_paths.remove(align_at)
 
     with h5py.File(outfilename, "w", driver="core") as outfile:
         # handle alignment of vectors
         if align_at is not None:
+            print(f'alignment_paths: {alignment_paths}')
             for path in alignment_paths:
                 align, aligned = interpolate(files, align_at, path, concat_fn)
                 align_shape = [1,1]
@@ -102,6 +104,8 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
                                            maxshape=(None, None))
         # plain concatenation
         for path in merge_paths:
+            print(f'merge_paths: {merge_paths}')
+            print(f'reserved_paths: {reserved_paths}')
             if path in reserved_paths and path is not align_at:
                 outfile.create_dataset(path,
                                        data=files[0][path],
@@ -111,20 +115,23 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
                                        data=concat_fn([file[path] for file in files]),
                                        maxshape=(None, None))
         # have to handle some attrs differently
-        ignored_attrs = ['name', 'description']
-        merge_attrs = set([attr for attr in merge_attrs if attr not in ignored_attrs])
-
+        ignored_attrs = {'name', 'description', 'createdBy', 'owner', 'allPermissions', 'groupPermissions'}
+        merge_attrs = {attr for attr in merge_attrs if attr not in ignored_attrs}
 
         for attr_key in merge_attrs:
             values = np.array([[file.attrs[attr_key].encode('ascii')
                                 if isinstance(file.attrs[attr_key], str) else file.attrs[attr_key] for file in files]])
-            outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape)
+            if len(values):
+                if isinstance(files[0].attrs[attr_key], str):
+                    outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape, dtype=h5py.special_dtype(vlen=bytes))
+                else:
+                    outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape)
         base_sample_ids = np.array([[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in infilenames]])
         # unicode datasets are not supported by all software using hdf5
         base_sample_names = np.array([[file.attrs['name'].encode('ascii')
                                      if isinstance(file.attrs['name'], str) else file.attrs['name'] for file in files]])
         outfile.create_dataset('base_sample_id', data=np.reshape(base_sample_ids, label_shape), maxshape=label_maxshape)
-        outfile.create_dataset('base_sample_name', data=np.reshape(base_sample_names, label_shape), maxshape=label_maxshape)
+        outfile.create_dataset('base_sample_name', data=np.reshape(base_sample_names, label_shape), maxshape=label_maxshape,  dtype=h5py.special_dtype(vlen=bytes))
 
         # Sort everything by the specified sortBy path
         ind = np.argsort(outfile[sort_by])[0, :]

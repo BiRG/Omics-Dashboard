@@ -17,14 +17,15 @@ def list_jobs():
 def get_job(job_id=None):
     try:
         user = get_current_user()
+        job = dt.jobserver_control.get_job(job_id)
         if request.method == 'POST':
             action = request.args.get('method')
             if action:
                 if action == 'resume':
-                    return jsonify(dt.jobserver_control.resume_job(user, job_id))
+                    return jsonify(dt.jobserver_control.resume_job(user, job))
                 if action == 'cancel':
-                    return jsonify(dt.jobserver_control.cancel_job(user, job_id))
-        return jsonify(dt.jobserver_control.get_job(job_id))
+                    return jsonify(dt.jobserver_control.cancel_job(user, job))
+        return jsonify(job.to_dict())
     except Exception as e:
         return handle_exception(e)
 
@@ -36,7 +37,8 @@ def get_chart_metadata(job_id=None):
     :param job_id:
     :return:
     """
-    return jsonify(dt.jobserver_control.get_job_chart_metadata(job_id))
+    job = dt.jobserver_control.get_job(job_id)
+    return jsonify(dt.jobserver_control.get_job_chart_metadata(job))
 
 
 @jobs_api.route('/submit', methods=['POST'])

@@ -4,15 +4,15 @@ id: postcollections
 baseCommand:
   - postcollections.py
 inputs:
-  - id: inputFiles
+  - id: input_files
     type: File[]
     inputBinding:
       position: 0
-  - id: omicsUrl
+  - id: omics_url
     type: string
     inputBinding:
       position: 1
-  - id: omicsAuthToken
+  - id: omics_auth_token
     type: String
     inputBinding:
       position: 2

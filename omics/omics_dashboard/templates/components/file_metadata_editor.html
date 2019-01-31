@@ -1,0 +1,66 @@
+{% macro file_metadata_editor(table_data) %}
+  {# attributes is of the "ListTableData" class #}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">File Attributes</h4>
+      <div class="card-body">
+        {% if table_data.editable %}
+        <h6 class="card-subtitle mb-2 text-muted">You have permission to edit this record.</h6>
+        {%- endif %}
+        <br>
+        <table id="fileAttributeEditor" class="table table-striped table-bordered" cellspacing="0" width="auto">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Value</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for row in table_data.rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.dtype }}</td>
+              <td class="file-attr" data-attr-dtype="{{ row.dtype }}" data-attr-key="{{ row.label }}" contenteditable="{{ 'true' if row.editable else 'false'}}">{{ row.value }}</td>
+            </tr>
+          {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro file_metadata_editor_script(update_url) %}
+    <script>
+        const changedFileAttributes = {};
+        function saveFileChanges(){
+            fetch("{{ update_url }}", {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({file_info: changedFileAttributes})
+            }).then(res=>res.json()).then(data=>console.log(data)); //TODO: add modal popup on save
+        }
+
+        $(document).ready(function() {
+            $('#fileAttributeEditor').DataTable({
+                dom: 'Bfrtip',
+                select: false,
+                buttons: [{text: 'Save Changes <i class="far fa-save"></i>', action: saveFileChanges, className: 'btn-info'}]
+            });
+            $('.file-attr').blur(function () {
+                const dtype = $(this).data('attr-dtype');
+                const attributeName = $(this).data('attr-key');
+                let newValue = $(this).text();
+                if (dtype === 'float64')
+                    newValue = parseFloat(newValue);
+                else if (dtype === 'int64')
+                    newValue = parseInt(newValue);
+                changedFileAttributes[attributeName] = newValue;
+            });
+        });
+    </script>
+{% endmacro %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Omics Dashboard - Create {{ page_data.label }}{% endblock %}
+{% from 'components/create_form.html' import create_form, create_form_script with context %}
+{% block content %}
+  {{ create_form(page_data.entries, page_data.label) }}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  {{ create_form_script() }}
+{% endblock %}

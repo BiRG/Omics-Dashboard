@@ -4,27 +4,27 @@ id: uploadsamples
 baseCommand:
   - uploadsamples.py
 inputs:
-  - id: inputFiles
+  - id: input_files
     type: File[]
     inputBinding:
       position: 0
-  - id: metadataFile
+  - id: metadata_file
     type: File
     inputBinding:
       position: 1
-  - id: idStart
+  - id: id_start
     type: int
     inputBinding:
       position: 2
-  - id: wfToken
+  - id: wf_token
     type: string
     inputBinding:
       position: 3
-  - id: omicsUrl
+  - id: omics_url
     type: string
     inputBinding:
       position: 4
-  - id: authToken
+  - id: auth_token
     type: string
     inputBinding:
       position: 5

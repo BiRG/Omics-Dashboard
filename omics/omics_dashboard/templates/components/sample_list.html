@@ -1,0 +1,150 @@
+{% macro sample_list_table(samples) %}
+ {# samples is of the "ListTableData" class #}
+<div class="row mt-3">
+  <div class="card w-100">
+    <h4 class="card-header text-white bg-primary">Samples</h4>
+    <div class="card-body">
+      <h6 class="card-subtitle text-muted">Use Ctrl-click (or ⌘-click) on the ID column to select multiple samples. <br>
+        Samples with names including "PLACEHOLDER" are empty pending completion of the sample upload workflow. <br>
+        Select "Save Changes" to update samples after editing a cell.</h6>
+      <br>
+      <div class="container container-fluid">
+        <table id="samplesTable" class="table table-striped table-bordered" cellspacing="0" width="auto">
+          <thead>
+          <tr id="sampleHeaders">
+            {% for heading in samples.headings %}
+            <th>{{ heading }}</th>
+            {%- endfor %}
+          </tr>
+          </thead>
+          <tbody>
+          {% for row in samples.rows %}
+            <tr id="tr-{{ row.values['ID'].value }}" data-sample-id="{{ row.values['ID'].value }}">
+              {% for key in samples.headings %}
+                {% if row.values[key].href is not none %}
+              <td><a href="{{ row.values[key].href }}">{{ row.values[key].value }}</a></td>
+                {%- else %}
+              <td id="td-{{ row.values['ID'].value }}-{{ key }}" data-attr-key="{{ key }}" data-sample-id="{{ row.values['ID'].value }}" class="sample-attr" contenteditable="{{ 'true' if row.values[key].editable else 'false' }}">{{ row.values[key].value }}</td>
+                {%- endif %}
+              {%- endfor %}
+            </tr>
+          {%- endfor %}
+          </tbody>
+          <tfoot id="sampleFooters">
+            <tr>
+            {% for heading in samples.headings %}
+              <th></th>
+            {%- endfor %}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro sample_list_scripts() %}
+<script>
+  const changedRows = [];
+  function saveChanges() {
+      const messages = [];
+      for (let i = 0; i < changedRows.length; ++i) {
+          const sampleId = changedRows[i].sample_id;
+          const key = changedRows[i].key;
+          const new_value = changedRows[i].new_value;
+          const updateUrl = `{{ url_for('samples_api.list_samples') }}${sampleId}`;
+          fetch(updateUrl, {
+              method: 'POST',
+              headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({file_info: {[key]: new_value}})
+          }).then(() => messages.push(`Changed ${key} in sample ${sampleId} to ${new_value}.`));
+      }
+  }
+  $(document).ready(function() {
+      const samplesTable = $('#samplesTable').dataTable( {
+          dom: 'Bfrtip',
+          autoWidth: true,
+          select: true,
+          order: [[ 0, 'desc' ]],
+          buttons: [
+              {
+                  extend: 'colvis',
+                  className: 'btn-primary'
+              },
+              {
+                 text: 'Save Changes <i class="far fa-save"></i>',
+                 action:  saveChanges,
+                 className: 'btn-info'
+              },
+              {
+                  text: 'Select Filtered',
+                  action: function(){
+                      this.rows({search: 'applied'}).select();
+                  },
+                  className: 'btn-primary'
+              },
+              {
+                  text: 'Deselect All',
+                  extend: 'selectNone',
+                  className: 'btn-secondary'
+              },
+              {
+                  text: 'Create Collection <i class="fas fa-angle-double-right"></i>',
+                  action: function(){
+                      //use data-sample-id instead
+                      const row_ids = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1]});
+                      if (row_ids.length > 0) {
+                          window.location.replace('/omics/collections/create?sample_ids="' + row_ids.join() + '"');
+                      }
+                  },
+                  className: 'btn-success'
+              }
+          ],
+          scrollX: true,
+          scrollY: true,
+          initComplete: function () {
+            this.api().columns().every( function () {
+                var column = this;
+                var select = $('<select><option value=""></option></select>')
+                    .appendTo( $(column.footer()).empty() )
+                    .on( 'change', function () {
+                        var val = $.fn.dataTable.util.escapeRegex(
+                            $(this).val()
+                        );
+
+                        column
+                            .search( val ? `^${val}$` : '', true, false )
+                            .draw();
+                    });
+
+                column.data().unique().sort().each( function ( d, j ) {
+                    var val = $('<div/>').html(d).text();
+                    select.append( `<option value="${val}">${val}</option>` )
+                });
+            });
+          }
+      });
+      //samplesTable.columns.adjust().fixedColumns().relayout();
+      samplesTable.api().columns.adjust().fixedColumns().relayout();
+      //kluges to handle styling from dataTables
+      //$('.dt-buttons').removeClass('btn-group');
+      $('.btn-success').removeClass('btn-secondary');
+      $('.btn-info').removeClass('btn-secondary');
+      $('.btn-outline-primary').removeClass('btn-secondary');
+      $('.btn-primary').removeClass('btn-secondary');
+      //keep track of whether a value has been edited
+      $('.sample-attr').blur(function() {
+          //var info = this.attr('id').split(',');
+          const sampleId = $(this).data('sample-id');
+          const key = $(this).data('attr-key');
+          changedRows.push({sample_id: parseInt(sampleId), key: key, new_value: $(this).text()});
+          console.log(changedRows[changedRows[changedRows.length - 1]])
+      });
+  } );
+</script>
+{% endmacro %}

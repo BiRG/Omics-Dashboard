@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 from data_tools.samples import create_placeholder_samples
 from data_tools.users import get_jwt
-from data_tools.workflows import get_modules
+from data_tools.workflows import get_modules, WorkflowModule
 from data_tools.jobserver_control import create_jobserver_token
 from data_tools.util import TMPDIR, DATADIR, MODULEDIR
 from data_tools.db import User
@@ -21,7 +21,7 @@ def create_sample_creation_workflow(user: User, input_filenames: List[str], meta
     # generate tmpdir for this temporary workflow
     new_metadata = dict(metadata)
     token = create_jobserver_token()
-    directory = f'{TMPDIR}/{token}'
+    directory = f'{TMPDIR}/{token.value}'
     os.mkdir(directory)
     metadata_filename = f'{directory}/metadata.json'
     metadata['sample_group_name'] = metadata['name']
@@ -135,32 +135,30 @@ def create_sample_creation_workflow(user: User, input_filenames: List[str], meta
     job = {
         'input_files': [{'path': filename, 'class': 'File'} for filename in new_filenames],
         'metadata_file': {'path': metadata_filename,
-                         'class': 'File'},
+                          'class': 'File'},
         'data_directory': {'path': f'{DATADIR}/samples',
-                          'class': 'Directory'},
+                           'class': 'Directory'},
         'prefix': prefix,
         'first_id': min([sample.id for sample in placeholder_samples]),
-        'auth_token': get_jwt(user),
-        'wf_token': token,
+        'omics_auth_token': get_jwt(user),
+        'wf_token': token.value,
         'omics_url': os.environ['OMICSSERVER']
     }
     # perhaps move execution here?
     return {'workflow': workflow, 'job': job, 'output_ids': [sample.id for sample in placeholder_samples]}
 
 
-def get_preprocessing_modules() -> List[Dict[str, Any]]:
+def get_preprocessing_modules() -> List[WorkflowModule]:
     """
     Get modules used for the preprocessing step of the sample upload process
     :return:
     """
-    modules = get_modules(f'{MODULEDIR}/sample-processing')
-    return modules
+    return get_modules(f'{MODULEDIR}/sample-processing')
 
 
-def get_parsing_modules() -> List[Dict[str, Any]]:
+def get_parsing_modules() -> List[WorkflowModule]:
     """
     Get the modules which may be used for the parsing step of the sample upload process
     :return:
     """
-    modules = get_modules(f'{MODULEDIR}/sample-parsing')
-    return modules
+    return get_modules(f'{MODULEDIR}/sample-parsing')

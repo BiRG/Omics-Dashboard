@@ -1,0 +1,6 @@
+{% extends 'entry.html' %}
+{% from 'components/text_viewer.html' import text_viewer %}
+{% block content %}
+  {{ super() }}
+  {{ text_viewer('CWL Workflow Definition', page_data.workflow_contents) }}
+{%- endblock %}

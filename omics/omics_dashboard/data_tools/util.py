@@ -6,6 +6,10 @@ class AuthException(Exception):
     pass
 
 
+class NotFoundException(Exception):
+    pass
+
+
 def validate_file(path: str) -> bool:
     """
     Check if the file is an HDF5 file
@@ -24,4 +28,6 @@ UPLOADDIR: str = f'{TMPDIR}/uploads'
 
 
 class LoginError(Exception):
-    pass
+    def __init__(self, message, redirect_url=None):
+        super(LoginError, self).__init__(message)
+        self.redirect_url = redirect_url

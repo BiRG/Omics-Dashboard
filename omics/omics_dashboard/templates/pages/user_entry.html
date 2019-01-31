@@ -1,0 +1,29 @@
+{% extends 'entry.html' %}
+{% from 'components/macros.html' import list_table %}
+{% block headline %}
+  {{ super() }}
+  {% if page_data.admin and not page_data.target_admin %}
+  <p>
+    <button class="btn btn-success" role="button" id="elevateButton"><i class="fas fa-arrow-circle-up"></i> Make Admin</button>
+  </p>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {{ super() }}
+  {{ list_table(page_data.user_group_table_data) }}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script>
+    $('#elevateButton').click(() => {
+        fetch('{{ page_data.update_url }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({admin: true})
+        }).then(() => location.reload())
+    });
+  </script>
+{% endblock %}

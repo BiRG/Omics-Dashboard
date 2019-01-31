@@ -57,33 +57,6 @@ pre code {
   min-width: 100%;
 }
 
-
-/* custom fonts */
-@font-face {
-  font-family: 'Didact Gothic';
-  font-style: normal;
-  font-weight: 400;
-  src: local('Didact Gothic Regular'), local('DidactGothic-Regular'),
-  url('../webfonts/didact-gothic-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-  url('../webfonts/didact-gothic-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-}
-
-@font-face {
-  font-family: 'Arimo';
-  font-style: normal;
-  font-weight: 400;
-  src: local('Arimo Regular'), local('Arimo-Regular'),
-  url('../webfonts/arimo-v11-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-  url('../webfonts/arimo-v11-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-}
-
-h1, h2, h3, h4, h5, nav, th, button, a {
-  font-family: 'Didact Gothic', sans-serif !important;
-}
-p, div {
-  font-family: 'Arimo', sans-serif !important;
-}
-
 body{
   margin-bottom: 100px;
 }
@@ -97,4 +70,8 @@ body{
     -moz-appearance: none;
     appearance: none;
   }
+}
+
+.page-contents{
+  padding: 1.5%
 }

@@ -1,6 +1,6 @@
 import json
 from data_tools.samples import get_sample_metadata
-from data_tools.util import AuthException, DATADIR
+from data_tools.util import AuthException, NotFoundException, DATADIR
 from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
 from data_tools.db import User, Sample, SampleGroup, db
 import data_tools.file_tools.metadata_tools as mdt
@@ -13,7 +13,7 @@ def get_sample_groups(user: User) -> List[SampleGroup]:
     :param user:
     :return:
     """
-    return get_read_permitted_records(user, Sample.query.all())
+    return get_read_permitted_records(user, SampleGroup.query.all())
 
 
 def get_sample_group(user: User, group_id: int) -> SampleGroup:
@@ -23,7 +23,9 @@ def get_sample_group(user: User, group_id: int) -> SampleGroup:
     :param group_id:
     :return:
     """
-    sample_group = Sample.query.filter_by(id=group_id).first()
+    sample_group = SampleGroup.query.filter_by(id=group_id).first()
+    if sample_group is None:
+        raise NotFoundException(f'Sample group with id {group_id} not found.')
     if is_read_permitted(user, sample_group):
         return sample_group
     raise AuthException(f'User {user.email} is not authorized to view sample group {group_id}')
@@ -32,11 +34,12 @@ def get_sample_group(user: User, group_id: int) -> SampleGroup:
 def create_sample_group(user: User, data: Dict[str, Any]) -> SampleGroup:
     """
     Create a new sample group.
-    :param user_id:
+    :param user:
     :param data:
     :return:
     """
-    sample_group = SampleGroup(owner_id=user.id)
+    name = data['name'] if 'name' in data else data['sample_group_name'] if 'sample_group_name' in data else ''
+    sample_group = SampleGroup(owner=user, creator=user, last_editor=user, name=name)
     db.session.add(sample_group)
     db.session.commit()
     update_sample_group(user, sample_group, data)
@@ -56,8 +59,10 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
         for key, value in new_data.items():
             if key in sample_group.to_dict():
                 sample_group.__setattr__(key, value)
+        sample_group.last_editor = user
+        db.session.commit()
         return sample_group
-    raise AuthException(f'User {user.email} is not permitted to modify group {sampe_group.id}')
+    raise AuthException(f'User {user.email} is not permitted to modify group {sample_group.id}')
 
 
 def update_sample_group_attachments(user: User, sample_group: SampleGroup, samples: List[Sample]) -> SampleGroup:
@@ -70,6 +75,7 @@ def update_sample_group_attachments(user: User, sample_group: SampleGroup, sampl
     """
     if is_write_permitted(user, sample_group) and all([is_read_permitted(user, sample) for sample in samples]):
         sample_group.samples = samples
+        sample_group.last_editor = user
         db.session.commit()
         return sample_group
     raise AuthException(f'User {user.email} not authorized to modify group {group.id}')
@@ -86,6 +92,7 @@ def attach_sample(user: User, sample: Sample, sample_group: SampleGroup) -> Samp
     if is_write_permitted(user, sample_group) and is_read_permitted(user, sample):
         if sample not in sample_group.samples:
             sample_group.samples.append(sample)
+        sample_group.last_editor = user
         db.session.commit()
         return sample_group
     raise AuthException(f'User {user.email} is not permitted to attach {sample.id} to group {sample_group.id}')
@@ -101,6 +108,7 @@ def detach_sample(user: User, sample: Sample, sample_group: SampleGroup) -> Samp
     """
     if is_write_permitted(user, sample_group):
         sample_group.samples.remove(sample)
+        sample_group.last_editor = user
         db.session.commit()
         return sample_group
     raise AuthException(f'User {user.email} not permitted to modify group {sample_group.id}')
@@ -146,7 +154,7 @@ def get_sample_group_members(user: User, sample_group: SampleGroup) -> List[Samp
 
 def sample_in_sample_group(user: User, sample: Sample, sample_group: SampleGroup) -> bool:
     """
-    Determine if a sample belongs to a sample group.
+    Determine if a sample belongs to a sample group. NotFoundException,
     :param user:
     :param sample:
     :param sample_group:

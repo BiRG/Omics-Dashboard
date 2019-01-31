@@ -1,0 +1,76 @@
+{% macro form_checkbox_entry(entry_data) %}
+  <div class="form-group form-check">
+    <input type="checkbox" class="form-check-input" id="{{ entry_data.id }}" name="{{ entry_data.name }}" value="true" {{ 'checked' if entry_data.value }}>
+    <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
+  </div>
+{% endmacro %}
+
+{% macro form_textarea_entry(entry_data) %}
+  <div class="form-group">
+    <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
+    <textarea id="{{ entry_data.id }}" class="form-control" name="{{ entry_data.name }}" rows="3" style="height: 131px;"></textarea>
+  </div>
+{% endmacro %}
+
+{% macro form_file_entry(entry_data) %}
+  <div class="form-group">
+    <label for="fileInput">Files</label>
+	<input type="file" class="file form-control" data-show-upload="false" data-show-preview="false" data-show-remove="false" aria-label="Filename" id="{{ entry_data.id }}" name="{{ entry_data.name }}" {{ 'multiple' if entry_data.select_multiple }}>
+  </div>
+{% endmacro %}
+
+{% macro form_entry(entry_data) %}
+  {% from 'components/macros.html' import selector with context %}
+    {% if entry_data.input_type == 'select' %}
+        {{ selector(entry_data) }}
+    {% elif entry_data.input_type == 'checkbox' %}
+        {{ form_checkbox_entry(entry_data) }}
+    {% elif entry_data.input_type == 'textarea' %}
+        {{ form_textarea_entry(entry_data) }}
+    {% elif entry_data.input_type == 'file' %}
+        {{ form_file_entry(entry_data) }}
+    {% else %}
+        <div class="form-group">
+          <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
+          <input type="{{ entry_data.input_type }}" class="form-control" name="{{ entry_data.name }}" id="{{ entry_data.id }}" placeholder="{{ entry_data.value }}">
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro create_form(entries, label, error=none, msg=none) %}
+  <div class="row mt-3">
+    <div class="card w-50 mx-auto" style="max-width: 25rem;">
+      <h4 class="card-header text-white bg-primary">{{ label }}</h4>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+        {% for entry_data in entries %}
+          {{ form_entry(entry_data) }}
+        {%- endfor %}
+          <div class="form-group">
+            <input type="submit" class="btn btn-primary btn-block form-control" value="Submit">
+          </div>
+        </form>
+        {% if error %}
+        <div class="alert alert-danger alert-dismissable" role="alert">
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+          <strong>Error:</strong> {{ error }}
+        </div>
+        {%- endif %}
+        {% if msg %}
+        <div class="alert alert-primary alert-dismissable" role="alert">
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+          {{ msg }}
+        </div>
+        {%- endif %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro create_form_script() %}
+  <script>
+    $('.file').fileinput({
+        theme: "fas"
+    });
+  </script>
+{% endmacro %}

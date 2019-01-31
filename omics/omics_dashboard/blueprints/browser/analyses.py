@@ -1,18 +1,20 @@
 from flask import render_template, request, redirect, url_for, Blueprint
-
+from data_tools.db import Collection
+from data_tools.template_data.form import AnalysisCreateFormData
+from data_tools.template_data.entry_page import AnalysisPageData
+from data_tools.template_data.list_table import ListTableData
+from data_tools.analyses import get_analyses, get_analysis
 import data_tools as dt
-from helpers import get_user_id, get_current_user, handle_exception_browser
+from helpers import get_current_user, handle_exception_browser, process_input_dict
 analyses = Blueprint('analyses', __name__, url_prefix='/analyses')
 
 
 @analyses.route('/', methods=['GET', 'POST'])
 def render_analysis_list():
     try:
-        user_id = get_user_id()
-        analysis_list = dt.analyses.get_analyses(user_id)
-        headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
-        return render_template('list.html', data=[analysis.to_dict() for analysis in analysis_list],
-                               headings=headings, type='Analyses')
+        current_user = get_current_user()
+        return render_template('pages/list.html',
+                               page_data=ListTableData(current_user, get_analyses(current_user), 'Analyses'))
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -20,16 +22,18 @@ def render_analysis_list():
 @analyses.route('/create', methods=['GET', 'POST'])
 def render_create_analysis():
     try:
-        user = get_current_user()
+        current_user = get_current_user()
         if request.method == 'POST':
-            collection_ids = [int(collection_id) for collection_id in request.form.getlist('collection')]
-            analysis = dt.analyses.create_analysis(user, request.form.to_dict())
-            for collection_id in collection_ids:
-                dt.analyses.attach_collection(user, analysis['id'], dt.collections.get_collection(user, collection_id))
-            return redirect(url_for('analyses.render_analysis', analysis_id=analysis['id']))
-        return render_template('createbase.html', type='Analysis',
-                               groups=[user_group.to_dict() for user_group in dt.user_groups.get_user_groups(user)],
-                               endpoint='analyses.render_create_analysis')
+            collection_ids = [int(collection_id) for collection_id in request.form.getlist('collections')]
+            collections = Collection.query.filter(Collection.id.in_(collection_ids)).all()
+            analysis = dt.analyses.create_analysis(current_user, process_input_dict(request.form.to_dict(), True), collections)
+            return redirect(url_for('analyses.render_analysis', analysis_id=analysis.id))
+
+        selected_collection_ids = [int(token) for token in request.args.get('collection_ids').strip('"').split(',')] \
+            if request.args.get('sample_ids', '') else []
+        selected_collections = Collection.query.filter(Collection.id.in_(selected_collection_ids)).all()
+        return render_template('pages/create.html',
+                               page_data=AnalysisCreateFormData(current_user, selected_collections))
     except Exception as e:
         return handle_exception_browser(e)
 
@@ -37,11 +41,8 @@ def render_create_analysis():
 @analyses.route('/<analysis_id>', methods=['GET'])
 def render_analysis(analysis_id=None):
     try:
-        user_id = get_user_id()
-        collection_headings = {'id': 'ID', 'name': 'Name', 'description': 'Description', 'owner': 'Owner'}
-        collections = dt.analyses.get_attached_collections(user_id, analysis_id)
-        analysis = dt.analyses.get_analysis(user_id, analysis_id)
-        return render_template('entry.html', data=analysis, type='Analysis',
-                               collections=collections, collection_headings=collection_headings)
+        current_user = get_current_user()
+        return render_template('pages/analysis_entry.html',
+                               page_data=AnalysisPageData(current_user, get_analysis(current_user, analysis_id)))
     except Exception as e:
         return handle_exception_browser(e)

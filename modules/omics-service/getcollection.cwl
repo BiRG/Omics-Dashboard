@@ -4,20 +4,20 @@ id: getcollection
 baseCommand:
   - getcollection.py
 inputs:
-  - id: collectionId
+  - id: collection_id
     type: int
     inputBinding:
       position: 0
-  - id: omicsUrl
+  - id: omics_url
     type: string
     inputBinding:
       position: 1
-  - id: omicsAuthToken
+  - id: omics_auth_token
     type: string
     inputBinding:
       position: 2
 outputs:
-  - id: collectionFile
+  - id: collection_file
     type: File
     outputBinding:
       glob: '*.h5'

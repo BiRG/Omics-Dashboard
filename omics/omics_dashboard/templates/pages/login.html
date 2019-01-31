@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from 'components/create_form.html' import create_form with context %}
+{% block title %}Omics Dashboard - {{ page_data.label }}{% endblock %}
+{# don't call super() to prevent navbar render #}
+{% block navbar %}
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-primary pb-2">
+    <div class="navbar-brand">Omics Dashboard @ {{ BRAND }}</div>
+  </nav>
+{% endblock %}
+{% block content %}
+<!-- Login form -->
+{{ create_form(page_data.entries, page_data.label) }}
+{% endblock %}

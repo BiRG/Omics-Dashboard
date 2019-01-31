@@ -46,12 +46,38 @@ def jwt_authenticate():
 
 
 @api.route('/invite', methods=['GET'])
-def get_invitation():
+def create_invitation():
+    #  We use 'GET' even though we're creating a record
+    #  we probably shouldn't ?
     try:
-        user = helpers.get_current_user()
-        return jsonify(dt.users.create_invitation(user))
+        current_user = helpers.get_current_user()
+        primary_user_group_id = request.args.get('primary_user_group_id')
+        primary_user_group = dt.user_groups.get_user_group(current_user, primary_user_group_id) if primary_user_group_id is not None else None
+        return jsonify(dt.users.create_invitation(current_user, primary_user_group).to_dict())
     except Exception as e:
         return handle_exception(e)
+
+
+@api.route('/invitations', methods=['GET'])
+def list_invitations():
+    try:
+        current_user = get_current_user()
+        return jsonify([invitation.to_dict() for invitation in dt.users.get_invitations(current_user)])
+    except Exception as e:
+        return handle_exception(e)
+
+
+@api.route('/invitations/<invitation_id>', methods=['GET', 'DELETE'])
+def get_invitation(invitation_id=None):
+    try:
+        current_user = get_current_user()
+        invitation = dt.users.get_invitation(current_user, invitation_id)
+        if request.method == 'DELETE':
+            return jsonify(dt.users.delete_invitation(current_user, invitation))
+        else:
+            return jsonify(invitation.to_dict())
+    except Exception as e:
+        handle_exception(e)
 
 
 @api.route('/finalize', methods=['POST'])
@@ -66,6 +92,7 @@ def finalize_job():
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
+        print(e)
         return handle_exception(e)
 
 
