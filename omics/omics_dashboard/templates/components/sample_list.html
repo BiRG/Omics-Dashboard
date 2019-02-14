@@ -44,7 +44,7 @@
 </div>
 {% endmacro %}
 
-{% macro sample_list_scripts() %}
+{% macro sample_list_scripts(attach_url) %}
 <script>
   const changedRows = [];
   function saveChanges() {
@@ -77,9 +77,9 @@
                   className: 'btn-primary'
               },
               {
-                 text: 'Save Changes <i class="far fa-save"></i>',
-                 action:  saveChanges,
-                 className: 'btn-info'
+                  text: 'Save Changes <i class="far fa-save"></i>',
+                  action:  saveChanges,
+                  className: 'btn-info'
               },
               {
                   text: 'Select Filtered',
@@ -92,6 +92,49 @@
                   text: 'Deselect All',
                   extend: 'selectNone',
                   className: 'btn-secondary'
+              },
+              {
+                  text: 'Attach <i class="fas fa-paperclip"></i>',
+                  action: function(){
+                      const sampleIds = [];
+                      const row_data = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1];});
+                      for (let i = 0; i < row_data.length; ++i) sampleIds.push(parseInt(row_data[i]));
+                      if (sampleIds.length > 0) {
+                          fetch('{{ attach_url }}', {
+                              method: 'POST',
+                              headers: {
+                                  'Accept': 'application/json',
+                                  'Content-Type': 'application/json'
+                              },
+                              credentials: 'same-origin',
+                              body: JSON.stringify({sample_ids: sampleIds})
+                          }).then(() => location.reload(true));
+                      }
+                  },
+                  className: 'btn-success'
+              },
+              {
+                  text: 'Detach <i class="fas fa-minus-circle"></i>',
+                  action: function(){
+                      //something weird happens with rows...
+                      const sampleIds = [];
+                      const row_data = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1];});
+                      for (let i = 0; i < row_data.length; ++i) sampleIds.push(parseInt(row_data[i]));
+                      console.log('Detach after');
+                      console.log(sampleIds);
+                      if (sampleIds.length > 0) {
+                          fetch('{{ attach_url }}', {
+                              method: 'DELETE',
+                              headers: {
+                                  'Accept': 'application/json',
+                                  'Content-Type': 'application/json'
+                              },
+                              credentials: 'same-origin',
+                              body: JSON.stringify({sample_ids: sampleIds})
+                          }).then(() => location.reload(true));
+                      }
+                  },
+                  className: 'btn-danger'
               },
               {
                   text: 'Create Collection <i class="fas fa-angle-double-right"></i>',
@@ -108,25 +151,31 @@
           scrollX: true,
           scrollY: true,
           initComplete: function () {
-            this.api().columns().every( function () {
-                var column = this;
-                var select = $('<select><option value=""></option></select>')
-                    .appendTo( $(column.footer()).empty() )
-                    .on( 'change', function () {
-                        var val = $.fn.dataTable.util.escapeRegex(
-                            $(this).val()
-                        );
+              this.api().columns().every(function(){
+                  const column = this;
+                  const select = $(`<select><option value=""></option></select>`)
+                      .attr('id', column.header().innerText.replace(/\s+/g, ''))
+                      .appendTo( $(column.footer()).empty() )
+                      .on( 'change', function () {
+                          const val = $.fn.dataTable.util.escapeRegex(
+                              $(this).val()
+                          );
 
-                        column
-                            .search( val ? `^${val}$` : '', true, false )
-                            .draw();
-                    });
+                          column
+                              .search( val ? `^${val}$` : '', true, false )
+                              .draw();
+                      } );
 
-                column.data().unique().sort().each( function ( d, j ) {
-                    var val = $('<div/>').html(d).text();
-                    select.append( `<option value="${val}">${val}</option>` )
-                });
-            });
+                  column.data().unique().sort().each( function ( d, j ) {
+                      const text = d.replace(/<(?:.|\n)*?>/gm, '');
+                      if (column.header().innerText === 'Attached' && text === 'True'){
+                          select.append( `<option value="${text}" selected>${text}</option>`);
+                          column.search('^True$', true, false).draw()
+                      } else {
+                          select.append( `<option value="${text}">${text}</option>` );
+                      }
+                  } );
+              });
           }
       });
       //samplesTable.columns.adjust().fixedColumns().relayout();

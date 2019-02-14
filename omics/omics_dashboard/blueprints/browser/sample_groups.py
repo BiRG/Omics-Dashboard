@@ -7,11 +7,11 @@ from data_tools.jobserver_control import start_job
 from data_tools.sample_creation import create_sample_creation_workflow
 from data_tools.sample_groups import get_sample_group, get_sample_groups, update_sample_group, delete_sample_group, \
     create_sample_group
-from data_tools.samples import get_sample
+from data_tools.samples import get_sample, delete_sample
 from data_tools.template_data.entry_page import SampleGroupPageData
 from data_tools.template_data.form import SampleCreateFormData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.util import UPLOADDIR
+from data_tools.util import UPLOADDIR, AuthException
 from helpers import handle_exception_browser, get_current_user, process_input_dict
 
 sample_groups = Blueprint('sample_groups', __name__, url_prefix='/sample_groups')
@@ -33,7 +33,15 @@ def render_sample_group(sample_group_id=None):
         current_user = get_current_user()
         sample_group = get_sample_group(current_user, sample_group_id)
         if request.method == 'DELETE':
+            samples_to_delete = [sample for sample in sample_group.samples if len(sample.sample_groups) < 2]
+            print(f'samples_to_delete: {samples_to_delete}')
             delete_sample_group(current_user, sample_group)
+            print(f'samples_to_delete: {samples_to_delete}')
+            for sample in samples_to_delete:
+                try:
+                    delete_sample(current_user, sample)
+                except AuthException:
+                    pass
             return redirect(url_for('sample_groups.render_sample_group_list'))
         if request.method == 'POST':
             update_sample_group(current_user, sample_group, request.form)

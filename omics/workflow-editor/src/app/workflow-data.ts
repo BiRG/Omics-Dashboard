@@ -4,10 +4,17 @@ export interface WorkflowData {
   id: number;
   name: string;
   description: string;
-  owner: number;
-  createdBy: number;
-  userGroup: number;
-  groupPermissions: string;
-  allPermissions: string;
-  workflow: WorkflowModel;
+  creator_id: number;
+  owner_id: number;
+  last_editor_id: number;
+  group_can_read: boolean;
+  group_can_write: boolean;
+  all_can_read: boolean;
+  all_can_write: boolean;
+  user_group_id: number;
+  filename: string;
+  file_type: string;
+  workflow_language: string;
+  analysis_ids: [number];
+  workflow_definition: WorkflowModel;
 }

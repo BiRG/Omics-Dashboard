@@ -5,6 +5,7 @@ import { Workflow, SVGArrangePlugin, SVGNodeMovePlugin, SVGPortDragPlugin,
 import {OmicsService} from '../omics.service';
 import { ActivatedRoute, NavigationStart } from '@angular/router';
 import {WorkflowModuleData} from '../workflow-module-data';
+import {Subject} from 'rxjs';
 @Component({
   selector: 'app-editor',
   templateUrl: './editor.component.html',
@@ -26,12 +27,16 @@ export class EditorComponent implements OnInit {
       });
     });
   }
+  private eventsSubject: Subject<void> = new Subject<void>();
 
+  emitEventtoChild() {
+    this.eventsSubject.next()
+  }
   ngOnInit() {
     document.title = this.title;
     this.workflowId = Number(this.route.snapshot.paramMap.get('workflowId'));
     this.omicsService.getWorkflow(this.workflowId).subscribe(res => {
-      const wf = WorkflowFactory.from(res.workflow as any);
+      const wf = WorkflowFactory.from(res.workflow_definition as any);
       this.svgRoot = document.getElementById('svg');
       this.workflow = new Workflow({
         model: wf,
@@ -51,13 +56,16 @@ export class EditorComponent implements OnInit {
   }
 
   moduleRequested(event: any) {
-    const newStep = this.wfModules[event.packageName][event.moduleInd].toolDefinition;
+    console.log(event);
+    console.log(this.wfModules[event.packageName][event.moduleInd].tool_definition);
+    const newStep: CommandLineToolModel = this.wfModules[event.packageName][event.moduleInd].tool_definition;
+    // @ts-ignore
     this.workflow.model.addStepFromProcess(newStep);
     for (const step of this.workflow.model.steps) {
       step.in.forEach(input => {
         this.workflow.model.includePort(input);
         if (input.id === 'omicsAuthToken') {
-          const tokenInput = this.workflow.model.inputs.find(elem => elem.id === 'omicsAuthToken');
+          const tokenInput = this.workflow.model.inputs.find(elem => elem.id === 'omics_auth_token');
           if (tokenInput === undefined) {
             this.workflow.model.createInputFromPort(input);
           } else {
@@ -65,7 +73,7 @@ export class EditorComponent implements OnInit {
           }
         }
         if (input.id === 'omicsUrl') {
-          const urlInput = this.workflow.model.inputs.find(elem => elem.id === 'omicsUrl');
+          const urlInput = this.workflow.model.inputs.find(elem => elem.id === 'omics_url');
           if (urlInput === undefined) {
             this.workflow.model.createInputFromPort(input);
           } else {
@@ -79,7 +87,7 @@ export class EditorComponent implements OnInit {
   onResetClicked() {
     this.omicsService.getWorkflow(this.workflowId).subscribe(res => {
       this.workflow = new Workflow({
-        model: WorkflowFactory.from(res.workflow as any),
+        model: WorkflowFactory.from(res.workflow_definition as any),
         svgRoot: this.svgRoot,
         plugins: [
           new SVGArrangePlugin(),

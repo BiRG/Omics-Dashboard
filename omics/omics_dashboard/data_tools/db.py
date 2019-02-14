@@ -356,10 +356,13 @@ class SampleGroup(OmicsRecordMixin, db.Model):
 
 class Collection(NumericFileRecordMixin, OmicsRecordMixin, db.Model):
     __tablename__ = 'collection'
+    id = db.Column(db.Integer, primary_key=True)  # needed to make backref on children work properly
     user_group = db.relationship('UserGroup', back_populates='collections')
     analyses = db.relationship('Analysis', secondary=collection_analysis_membership, back_populates='collections')
+    parent_id = db.Column(db.Integer, db.ForeignKey('collection.id'))
+    children = db.relationship('Collection', backref=db.backref('parent', remote_side=[id]))
 
-    def create_label_column(self, name: str, data_type: str= 'string'):
+    def create_label_column(self, name: str, data_type: str='string'):
         mdt.add_column(self.filename, name, data_type)
 
     def to_dict(self):
@@ -420,7 +423,7 @@ class Workflow(FileRecordMixin, OmicsRecordMixin, db.Model):
             'file_type': self.file_type,
             'workflow_language': self.workflow_language,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'workflow': self.get_file_info()
+            'workflow_definition': self.get_file_info()
         }
 
 

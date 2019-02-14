@@ -119,10 +119,7 @@ def upload_sample():
                 file.write(sample_file_data)
                 del new_data['file']
         if dt.util.validate_file(filename):
-            print('validating')
-            sample_data = dt.samples.upload_sample(user, filename, new_data)
-            print('returning')
-            return jsonify(sample_data)
+            return jsonify(dt.samples.upload_sample(user, filename, new_data).to_dict())
         raise ValueError('invalid content type')
     except Exception as e:
         return handle_exception(e)

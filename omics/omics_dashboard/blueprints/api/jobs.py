@@ -8,7 +8,7 @@ jobs_api = Blueprint('jobs_api', __name__, url_prefix='/api/jobs')
 @jobs_api.route('/', methods=['GET', 'POST'])
 def list_jobs():
     try:
-        return jsonify(dt.jobserver_control.get_jobs())
+        return jsonify([job.to_dict() for job in dt.jobserver_control.get_jobs()])
     except Exception as e:
         return handle_exception(e)
 
@@ -46,6 +46,6 @@ def submit_job():
     try:
         user = get_current_user()
         body = request.get_json(force=True)
-        dt.jobserver_control.start_job(body['workflow'], body['job'], user, 'analysis')
+        return jsonify(dt.jobserver_control.start_job(body['workflow'], body['job'], user, 'analysis').to_dict())
     except Exception as e:
         return handle_exception(e)

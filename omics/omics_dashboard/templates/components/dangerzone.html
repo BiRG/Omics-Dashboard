@@ -1,11 +1,17 @@
 {# should not be used as a page in itself #}
-{% macro dangerzone(name) %}
+{% macro dangerzone(name, disclaimer) %}
   <!-- Danger Zone Card -->
   <div class="row mt-3">
    <div class="card w-100">
      <h4 class="card-header text-white bg-danger">Delete Record</h4>
      <div class="card-body">
-       <h6 class="card-subtitle text-danger"><i class="fas fa-exclamation-triangle"></i> Record deletion cannot be undone! <i class="fas fa-exclamation-triangle"></i></h6>
+       <h6 class="card-subtitle text-danger">
+         <i class="fas fa-exclamation-triangle"></i>
+         {% if disclaimer is not none %}
+           {{ disclaimer }}
+         {%- endif %}
+           Record deletion cannot be undone!
+         <i class="fas fa-exclamation-triangle"></i></h6>
        <form id="delete-form">
          <div class="form-group">
          <label for="deleteButton">Click to delete record.</label>

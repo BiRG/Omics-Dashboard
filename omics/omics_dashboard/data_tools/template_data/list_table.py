@@ -54,7 +54,7 @@ class FileListTableRow:
     """
     Stores a record for storing in a list of file attributes
     """
-    def __init__(self, record: Union[Sample, Collection], editable: bool = False):
+    def __init__(self, record: Union[Sample, Collection], editable: bool = False, special_val: bool = None, special_val_heading: str = None):
         self.values = {'ID': ListTableCell(record.id), 'Name': ListTableCell(record.name, get_item_link(record))}
         if record.file_exists():
             for key, value in record.get_file_attributes().items():
@@ -64,6 +64,8 @@ class FileListTableRow:
             print(f'row_count: {row_count}, column_count: {column_count}')
             self.values['Rows'] = ListTableCell(row_count)
             self.values['Columns'] = ListTableCell(column_count)
+        if special_val_heading is not None and special_val is not None:
+            self.values[special_val_heading] = ListTableCell(special_val)
 
 
 class ListTableData(PageData):
@@ -94,9 +96,19 @@ class FileListTableData(PageData):
     """
     Store only file metadata, id and name. Editable file metadata is
     """
-    def __init__(self, current_user: User, records: List[Union[Sample, Collection]], title: str):
+    def __init__(self, current_user: User, records: List[Union[Sample, Collection]], title: str, special_vals: List[bool] = None, special_val_heading=None):
         super(FileListTableData, self).__init__(current_user)
         self.title = title
-        self.rows = [FileListTableRow(record, is_write_permitted(current_user, record)) for record in records]
-        self.headings = [key for key in self.rows[0].values.keys() if
-                         all([key in row.values for row in self.rows])] if len(self.rows) else []
+        self.special_val_heading = special_val_heading if special_val_heading is not None else ''
+        if special_vals is None:
+            special_vals = [None for _ in records]
+        self.rows = [FileListTableRow(record, is_write_permitted(current_user, record), special_val, special_val_heading) for record, special_val in zip(records, special_vals)]
+        if len(self.rows):
+            self.headings = ['ID'] + [key for key in self.rows[0].values.keys() if key not in {'ID', special_val_heading} and all([key in row.values for row in self.rows])]
+            if 'ID' not in self.rows[0].values.keys():
+                self.headings.remove('ID')
+        if len(special_vals) and special_vals[0] is not None:
+            self.headings.remove('ID')
+            self.headings = [special_val_heading] + self.headings
+            if 'ID' in self.rows[0].values.keys():
+                self.headings = ['ID'] + self.headings

@@ -13,6 +13,7 @@
   {{ super() }}
   {{ file_label_column_editor(page_data.label_column_table_data) }}
   {{ list_table(page_data.analysis_table_data) }}
+  {{ list_table(page_data.child_table_data) }}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

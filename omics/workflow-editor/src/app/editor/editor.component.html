@@ -29,11 +29,11 @@
                 <br>
                 <b>Input(s)</b>:
                 <ul>
-                  <li *ngFor="let input of wfModule.toolDefinition.inputs"><code>{{ input.id }}: {{ input.type }}</code> <br> {{ input.doc }}</li>
+                  <li *ngFor="let input of wfModule.tool_definition.inputs"><code>{{ input.id }}: {{ input.type }}</code> <br> {{ input.doc }}</li>
                 </ul>
                 <b>Output(s)</b>:
                 <ul>
-                  <li *ngFor="let output of wfModule.toolDefinition.outputs"><code>{{ output.id }}: {{ output.type }}</code> <br> {{ output.doc }}</li>
+                  <li *ngFor="let output of wfModule.tool_definition.outputs"><code>{{ output.id }}: {{ output.type }}</code> <br> {{ output.doc }}</li>
                 </ul>
               </ng-template>
             </ngb-panel>

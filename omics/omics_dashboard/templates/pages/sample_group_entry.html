@@ -4,7 +4,10 @@
   {{ super() }}
   {{ sample_list_table(page_data.sample_table_data) }}
 {% endblock %}
+{% block postcontent %}
+    {{ dangerzone(page_data.name, 'Deleting this group deletes all samples in the group you are permitted to delete if those samples are in no other groups.') }}
+{%- endblock %}
 {% block scripts %}
   {{ super() }}
-  {{ sample_list_scripts() }}
+  {{ sample_list_scripts(page_data.attach_url) }}
 {% endblock %}

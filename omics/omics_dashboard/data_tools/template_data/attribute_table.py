@@ -97,6 +97,11 @@ class AttributeTableData(PageData):
                                                            is_write_permitted(current_user, record),
                                                            select_options=permissions_options,
                                                            select_multiple=True)
+        if isinstance(record, Collection):
+            if record.parent is not None and is_read_permitted(current_user, record.parent):
+                self.values['Parent Collection'] = AttributeTableRow('parent', record.parent.name, href=get_item_link(record.parent))
+            else:
+                self.values['Parent Collection'] = AttributeTableRow('parent', 'None')
         if isinstance(record, Job):
             self.values['Type'] = AttributeTableRow('type', record.type)
             self.values['Status'] = AttributeTableRow('status', record.status)
@@ -143,6 +148,7 @@ class DatasetSummaryTableData(PageData):
                                                         sample_id=record.id,
                                                         path=dataset['path']))
                          for dataset in record.get_dataset_info()]
+
 
 class WorkflowModuleAttributeTableData:
     def __init__(self, workflow_module: WorkflowModule):

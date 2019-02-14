@@ -19,8 +19,8 @@ def get_workflow_modules():
     try:
         get_current_user()
         if request.args.get('path'):
-            return jsonify(dt.workflows.get_module(request.args.get('path')))
-        return jsonify(dt.workflows.get_modules())
+            return jsonify(dt.workflows.get_module(request.args.get('path')).to_dict())
+        return jsonify([module.to_dict() for module in dt.workflows.get_modules()])
     except Exception as e:
         return handle_exception(e)
 
@@ -31,9 +31,9 @@ def get_workflow(workflow_id=None):
         user = get_current_user()
         workflow = dt.workflows.get_workflow(user, workflow_id)
         if request.method == 'GET':
-            return jsonify(dt.workflows.get_workflow(user, workflow))
+            return jsonify(workflow.to_dict())
         if request.method == 'POST':
-            return jsonify(dt.workflows.update_workflow(user, workflow, request.get_json(force=True)))
+            return jsonify(dt.workflows.update_workflow(user, workflow, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':
             return jsonify(dt.workflows.delete_workflow(user, workflow))
     except Exception as e:

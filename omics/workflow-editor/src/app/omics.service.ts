@@ -45,12 +45,12 @@ export class OmicsService {
     const req_body = {
       name: workflowModel.label,
       description: workflowModel.description,
-      workflow: workflowModel.serialize()
+      workflow_definition: workflowModel.serialize()
     };
     return this.http.post(`${baseUrl}/api/workflows/${id}`, req_body, httpOptions);
   }
   submitJob(workflowModel: WorkflowModel, job: Object) {
-    // job should satisfy workflow inputs
+    // job should satisfy workflow_definition inputs
     // this should be handled by the omics service?
     const req_body = {
       workflow: workflowModel.serialize(),

@@ -126,7 +126,7 @@ export interface NgbPanelChangeEvent {
             </button>
             <button *ngIf="addButton"
                     (click)="onAddButtonClick($event)"
-                    id="{{ panelInd }}-add-button" class="btn btn-outline-primary float-right">
+                    id="{{ panelInd }}-add-button" class="btn btn-outline-primary float-right" [attr.data-panel-ind]="panelInd">
               <i class="fas fa-plus"></i>
             </button>
           </h5>
@@ -180,7 +180,7 @@ export class NgbAccordion implements AfterContentChecked {
   }
 
   onAddButtonClick(event):  void {
-    const moduleInd: number = event.target.id.split('-')[0];
+    const moduleInd: number = event.target.getAttribute('data-panel-ind');
     const packageName: string = this.panels.toArray()[moduleInd].packageName;
     this.moduleRequested.emit({packageName, moduleInd});
   }

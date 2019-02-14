@@ -3,6 +3,7 @@ from typing import Union
 from flask import url_for
 
 from data_tools.collections import get_collections
+from data_tools.samples import get_samples
 from data_tools.db import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup
 from data_tools.jobserver_control import Job
 from data_tools.template_data.attribute_table import AttributeTableData, FileAttributeTableData, WorkflowModuleAttributeTableData, DatasetSummaryTableData
@@ -50,6 +51,7 @@ class CollectionPageData(FileEntryPageData):
         super(CollectionPageData, self).__init__(current_user, collection, 'Collection')
         self.label_column_table_data = LabelColumnTableData(current_user, collection)
         self.analysis_table_data = ListTableData(current_user, collection.analyses, 'Analyses')
+        self.child_table_data = ListTableData(current_user, collection.children, 'Child Collections')
 
 
 class SamplePageData(FileEntryPageData):
@@ -65,7 +67,10 @@ class SampleGroupPageData(EntryPageData):
                  current_user: User,
                  sample_group: SampleGroup):
         super(SampleGroupPageData, self).__init__(current_user, sample_group, 'Sample Group')
-        self.sample_table_data = FileListTableData(current_user, sample_group.samples, 'Samples')
+
+        attached = [sample in sample_group.samples for sample in get_samples(current_user)]
+        self.sample_table_data = FileListTableData(current_user, get_samples(current_user), 'Samples', attached, 'Attached')
+        self.attach_url = url_for('sample_groups_api.attach_sample', sample_group_id=sample_group.id)
 
 
 class AnalysisPageData(EntryPageData):

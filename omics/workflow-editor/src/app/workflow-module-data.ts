@@ -1,12 +1,14 @@
 import {CommandLineToolModel} from 'cwlts/models';
 
 export interface WorkflowModuleData {
-  packageName: string;
+  id: number;
+  path: string;
   label: string;
   description: string;
   package: string;
-  path: string;
-  subPackage: string;
-  subpackageDescription: string;
-  toolDefinition: CommandLineToolModel;
+  package_description: string;
+  subpackage: string;
+  subpackage_description: string;
+  tool_definition: CommandLineToolModel;
 }
+
