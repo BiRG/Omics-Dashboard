@@ -31,6 +31,10 @@ services:
     volumes:
       - jobserverdb:/var/lib/mysql
     container_name: omics_jobserver_db
+  workflow_editor:
+    build: workflow_editor
+    env_file: common.env
+    container_name: omics_workflow_editor
   proxy:
     build: proxy
     env_file: common.env

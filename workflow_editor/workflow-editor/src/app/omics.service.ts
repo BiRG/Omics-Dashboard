@@ -18,7 +18,7 @@ export class OmicsService {
 
   constructor(private http: HttpClient) { }
   getModules(): Observable<WorkflowModuleData[]> {
-    return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflow_modules`, httpOptions);
+    return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflows/workflow_modules`, httpOptions);
   }
   getWorkflows(): Observable<any[]> {
     return this.http.get<WorkflowData[]>(`${baseUrl}/api/workflows`, httpOptions);

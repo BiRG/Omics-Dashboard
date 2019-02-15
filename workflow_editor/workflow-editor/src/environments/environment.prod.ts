@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  omicsUrl: 'http://localhost/omics'
+  omicsUrl: 'http://localhost/foo'
 };

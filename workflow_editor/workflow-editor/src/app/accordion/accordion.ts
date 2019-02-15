@@ -10,10 +10,7 @@ import {
   TemplateRef
 } from '@angular/core';
 
-import {isString} from 'util';
-
 import {NgbAccordionConfig} from './accordion-config';
-import { AngularDraggableModule} from 'angular2-draggable';
 
 let nextId = 0;
 

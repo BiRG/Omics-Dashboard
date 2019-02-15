@@ -2,10 +2,10 @@ from flask import jsonify, request, Blueprint
 
 import data_tools as dt
 from helpers import get_current_user, handle_exception
-workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api')
+workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows')
 
 
-@workflows_api.route('/workflows', methods=['GET', 'POST'])
+@workflows_api.route('/', methods=['GET', 'POST'])
 def list_workflows():
     try:
         user = get_current_user()
@@ -25,7 +25,7 @@ def get_workflow_modules():
         return handle_exception(e)
 
 
-@workflows_api.route('/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+@workflows_api.route('/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
 def get_workflow(workflow_id=None):
     try:
         user = get_current_user()
@@ -40,7 +40,7 @@ def get_workflow(workflow_id=None):
         return handle_exception(e)
 
 
-@workflows_api.route('/workflows/create')
+@workflows_api.route('/create')
 def create_workflow():
     try:
         user = get_current_user()

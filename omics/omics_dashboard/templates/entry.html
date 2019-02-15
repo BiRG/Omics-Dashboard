@@ -2,7 +2,7 @@
 {% block title %}Omics Dashboard - {{ page_data.record_type }} {{ page_data.id }}{% endblock %}
 {% from 'components/modal.html' import modal, modal_script %}
 {% from 'components/attribute_editor.html' import attribute_editor, attribute_editor_script with context %}
-{% from 'components/dangerzone.html' import dangerzone, dangerzone_script with context%}
+{% from 'components/dangerzone.html' import dangerzone, dangerzone_script with context %}
 {% block headline %} {{ page_data.name }} ({{ page_data.record_type }} {{ page_data.id }}){% endblock -%}
 {% block content %}
   {{ super() }}

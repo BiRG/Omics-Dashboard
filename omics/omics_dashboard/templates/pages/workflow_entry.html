@@ -1,5 +1,10 @@
 {% extends 'entry.html' %}
 {% from 'components/text_viewer.html' import text_viewer %}
+{% block headline %}
+  {{ super() }}
+  <br>
+  <a href="/omics/workflow_editor/{{ page_data.id }}" class="btn btn-primary"><i class="fas fa-project-diagram"></i> Open in Editor</a>
+{% endblock %}
 {% block content %}
   {{ super() }}
   {{ text_viewer('CWL Workflow Definition', page_data.workflow_contents) }}

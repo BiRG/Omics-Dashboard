@@ -6,10 +6,10 @@ from data_tools.template_data.entry_page import WorkflowPageData, WorkflowModule
 from data_tools.template_data.list_table import ListTableData
 from helpers import get_current_user, handle_exception_browser, process_input_dict
 
-workflows = Blueprint('workflows', __name__)
+workflows = Blueprint('workflows', __name__, url_prefix='/workflows')
 
 
-@workflows.route('/workflows', methods=['GET', 'POST'])
+@workflows.route('/', methods=['GET', 'POST'])
 def render_workflow_list():
     try:
         current_user = get_current_user()
@@ -19,7 +19,7 @@ def render_workflow_list():
         return handle_exception_browser(e)
 
 
-@workflows.route('/workflows/<workflow_id>', methods=['GET'])
+@workflows.route('/<workflow_id>', methods=['GET'])
 def render_workflow(workflow_id=None):
     try:
         current_user = get_current_user()
@@ -29,7 +29,7 @@ def render_workflow(workflow_id=None):
         return handle_exception_browser(e)
 
 
-@workflows.route('/workflows/create', methods=['GET', 'POST', 'DELETE'])
+@workflows.route('/create', methods=['GET', 'POST', 'DELETE'])
 def render_create_workflow():
     try:
         current_user = get_current_user()
