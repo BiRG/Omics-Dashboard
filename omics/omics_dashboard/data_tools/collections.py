@@ -8,6 +8,7 @@ from data_tools.db import Collection, User, Sample, db
 from data_tools.file_tools.h5_merge import h5_merge
 from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
+from data_tools.analyses import get_analysis
 
 
 def get_all_collections() -> List[Collection]:
@@ -122,7 +123,10 @@ def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Co
     :return:
     """
     if validate_file(filename):
-        new_collection = Collection(owner=user, creator=user, last_editor=user)
+        parent_id = new_data['parent_id'] if 'parent_id' in new_data else None
+        analysis_id = new_data['analysis_id'] if 'analysis_id' in new_data else None
+        analyses = [get_analysis(user, analysis_id)] if analysis_id is not None else []
+        new_collection = Collection(owner=user, creator=user, last_editor=user, name=new_data['name'], parent_id=parent_id, analyses=analyses)
         db.session.add(new_collection)
         db.session.commit()
         new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
@@ -145,7 +149,7 @@ def download_collection(user: User, collection: Collection) -> Dict[str, str]:
     :return:
     """
     if is_read_permitted(user, collection):
-        return {'filename': collection.filename}
+        return {'filename': os.path.basename(collection.filename)}
     raise AuthException(f'User {user.id} is not permitted to access collection {collection.id}')
 
 

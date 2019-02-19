@@ -23,7 +23,7 @@ const appRoutes: Routes = [
     BrowserModule,
     HttpClientModule,
     NgbAccordionModule,
-    RouterModule.forRoot(appRoutes)
+    RouterModule.forRoot(appRoutes, {useHash: true})
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -116,6 +116,7 @@ def upload_collection():
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
         new_data = request.get_json()
+        print([key for key in new_data.keys()])
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')
         filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))

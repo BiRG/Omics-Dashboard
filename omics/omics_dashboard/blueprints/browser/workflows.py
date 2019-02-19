@@ -34,11 +34,18 @@ def render_create_workflow():
     try:
         current_user = get_current_user()
         if request.method == 'POST':
-            req_data = process_input_dict(request.form.to_dict())
             workflow = create_workflow(current_user, process_input_dict(request.form.to_dict(), True))
             return redirect(url_for('workflows.render_workflow', workflow_id=workflow.id))
         return render_template('pages/create.html',
                                page_data=WorkflowCreateFormData(current_user))
+    except Exception as e:
+        return handle_exception_browser(e)
+
+
+@workflows.route('/edit/<workflow_id>', methods=['GET'])
+def render_edit_workflow(workflow_id=None):
+    try:
+        return redirect(f"{url_for('static', filename='workflow_editor/index.html')}#/{workflow_id}")
     except Exception as e:
         return handle_exception_browser(e)
 

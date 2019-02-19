@@ -1,4 +1,5 @@
 FROM python:3.7-slim
+ARG MYSQL_PASSWORD
 RUN mkdir -p /usr/share/man/man1
 RUN apt -y update && apt -y install wget openjdk-8-jre-headless 
 RUN apt -y update && apt -y install build-essential gcc gfortran
@@ -17,6 +18,7 @@ RUN ln -s /docker/docker /usr/bin/docker
 ADD tools/*.py /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.py
 ADD cromwell.conf /
+RUN sed -ri "s|(password = )\"(.*)\"|\1\""$MYSQL_PASSWORD"\"|g" /cromwell.conf
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT /entrypoint.sh

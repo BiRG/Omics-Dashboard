@@ -106,7 +106,6 @@ export class EditorComponent implements OnInit {
   }
   @HostListener('wheel', ['$event'])
   onMouseWheel(event: WheelEvent) {
-    console.log('onMouseWheel');
     const scale       = this.workflow.scale;
     const scaleUpdate = scale - event.deltaY / 50;
 

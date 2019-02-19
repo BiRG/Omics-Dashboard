@@ -3,7 +3,7 @@
 {% block headline %}
   {{ super() }}
   <br>
-  <a href="/omics/workflow_editor/{{ page_data.id }}" class="btn btn-primary"><i class="fas fa-project-diagram"></i> Open in Editor</a>
+  <a href="{{ url_for('workflows.render_edit_workflow', workflow_id=page_data.id) }}" class="btn btn-primary"><i class="fas fa-project-diagram"></i> Open in Editor</a>
 {% endblock %}
 {% block content %}
   {{ super() }}
