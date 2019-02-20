@@ -135,7 +135,7 @@
     <script>
       $(document).ready(() => {
         $('.selectpicker').selectpicker();
-          $('.data-table').dataTable({order: [[0, 'desc']]});
+        $('.data-table').dataTable({order: [[0, 'desc']], buttons:['colvis']});
       });
     </script>
   {%- endblock %}
