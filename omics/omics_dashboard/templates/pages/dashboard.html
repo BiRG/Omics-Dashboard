@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% from 'components/macros.html' import list_table %}
+{% block content %}
+  {{ super() }}
+  <div class="jumbotron">
+    <h1 class="display-4">Hello {{ page_data.current_user.name }}!</h1>
+    <p class="lead">Welcome to Omics Dashboard! For help <a href="{{ url_for('browser.render_help') }}">click here.</a></p>
+  </div>
+  {{ list_table(page_data.analysis_table_data) }}
+  {{ list_table(page_data.collection_table_data) }}
+  {{ list_table(page_data.user_group_table_data) }}
+{% endblock %}

@@ -1,54 +1,21 @@
-{# The dashboard puts resources belonging to the user front and center#}
-{% extends "entrybase.html" %}
-{% block head %}
-  {{ super() }}
-
-{% if type.lower() == 'job' %}
-{% include 'jobchart.html' %}
-{% endif %}
-
-{% endblock %}
-{% block styles %}
-  {{ super() }}
-  {% if type.lower() == 'sample group' %}
-    <style>
-     tfoot {
-      display: table-header-group;
-     }
-    </style>
-  {% endif %}
-{% endblock %}
-{% set protectedKeys =  ['owner', 'id', 'rowid', 'groupPermissions','allPermissions', 'userGroup', 'dateModified', 'maxRowCount', 'maxColCount'] %}
+{% extends 'base.html' %}
+{% block title %}Omics Dashboard - {{ page_data.record_type }} {{ page_data.id }}{% endblock %}
+{% from 'components/modal.html' import modal, modal_script %}
+{% from 'components/attribute_editor.html' import attribute_editor, attribute_editor_script with context %}
+{% from 'components/dangerzone.html' import dangerzone, dangerzone_script with context %}
+{% block headline %} {{ page_data.name }} ({{ page_data.record_type }} {{ page_data.id }}){% endblock -%}
 {% block content %}
   {{ super() }}
-  {% if type.lower() == 'analysis' %}
-    {% include 'collectiontable.html' %}
-  {% elif type.lower() == 'job' %}
-    <div class="card mb-3">
-      <h4 class="card-header text-white bg-dark">Progress</h4>
-      <div class="card-body">
-        <div id="chart_div"></div>
-      </div>
-    </div>
-  {% elif type.lower() == 'sample group' %}
-    {% include 'sampletable.html' %}
-  {% elif type.lower() == 'workflow module' or type.lower() == 'workflow' %}
-    {% include 'workflowcontents.html' %}
-  {% endif %}
-  {% if type.lower() not in ['job', 'workflow module'] and is_write_permitted(get_user_id(), data) %}
-    {% include 'dangerzone.html' %}
-  {% endif %}
-{% endblock %}
+  {{ modal() }}
+  {{ attribute_editor(page_data.attribute_table_data) }}
+{%- endblock %}
+{% block postcontent %}
+  {{ super() }}
+  {{ dangerzone(page_data.name) }}
+{%- endblock %}
 {% block scripts %}
   {{ super() }}
-{% if type.lower() == 'analysis' %}
-  <script type="text/javascript">
-      $(document).ready(function() {
-          var table = $('#collections').DataTable();
-      });
-  </script>
-{% elif type.lower() == 'sample group' %}
-    <script src="{{ url_for('static', filename='js/sampletable.js') }}"></script>
-{% endif %}
-{% endblock %}
-
+  {{ modal_script() }}
+  {{ attribute_editor_script(page_data.update_url) }}
+  {{ dangerzone_script(page_data.update_url, page_data.list_url) }}
+{%- endblock %}

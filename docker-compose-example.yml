@@ -4,12 +4,16 @@ version: '3'
 #change .env and common.env to suit your environment
 services:
   omics:
-    build: omics
+    build: 
+      context: omics
+      args:
+        OMICSSERVER: ${OMICSSERVER}
     env_file: common.env
     volumes:
       - data:/data
       - ${MODULEDIR}:/modules
       - jobserverexecution:/cromwell-executions
+      - tmp:/tmp  
     container_name: omics_omics
   jobserver:
     build: jobserver
@@ -31,10 +35,13 @@ services:
       - jobserverdb:/var/lib/mysql
     container_name: omics_jobserver_db
   proxy:
-    build: proxy
+    build: 
+      context: proxy
+      args:
+        omics_url: ${OMICSSERVER}
     env_file: common.env
     ports:
-      - 80:80
+      - ${HOSTPORT}:80
     volumes:
       - data:/data
     depends_on:

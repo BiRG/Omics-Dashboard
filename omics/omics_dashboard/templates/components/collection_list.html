@@ -1,0 +1,165 @@
+{% macro collection_list(collections) %}
+  {# by default, we have all collections associated with user group of this analysis in the table #}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">Collections</h4>
+      <div class="card-body">
+        {% if collections.editable %}
+        <h6 class="card-subtitle mb-2 text-muted">You have permission to edit this record.</h6>
+        {% endif %}
+        <h6 class="card-subtitle text-muted">Use Ctrl-click (or ⌘-click) on the ID column to select multiple collections.</h6>
+        <br>
+        <div class="container">
+          <table id="collectionsTable" class="table table-striped table-bordered" cellspacing="0" width="auto">
+            <thead>
+            <tr>
+              {% for heading in collections.headings %}
+                <th class="collection-heading">{{ heading }}</th>
+              {% endfor %}
+            </tr>
+            </thead>
+            <tfoot>
+            <tr>
+            {% for heading in collections.headings %}
+              <th></th>
+            {% endfor %}
+            </tr>
+            </tfoot>
+            <tbody>
+            {% for row in collections.rows %}
+              <tr id="tr-{{ row.values['ID'].value }}" data-collection-id="{{ row.values['ID'].value }}">
+              {% for key in collections.headings %}
+                {% if row.values[key].href is not none %}
+                <td><a href="{{ row.values[key].href }}">{{ row.values[key].value }}</a></td>
+                {% else %}
+                <td class="collection-attr" data-collection-id="{{ row.values['ID'].value }}" {% if row.values[key].order_value is not none %} data-order="{{ row.values[key].order_value }}"{% endif %}>{{ row.values[key].value }}</td>
+                {% endif %}
+              {% endfor %}
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro collection_list_script(attach_url) %}
+  <script>
+  /*
+    $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+        if (settings.nTable.id === 'collectionsTable'){
+            const attached = parseInt(data[data.length - 1]) || 0;
+            return attached.includes(dataIndex);
+        }
+        return false;
+    });
+    */
+    let selectedFlag = true;
+    $(document).ready(function() {
+        const collectionsTable = $('#collectionsTable').dataTable( {
+            dom: 'lBfrtip',
+            select: true,
+            order: [[ 0, 'desc' ]],
+            buttons: [
+                {
+                    extend: 'colvis',
+                    className: 'btn-primary'
+                },
+                {
+                    text: 'Select Filtered',
+                    action: function(){
+                        this.rows({search: 'applied'}).select();
+                    },
+                    className: 'btn-info'
+                },
+                {
+                    text: 'Deselect All',
+                    extend: 'selectNone',
+                    className: 'btn-secondary'
+                },
+                {
+                    text: 'Attach <i class="fas fa-paperclip"></i>',
+                    action: function(){
+                        const collectionIds = [];
+                        const row_data = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1];});
+                        for (let i = 0; i < row_data.length; ++i) collectionIds.push(parseInt(row_data[i]));
+                        if (collectionIds.length > 0) {
+                            fetch('{{ attach_url }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({collection_ids: collectionIds})
+                            }).then(() => location.reload(true));
+                        }
+                    },
+                    className: 'btn-success'
+                },
+                {
+                    text: 'Detach <i class="fas fa-minus-circle"></i>',
+                    action: function(){
+                        //something weird happens with rows...
+                        console.log('Detach')
+                        const collectionIds = [];
+                        const row_data = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1];});
+                        for (let i = 0; i < row_data.length; ++i) collectionIds.push(parseInt(row_data[i]));
+                        console.log('Detach after');
+                        console.log(collectionIds);
+                        if (collectionIds.length > 0) {
+                            fetch('{{ attach_url }}', {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({collection_ids: collectionIds})
+                            }).then(() => location.reload(true));
+                        }
+                    },
+                    className: 'btn-danger'
+                },
+            ],
+            scrollX: true,
+            initComplete: function () {
+                this.api().columns().every(function(){
+                    const column = this;
+                    const select = $(`<select><option value=""></option></select>`)
+                        .attr('id', column.header().innerText.replace(/\s+/g, ''))
+                        .appendTo( $(column.footer()).empty() )
+                        .on( 'change', function () {
+                            const val = $.fn.dataTable.util.escapeRegex(
+                                $(this).val()
+                            );
+
+                            column
+                                .search( val ? `^${val}$` : '', true, false )
+                                .draw();
+                        } );
+
+                    column.data().unique().sort().each( function ( d, j ) {
+                        const text = d.replace(/<(?:.|\n)*?>/gm, '');
+                        if (column.header().innerText === 'Attached' && text === 'True'){
+                            select.append( `<option value="${text}" selected>${text}</option>`);
+                            column.search('^True$', true, false).draw()
+                        } else {
+                            select.append( `<option value="${text}">${text}</option>` );
+                        }
+                    } );
+                } );
+            }
+        } );
+        //kluges to handle styling from dataTables
+        $('.btn-success').removeClass('btn-secondary');
+        $('.btn-info').removeClass('btn-secondary');
+        $('.btn-outline-primary').removeClass('btn-secondary');
+        $('.btn-primary').removeClass('btn-secondary');
+        collectionsTable.api().columns.adjust().fixedColumns().relayout();
+        //$('#Attached>option[value="True"]').prop('selected', true);
+    });
+  </script>
+{% endmacro %}

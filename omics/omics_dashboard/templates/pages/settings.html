@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from 'components/create_form.html' import create_form with context %}
+{% from 'components/macros.html' import selector with context %}
+{% block title %}Omics Dashboard - Settings{% endblock %}
+{% block headline %}Settings{% endblock %}
+{% block content %}
+  {{ create_form(page_data.profile_update_form_data.entries, page_data.profile_update_form_data.label, error) }}
+{% if page_data.admin %}
+  <div class="row mt-3">
+    <div class="card w-50 mx-auto" style="max-width: 25rem;">
+      <h4 class="card-header text-white bg-primary">Generate Invitation Link</h4>
+      <form id="invitationForm">
+        {{ selector(page_data.user_group_entry) }}
+        <div class="form-group">
+          <label for="invitation-group">Invite URL</label>
+          <div class="input-group" name="invitation-group">
+            <input title="Invitation" type="text" name="invitation" id="invitation" class="form-control" value="Placeholder" readonly>
+            <span class="input-group-btn">
+              <button id="copy-button" class="btn btn-outline-secondary" data-toggle="tooltip" data-placement="right" title="Copy to clipboard" type="button" data-clipboard-target="#invitation">
+               <i class="fas fa-clipboard"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+        <div class="form-group">
+          <input id="generateInvitationButton" type="button" role="button" class="btn btn-primary form-control" value="Generate" onclick="generateInvitation()">
+        </div>
+      </form>
+    </div>
+  </div>
+  {{ create_form(page_data.password_reset_form_data.entries, page_data.password_reset_form_data.label) }}
+
+{%- endif %}
+{%- endblock %}
+{% block scripts %}
+{{ super() }}
+  {% if page_data.admin %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+
+    <!-- Handle the generate and copy buttons -->
+  <script type="text/javascript">
+  new ClipboardJS('#copy-button');
+
+  function generateInvitation() {
+      const userGroupSelect = document.getElementById('{{ page_data.user_group_entry.id }}');
+      const userGroupId = userGroupSelect.options[userGroupSelect.selectedIndex].value;
+      console.log(userGroupId);
+      const inviteUrl = `{{ url_for('api.create_invitation') }}?primary_user_group_id=${userGroupId}`;
+      fetch(inviteUrl)
+           .then(res => res.json())
+           .then(data => {
+               console.log(data);
+               document.getElementById('invitation').value = `${window.location.protocol}//${window.location.host}{{ url_for('browser.render_registration') }}?invitation=${data.value}`;
+           });
+    }
+    $(() => {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+  </script>
+  {% endif %}
+{% endblock %}

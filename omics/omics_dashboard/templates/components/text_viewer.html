@@ -1,0 +1,14 @@
+{% macro text_viewer(title, contents) %}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">{{ title }}</h4>
+      <div class="card-body">
+        <pre>
+          <code>
+{{ contents }}
+          </code>
+        </pre>
+      </div>
+    </div>
+  </div>
+{% endmacro %}

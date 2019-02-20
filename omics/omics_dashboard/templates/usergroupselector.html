@@ -1,8 +1,0 @@
-{# User should be admin of group before this selector is rendered #}
-{% set groups = get_included_groups(get_user_id()) %}
-<select class="form-control">
-  <option value="0">None</option>
-  {% for group in groups %}
-  <option value="{{ group['id'] }}" {{ 'selected' if group['id'] == data['userGroup'] }}>{{ group['id'] }}: {{ group['name'] }}</option>
-  {% endfor %}
-</select>

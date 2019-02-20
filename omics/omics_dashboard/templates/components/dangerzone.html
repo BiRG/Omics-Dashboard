@@ -1,0 +1,59 @@
+{# should not be used as a page in itself #}
+{% macro dangerzone(name, disclaimer) %}
+  <!-- Danger Zone Card -->
+  <div class="row mt-3">
+   <div class="card w-100">
+     <h4 class="card-header text-white bg-danger">Delete Record</h4>
+     <div class="card-body">
+       <h6 class="card-subtitle text-danger">
+         <i class="fas fa-exclamation-triangle"></i>
+         {% if disclaimer is not none %}
+           {{ disclaimer }}
+         {%- endif %}
+           Record deletion cannot be undone!
+         <i class="fas fa-exclamation-triangle"></i></h6>
+       <form id="delete-form">
+         <div class="form-group">
+         <label for="deleteButton">Click to delete record.</label>
+           <button type="button" class="btn btn-danger btn-block" data-toggle="modal" data-target="#deleteModal" id="deleteButton"> <i class="fas fa-eraser fa-fw"></i>Delete</button>
+         </div>
+       </form>
+     </div>
+   </div>
+  </div>
+
+<!-- Danger Zone Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true"><i class="far fa-window-close"></i></span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete {{ name }}?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-danger" onclick="deleteRecord()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro dangerzone_script(update_url, redirect_url) %}
+  <script>
+    function deleteRecord() {
+        fetch('{{ update_url }}', {method: 'DELETE'})
+            .then(res => res.json())
+            .then(() => window.location.replace('{{ redirect_url }}'))
+            .catch(data => {
+                activateModal('Error Occurred', `An error occurred: ${data.message}`)
+            });
+    }
+  </script>
+{% endmacro %}
+

@@ -4,7 +4,7 @@ id: parsetxtxy
 baseCommand:
   - batchparsetxtxy.py
 inputs:
-  - id: inputFiles
+  - id: input_files
     doc: Text files containing data.
     type: File[]
     inputBinding:
@@ -15,7 +15,7 @@ inputs:
     inputBinding:
       position: 1
 outputs:
-  - id: outputFiles
+  - id: output_files
     doc: HDF5 files containing the parsed files.
     type: File[]
     outputBinding:

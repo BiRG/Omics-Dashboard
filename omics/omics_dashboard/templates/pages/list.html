@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Omics Dashboard - {{ page_data.title }}{% endblock %}
+{% block headline %}{{ page_data.title }}{% endblock %}
+{% block content %}
+  <table id="entries" class="table table-striped table-bordered" cellspacing="0" width="auto">
+    <thead>
+      <tr>
+      {% for heading in page_data.headings %}
+        <th>{{ heading }}</th>
+      {%- endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in page_data.rows %}
+      <tr>
+        {%- for heading in page_data.headings %}
+        <td {%- if row.values[heading].order_value is not none %} data-order="{{ row.values[heading].order_value }}"{% endif %}>
+        {%- if row.values[heading].href is not none %}
+          <a href="{{ row.values[heading].href }}">{{ row.values[heading].value }}</a>
+        {%- else %}
+          {{ row.values[heading].value }}
+        {%- endif %}
+        </td>
+        {%- endfor %}
+      </tr>
+      {%- endfor %}
+    </tbody>
+  </table>
+{%- endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script>
+    $(document).ready(() => {
+        $('#entries').dataTable({
+            buttons: [ {extend: 'colvis', className: 'btn-primary'} ],
+            order: [[ 0, 'desc' ]]
+        });
+    } );
+  </script>
+{%- endblock %}

@@ -1,0 +1,15 @@
+{% extends 'entry.html' %}
+{% from 'components/job_chart.html' import job_chart, job_chart_script with context %}
+{% block headline %}
+  <h1 class="display-4">{{ page_data.name }}</h1>
+{% endblock %}
+{% block content %}
+  {{ super() }}
+  {{ job_chart() }}
+{% endblock %}
+{% block postcontent %}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  {{ job_chart_script(page_data.job_chart_url) }}
+{% endblock %}

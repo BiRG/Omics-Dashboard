@@ -4,14 +4,18 @@ id: postcollections
 baseCommand:
   - postcollections.py
 inputs:
-  - id: inputFiles
+  - id: input_files
     type: File[]
     inputBinding:
       position: 0
-  - id: authToken
-    type: String
+  - id: omics_url
+    type: string
     inputBinding:
       position: 1
+  - id: omics_auth_token
+    type: String
+    inputBinding:
+      position: 2
 outputs:
   - id: responses
     type: stdout

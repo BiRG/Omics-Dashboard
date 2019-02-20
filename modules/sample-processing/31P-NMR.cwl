@@ -4,7 +4,7 @@ id: 31PNMR
 baseCommand:
   - batchprocessNMR.py
 inputs:
-  - id: inputFiles
+  - id: input_files
     type: File[]
     inputBinding:
       position: 0
@@ -16,7 +16,7 @@ inputs:
       position: 1
     doc: The frequency of your instrument in Hz.
 outputs:
-  - id: outputFiles
+  - id: output_files
     type: File[]
     outputBinding:
       glob: '*.h5'

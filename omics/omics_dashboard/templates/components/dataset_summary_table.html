@@ -1,0 +1,40 @@
+{% macro dataset_summary_table(table_data) %}
+  {# attributes is of the "ListTableData" class #}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">Datasets</h4>
+      <div class="card-body">
+        <table id="datasetSummaryTable" class="table table-striped table-bordered" cellspacing="0" width="auto">
+          <thead>
+          <tr>
+            <th>Path</th>
+            <th>Type</th>
+            <th>Rows</th>
+            <th>Columns</th>
+            <th>Download</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for row in table_data.rows %}
+            <tr>
+              <td>{{ row.path }}</td>
+              <td>{{ row.dtype }}</td>
+              <td>{{ row.n_rows }}</td>
+              <td>{{ row.n_cols }}</td>
+              <td><a class="btn btn-info" href="{{ row.download_url }}"><i class="fas fa-file-download"></i> CSV</a>
+            </tr>
+          {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro dataset_summary_table_script() %}
+  <script>
+      $(document).ready(function() {
+          $('#datasetSummaryTable').DataTable();
+      });
+  </script>
+{% endmacro %}

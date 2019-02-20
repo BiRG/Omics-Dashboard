@@ -1,15 +1,15 @@
 from flask import jsonify, request, Blueprint
 
 import data_tools as dt
-from helpers import get_user_id, handle_exception
-workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api')
+from helpers import get_current_user, handle_exception
+workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows')
 
 
-@workflows_api.route('/workflows', methods=['GET', 'POST'])
+@workflows_api.route('/', methods=['GET', 'POST'])
 def list_workflows():
     try:
-        user_id = get_user_id()
-        return jsonify(dt.workflows.get_workflows(user_id))
+        user = get_current_user()
+        return jsonify([workflow.to_dict() for workflow in dt.workflows.get_workflows(user)])
     except Exception as e:
         return handle_exception(e)
 
@@ -17,32 +17,33 @@ def list_workflows():
 @workflows_api.route('/workflow_modules')
 def get_workflow_modules():
     try:
-        get_user_id()
+        get_current_user()
         if request.args.get('path'):
-            return jsonify(dt.workflows.get_module(request.args.get('path')))
-        return jsonify(dt.workflows.get_modules())
+            return jsonify(dt.workflows.get_module(request.args.get('path')).to_dict())
+        return jsonify([module.to_dict() for module in dt.workflows.get_modules()])
     except Exception as e:
         return handle_exception(e)
 
 
-@workflows_api.route('/workflows/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+@workflows_api.route('/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
 def get_workflow(workflow_id=None):
     try:
-        user_id = get_user_id()
+        user = get_current_user()
+        workflow = dt.workflows.get_workflow(user, workflow_id)
         if request.method == 'GET':
-            return jsonify(dt.workflows.get_workflow(user_id, workflow_id))
+            return jsonify(workflow.to_dict())
         if request.method == 'POST':
-            return jsonify(dt.workflows.update_workflow(user_id, workflow_id, request.get_json(force=True)))
+            return jsonify(dt.workflows.update_workflow(user, workflow, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':
-            return jsonify(dt.workflows.delete_workflow(user_id, workflow_id))
+            return jsonify(dt.workflows.delete_workflow(user, workflow))
     except Exception as e:
         return handle_exception(e)
 
 
-@workflows_api.route('/workflows/create')
+@workflows_api.route('/create')
 def create_workflow():
     try:
-        user_id = get_user_id()
-        return jsonify(dt.workflows.create_workflow(user_id, request.get_json()))
+        user = get_current_user()
+        return jsonify(dt.workflows.create_workflow(user, request.get_json()).to_dict())
     except Exception as e:
         return handle_exception(e)

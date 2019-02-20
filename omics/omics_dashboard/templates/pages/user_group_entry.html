@@ -1,0 +1,45 @@
+{% extends 'entry.html' %}
+{% from 'components/macros.html' import list_table %}
+{% block headline %}
+  {{ super() }}
+    {% if page_data.is_member %}
+    {% if page_data.is_primary %}
+    <p>
+        <button class="btn btn-danger" role="button" id="unmakePrimaryButton"><i class="fas fa-user-minus"></i> Remove as Primary Group</button>
+    </p>
+    {% else %}
+    <p>
+      <button class="btn btn-success" role="button" id="makePrimaryButton"><i class="fas fa-user-plus"></i> Make My Primary Group</button>
+    </p>
+    {% endif %}
+    {% endif %}
+{% endblock %}
+{% block content %}
+  {{ super() }}
+  {{ list_table(page_data.user_table_data) }}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script>
+    $('#makePrimaryButton').click(() => {
+        fetch('{{ page_data.user_update_url }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({primary_user_group_id: {{ page_data.id }} })
+        }).then(() => location.reload());
+    });
+    $('#unmakePrimaryButton').click(() => {
+        fetch('{{ page_data.user_update_url }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({primary_user_group_id: null })
+        }).then(() => location.reload());
+    });
+  </script>
+{% endblock %}

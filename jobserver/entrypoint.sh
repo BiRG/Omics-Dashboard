@@ -1,5 +1,5 @@
 #!/bin/bash
-cat /cromwell.conf | sed -E "s|(password = )\"(.*)\"|\1\"$MYSQL_PASSWORD\"|g" > /cromwell.conf
+cat /cromwell.conf
 while ! mysqladmin ping -h"jobserverdb" --silent; do
   echo "Waiting for database."
   sleep 1

@@ -18,7 +18,7 @@ export class OmicsService {
 
   constructor(private http: HttpClient) { }
   getModules(): Observable<WorkflowModuleData[]> {
-    return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflow_modules`, httpOptions);
+    return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflows/workflow_modules`, httpOptions);
   }
   getWorkflows(): Observable<any[]> {
     return this.http.get<WorkflowData[]>(`${baseUrl}/api/workflows`, httpOptions);
@@ -45,12 +45,12 @@ export class OmicsService {
     const req_body = {
       name: workflowModel.label,
       description: workflowModel.description,
-      workflow: workflowModel.serialize()
+      workflow_definition: workflowModel.serialize()
     };
     return this.http.post(`${baseUrl}/api/workflows/${id}`, req_body, httpOptions);
   }
   submitJob(workflowModel: WorkflowModel, job: Object) {
-    // job should satisfy workflow inputs
+    // job should satisfy workflow_definition inputs
     // this should be handled by the omics service?
     const req_body = {
       workflow: workflowModel.serialize(),

@@ -1,0 +1,69 @@
+{% macro item_link(name, url) %}
+  <a href="{{ url }}">{{ name }}</a>
+{% endmacro %}
+
+
+{% macro selector(form_entry_data)  %}
+  <div class="form-group">
+    <label for="{{ form_entry_data.id }}">{{ form_entry_data.label }}</label>
+    <select id="{{ form_entry_data.id }}" name="{{ form_entry_data.name }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if  form_entry_data.select_multiple }}>
+      {% for item in form_entry_data.select_options %}
+      <option value="{{ item.value }}" {{ 'selected' if item.selected }}>{{ item.contents }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{% macro list_table(table_data) %}
+  <div class="row mt-3">
+    <div class="card w-100">
+      <h4 class="card-header text-white bg-primary">{{ table_data.title }}</h4>
+      <div class="card-body">
+        <table id="{{ table_data.title.lower().replace(' ', '-') }}-table" class="data-table table table-striped table-bordered" cellspacing="0" width="auto">
+          <thead>
+          <tr>
+            {% for heading in table_data.headings %}
+              <th>{{ heading }}</th>
+            {% endfor %}
+          </tr>
+          </thead>
+          <tbody>
+          {% for row in table_data.rows %}
+          <tr>
+            {% for heading in table_data.headings %}
+            <td {% if row.values[heading].order_value is not none %} data-order="{{ row.values[heading].order_value }}"{% endif %}>
+              {% if row.values[heading].href is not none %}
+              <a href="{{ row.values[heading].href }}">{{ row.values[heading].value }}</a>
+              {% elif isinstance(row.values[heading].value, bool) %}
+              {% if row.values[heading].value %}<i class="fas fa-check"></i>{% endif %}
+              {% else %}
+              {{ row.values[heading].value }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro download_dropdown(download_url) %}
+  <div class="btn-group" role="group">
+    <button class="btn btn-info dropdown-toggle" type="button" id="downloadDropDownButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fas fa-file-download"></i> Download
+    </button>
+    <div class="dropdown-menu" aria-labelledby="downloadDropDownButton">
+      <a class="dropdown-item" href="{{ download_url }}">HDF5</a>
+      <a class="dropdown-item" href="{{ download_url }}?format=pandas&data_format=csv">Pandas CSV</a>
+      <a class="dropdown-item" href="{{ download_url }}?format=pandas&data_format=json&orient=records">Pandas JSON (by record)</a>
+      <a class="dropdown-item" href="{{ download_url }}?format=pandas&data_format=json&orient=columns">Pandas JSON (by column)</a>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro download_button(download_url) %}
+<a href="{{ download_url }}" class="btn btn-primary" role="button" id="downloadButton">Download</a>
+{% endmacro %}

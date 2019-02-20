@@ -1,0 +1,152 @@
+{% macro file_label_column_editor(column_data) %}
+  <!-- Column editor -->
+  <div class="row mt-3">
+    <div class="card w-100">
+    <h4 class="card-header text-white bg-primary">Labels</h4>
+      <div class="card-body">
+        <div class="container">
+          <table id="labelColumnTable" class="table table-striped table-bordered" cellspacing="0" width="auto">
+            <thead>
+              <tr id="columnHeaders">
+              {% for heading in column_data.headings %}
+                <th>{{ heading }}</th>
+              {%- endfor %}
+              </tr>
+            </thead>
+            <tbody>
+            {% for i in range(column_data.row_count) %}
+              <tr id="tr-{{ i }}">
+                {% for heading in column_data.headings %}
+                <td class="column-value" data-column-key="{{ heading }}" data-row-number="{{ i }}" contenteditable="{{ 'true' if column_data.editable else 'false' }}">{{ column_data.columns[heading][i] }}</td>
+                {%- endfor %}
+              </tr>
+            {%- endfor %}
+            </tbody>
+            <tfoot id="columnFooters">
+              <tr>
+                {% for heading in column_data.headings %}
+                <th></th>
+              {%- endfor %}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+ <!-- Modal -->
+
+<div class="modal fade" id="createColumnModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLabel">Create Column</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true"><i class="far fa-close"></i></span>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <form class="px-4 py-2" method="post">
+          <div class="form-group">
+            <label for="datasetNameInput">Name</label>
+            <input name="dataset_name" id="datasetNameInput">
+          </div>
+          <div class="form-group">
+            <label for="dtypeSelect">Data Type</label>
+            <select id="dtypeSelect" name="dtype">
+              <option value="integer">Integer</option>
+              <option value="float">Floating-point</option>
+              <option value="string">String</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro file_label_column_editor_script(update_url) %}
+  <script>
+    const changedRows = [];
+    function saveLabelColumnChanges() {
+        console.log(changedRows);
+        fetch("{{ update_url }}", {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(changedRows)
+        }).then(res => res.json()).then(data => {console.log(data); activateModal('Updated Collection', data.message);});
+    }
+    function showAddColumnModal() {
+        $('#createColumnModal').modal()
+    }
+    $(document).ready(function(){
+        const labelColumnTable = $('#labelColumnTable').dataTable( {
+            dom: 'lBfrtip',
+            select: false,
+            buttons: [
+                {
+                    extend: 'colvis',
+                    className: 'btn-primary'
+                },
+                {
+                    text: 'Save Changes <i class="far fa-save"></i>',
+                    action:  saveLabelColumnChanges,
+                    className: 'btn-info'
+                },
+                {
+                    text: 'Create Column <i class="fas fa-plus-square"></i>',
+                    className: 'btn-success',
+                    action: showAddColumnModal
+                }
+            ],
+            scrollX: true,
+            initComplete: function() {
+                this.api().columns().every(function(){
+                    const column = this;
+                    const select = $('<select><option value=""></option></select>')
+                        .appendTo( $(column.footer()).empty() )
+                        .on( 'change', (elem) => {
+                            const val = $.fn.dataTable.util.escapeRegex(
+                                $(elem.target).val()
+                            );
+
+                            column
+                                .search( val ? `^${val}$` : '', true, false )
+                                .draw();
+                        } );
+
+                    column.data().unique().sort().each(function( d, j ){
+                        const text = d.replace(/<(?:.|\n)*?>/gm, '');
+                        select.append( `<option value="${text}">${text}</option>` );
+                    } );
+                } );
+            }
+        } );
+        //kluges to handle styling from dataTables
+        //$('.dt-buttons').removeClass('btn-group');
+        $('.btn-success').removeClass('btn-secondary');
+        $('.btn-info').removeClass('btn-secondary');
+        $('.btn-outline-primary').removeClass('btn-secondary');
+        $('.btn-primary').removeClass('btn-secondary');
+        //keep track of whether a value has been edited
+        $('.column-value').blur((elem) => {
+            changedRows.push({
+                i: $(elem.target).data('row-number'),
+                path: $(elem.target).data('column-key'),
+                new_value: $(elem.target).text()
+            });
+        });
+        labelColumnTable.api().columns.adjust().fixedColumns().relayout();
+    } );
+  </script>
+{% endmacro %}

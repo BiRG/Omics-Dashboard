@@ -5,7 +5,8 @@ from flask import request, session, jsonify, Blueprint, url_for
 
 import data_tools as dt
 from data_tools.util import TMPDIR
-from helpers import get_user_id, handle_exception
+import helpers
+from helpers import handle_exception
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
@@ -20,7 +21,7 @@ def send_ok():
 def login():
     credentials = request.get_json(force=True)
     if dt.users.validate_login(credentials['email'], credentials['password']):
-        session['user'] = dt.users.get_user_by_email(credentials['email'])
+        session['user'] = dt.users.get_user_by_email(credentials['email']).to_dict()
         session['logged_in'] = True
         return jsonify(session['user']), 200
     else:
@@ -39,39 +40,91 @@ def logout():
 def jwt_authenticate():
     credentials = request.get_json(force=True)
     if dt.users.validate_login(credentials['email'], credentials['password']):
-        token = dt.users.get_jwt(credentials['email'], credentials['password'])
+        token = dt.users.get_jwt_by_email(credentials['email'], credentials['password'])
         return jsonify({'token': str(token)}), 200
     return jsonify({"message": "authentication failed"}), 403
 
 
 @api.route('/invite', methods=['GET'])
-def get_invitation():
+def create_invitation():
+    #  We use 'GET' even though we're creating a record
+    #  we probably shouldn't ?
     try:
-        user_id = get_user_id()
-        return jsonify(dt.users.create_invitation(user_id))
+        current_user = helpers.get_current_user()
+        primary_user_group_id = request.args.get('primary_user_group_id')
+        try:
+            primary_user_group = dt.user_groups.get_user_group(current_user, primary_user_group_id) if primary_user_group_id is not None else None
+        except dt.util.NotFoundException:
+            primary_user_group = None
+            pass
+        return jsonify(dt.users.create_invitation(current_user, primary_user_group).to_dict())
     except Exception as e:
         return handle_exception(e)
+
+
+@api.route('/invitations', methods=['GET'])
+def list_invitations():
+    try:
+        current_user = helpers.get_current_user()
+        return jsonify([invitation.to_dict() for invitation in dt.users.get_invitations(current_user)])
+    except Exception as e:
+        return handle_exception(e)
+
+
+@api.route('/invitations/<invitation_id>', methods=['GET', 'DELETE'])
+def get_invitation(invitation_id=None):
+    try:
+        current_user = helpers.get_current_user()
+        invitation = dt.users.get_invitation(current_user, invitation_id)
+        if request.method == 'DELETE':
+            return jsonify(dt.users.delete_invitation(current_user, invitation))
+        else:
+            return jsonify(invitation.to_dict())
+    except Exception as e:
+        handle_exception(e)
 
 
 @api.route('/finalize', methods=['POST'])
 def finalize_job():
     try:
-        user_id = get_user_id()
+        user = helpers.get_current_user()
         body = request.get_json(force=True)
-        token = body['wfToken']
+        token = body['wf_token']
         path = f'{TMPDIR}/{token}'
         info = json.load(open(f'{path}/wfdata.json', 'r'))
-        if dt.jobserver_control.check_jobserver_token(token) and dt.users.is_write_permitted(user_id, info):
+        if dt.jobserver_control.check_jobserver_token(token) and dt.users.is_write_permitted(user, info):
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
+        print(e)
         return handle_exception(e)
 
 
-@api.route('/currentuser')
+@api.route('/current_user')
 def get_current_user():
     try:
-        user_id = get_user_id()
-        return jsonify(dt.users.get_user(user_id)), 200
+        user = helpers.get_current_user()
+        return jsonify(user.to_dict()), 200
+    except Exception as e:
+        return jsonify({'message': 'Not logged in'}), 401
+
+
+@api.route('/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.get_json(force=True)
+        if 'invitation' not in data:
+            raise ValueError('No invitation code provided.')
+        if request.method == 'POST':
+            change_password = not (data['password1'] == '' and data['password2'] == '')
+            valid_passwords = data['password1'] == data['password2'] if change_password else False
+            if not valid_passwords:
+                raise ValueError('Passwords do not match.')
+            new_user = dt.users.register_user(data['invitation'],
+                                              {'email': data['email'],
+                                               'password': data['password1'],
+                                               'name': data['name']
+                                               })
+            return jsonify(new_user.to_dict())
     except Exception as e:
         return handle_exception(e)

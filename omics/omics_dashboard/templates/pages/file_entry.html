@@ -1,0 +1,13 @@
+{% extends 'entry.html' %}
+{% from 'components/file_metadata_editor.html' import file_metadata_editor, file_metadata_editor_script with context %}
+{% from 'components/dataset_summary_table.html' import dataset_summary_table, dataset_summary_table_script with context %}
+{% block content %}
+  {{ super() }}
+  {{ file_metadata_editor(page_data.file_attribute_table_data) }}
+  {{ dataset_summary_table(page_data.dataset_summary_table_data) }}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  {{ file_metadata_editor_script(page_data.update_url) }}
+  {{ dataset_summary_table_script() }}
+{% endblock %}

@@ -5,38 +5,39 @@ from typing import List, Dict, Any
 import numpy as np
 
 
+def get_file_attributes(filename: str) -> Dict[str, Any]:
+    with h5py.File(filename, 'r') as infile:
+        return {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
+                for key, value in infile.attrs.items()}
+
+
+def get_file_attribute_dtypes(filename: str) -> Dict[str, str]:
+    with h5py.File(filename, 'r') as infile:
+        return {key: type(value).__name__ for key, value in infile.attrs.items()}
+
+
 def get_collection_metadata(filename: str) -> Dict[str, Any]:
     """Get attributes of a hdf5 file, its last modified date, and the sizes of its largest datasets"""
     with h5py.File(filename, 'r') as infile:
         attrs = {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
                  for key, value in infile.attrs.items()}
-    collection_id = os.path.splitext(os.path.basename(filename))[0]
-    try:
-        attrs['id'] = int(collection_id)
-    except ValueError:
-        pass  # don't set id if it isn't integer (used for validating files not in the system)
-    attrs['dateModified'] = int(os.path.getmtime(filename))
+    attrs['date_modified'] = int(os.path.getmtime(filename))
     dims = approximate_dims(filename)
-    attrs['maxRowCount'] = dims[0]
-    attrs['maxColCount'] = dims[1]
+    attrs['max_row_count'] = dims[0]
+    attrs['max_col_count'] = dims[1]
     return {key: (value.item() if hasattr(value, 'item') else value) for (key, value) in attrs.items()}
 
 
 def get_collection_info(filename: str) -> Dict[str, Any]:
-    """Get metdata and paths of a hdf5 file"""
+    """Get metadata and paths of a hdf5 file"""
     with h5py.File(filename, 'r') as infile:
         collection_info = get_group_info(infile)
-    collection_id = os.path.splitext(os.path.basename(filename))[0]
-    try:
-        collection_info['id'] = int(collection_id)
-    except ValueError:
-        pass  # dont set id if not integer (used for validating files not in the system)
     collection_info.update(collection_info['attrs'])
     del collection_info['attrs']
-    collection_info['dateModified'] = int(os.path.getmtime(filename))
+    collection_info['date_modified'] = int(os.path.getmtime(filename))
     dims = approximate_dims(filename)
-    collection_info['maxRowCount'] = dims[0]
-    collection_info['maxColCount'] = dims[1]
+    collection_info['max_row_count'] = dims[0]
+    collection_info['max_col_count'] = dims[1]
     return {key: (value.item() if hasattr(value, 'item') else value) for (key, value) in collection_info.items()}
 
 
@@ -112,6 +113,11 @@ def get_dataset_info(dataset: h5py.Dataset) -> Dict[str, Any]:
     }
 
 
+def get_all_dataset_info(filename: str):
+    with h5py.File(filename, 'r') as file:
+        return [get_dataset_info(dataset) for dataset in get_datasets(file)]
+
+
 def update_metadata(filename: str, new_data: Dict[str, Any]) -> Dict[str, Any]:
     with h5py.File(filename, 'r+') as file:
         file.attrs.update(new_data)
@@ -138,3 +144,16 @@ def approximate_dims(filename: str) -> (int, int):
 def get_datasets(file: h5py.File) -> List[h5py.Dataset]:
     """Get all the datasets in this file"""
     return [file[key] for key in file.keys() if isinstance(file[key], h5py.Dataset)]
+
+
+def add_column(filename: str, name: str, data_type: str = 'string'):
+    m, _ = approximate_dims(filename)
+    with h5py.File(filename, 'r+') as file:
+        if data_type == 'integer':
+            file.create_dataset(name, shape=(m, 1), dtype=np.int64)
+        elif data_type == 'float':
+            file.create_dataset(name, shape=(m, 1), dtype=np.float64)
+        elif data_type == 'string':
+            file.create_dataset(name, shape=(m, 1), dtype=h5py.special_dtype(vlen=bytes))
+        else:
+            raise ValueError(f'Improper data_type {data_type}')

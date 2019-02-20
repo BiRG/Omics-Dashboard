@@ -4,6 +4,7 @@ Cython
 flask
 flask-cors
 h5py
+scipy
 pandas
 itsdangerous
 jinja2
@@ -19,7 +20,6 @@ pyjwt
 pandas
 cachecontrol
 chardet
-flask-swagger-ui
 future
 idna
 isodate
@@ -34,3 +34,5 @@ shellescape
 typing
 urllib3
 xkcdpass
+sqlalchemy
+Flask-SQLAlchemy

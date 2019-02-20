@@ -3,16 +3,17 @@ import os
 from typing import List, Dict, Any
 
 from data_tools.samples import create_placeholder_samples
-from data_tools.users import get_jwt_by_id
-from data_tools.workflows import get_modules
+from data_tools.users import get_jwt
+from data_tools.workflows import get_modules, WorkflowModule
 from data_tools.jobserver_control import create_jobserver_token
 from data_tools.util import TMPDIR, DATADIR, MODULEDIR
+from data_tools.db import User
 
 
-def create_sample_creation_workflow(user_id: int, input_filenames: List[str], metadata: Dict[str, Any]):
+def create_sample_creation_workflow(user: User, input_filenames: List[str], metadata: Dict[str, Any]):
     """
     Create a CWL workflow for the sample upload process.
-    :param user_id:
+    :param user:
     :param input_filenames:
     :param metadata:
     :return:
@@ -20,37 +21,36 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
     # generate tmpdir for this temporary workflow
     new_metadata = dict(metadata)
     token = create_jobserver_token()
-    directory = f'{TMPDIR}/{token}'
+    directory = f'{TMPDIR}/{token.value}'
     os.mkdir(directory)
     metadata_filename = f'{directory}/metadata.json'
-    metadata['sampleGroupName'] = metadata['name']
+    metadata['sample_group_name'] = metadata['name']
     del metadata['name']
     with open(metadata_filename, 'w') as file:
         json.dump(new_metadata, file)
     with open(f'{directory}/wfdata.json', 'w') as file:
-        json.dump({'owner': user_id}, file)
+        json.dump({'owner': user.id}, file)
     new_filenames = [f'{directory}/{os.path.basename(input_filename)}' for input_filename in input_filenames]
     [os.rename(input_filename, new_filename) for input_filename, new_filename in zip(input_filenames, new_filenames)]
     prefix = new_metadata['name']
     new_metadata['name'] = f'PLACEHOLDER <{prefix}>'
-    output_ids = create_placeholder_samples(new_metadata, len(input_filenames))
+    placeholder_samples = create_placeholder_samples(user, new_metadata, len(input_filenames))
     del new_metadata['name']
-    print(new_metadata)
     workflow = {
         'cwlVersion': 'v1.0',
         'class': 'Workflow',
         'inputs':
             [
                 {
-                    'id': 'inputFiles',
+                    'id': 'input_files',
                     'type': 'File[]'
                 },
                 {
-                    'id': 'metadataFile',
+                    'id': 'metadata_file',
                     'type': 'File'
                 },
                 {
-                    'id': 'dataDirectory',
+                    'id': 'data_directory',
                     'type': 'Directory'
                 },
                 {
@@ -58,19 +58,19 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
                     'type': 'string'
                 },
                 {
-                    'id': 'firstId',
+                    'id': 'first_id',
                     'type': 'int'
                 },
                 {
-                    'id': 'authToken',
+                    'id': 'omics_auth_token',
                     'type': 'string'
                 },
                 {
-                    'id': 'wfToken',
+                    'id': 'wf_token',
                     'type': 'string'
                 },
                 {
-                    'id': 'omicsUrl',
+                    'id': 'omics_url',
                     'type': 'string'
                 }
             ],
@@ -89,78 +89,76 @@ def create_sample_creation_workflow(user_id: int, input_filenames: List[str], me
                     'run': new_metadata["parser"],
                     'in': [
                         {
-                            'id': 'inputFiles',
-                            'source': 'inputFiles'
+                            'id': 'input_files',
+                            'source': 'input_files'
                         },
                         {
                             'id': 'prefix',
                             'source': 'prefix'
                         }
                     ],
-                    'out': [{'id': 'outputFiles'}]
+                    'out': [{'id': 'output_files'}]
                 },
                 {
                     'id': 'process',
                     'run': new_metadata["preproc"],
                     'in': [
                         {
-                            'id': 'inputFiles',
-                            'source': 'parse/outputFiles'
+                            'id': 'input_files',
+                            'source': 'parse/output_files'
                         }
                     ],
-                    'out': [{'id': 'outputFiles'}]
+                    'out': [{'id': 'output_files'}]
                 },
                 {
                     'id': 'update',
                     'run': f'{MODULEDIR}/omics-service/uploadsamples.cwl',
                     'in':
                         [
-                            {'id': 'inputFiles',
-                             'source': 'process/outputFiles'},
-                            {'id': 'metadataFile',
-                             'source': 'metadataFile'},
-                            {'id': 'idStart',
-                             'source': 'firstId'},
-                            {'id': 'wfToken',
-                             'source': 'wfToken'},
-                            {'id': 'omicsUrl',
-                             'source': 'omicsUrl'},
-                            {'id': 'authToken',
-                             'source': 'authToken'}
+                            {'id': 'input_files',
+                             'source': 'process/output_files'},
+                            {'id': 'metadata_file',
+                             'source': 'metadata_file'},
+                            {'id': 'id_start',
+                             'source': 'first_id'},
+                            {'id': 'wf_token',
+                             'source': 'wf_token'},
+                            {'id': 'omics_url',
+                             'source': 'omics_url'},
+                            {'id': 'auth_token',
+                             'source': 'omics_auth_token'}
                         ],
                     'out': [{'id': 'responses'}]
                 }
             ]
     }
     job = {
-        'inputFiles': [{'path': filename, 'class': 'File'} for filename in new_filenames],
-        'metadataFile': {'path': metadata_filename,
-                         'class': 'File'},
-        'dataDirectory': {'path': f'{DATADIR}/samples',
-                          'class': 'Directory'},
+        'input_files': [{'path': filename, 'class': 'File'} for filename in new_filenames],
+        'metadata_file': {'path': metadata_filename,
+                          'class': 'File'},
+        'data_directory': {'path': f'{DATADIR}/samples',
+                           'class': 'Directory'},
         'prefix': prefix,
-        'firstId': min(output_ids),
-        'authToken': get_jwt_by_id(user_id),
-        'wfToken': token,
-        'omicsUrl': os.environ['OMICSSERVER']
+        'first_id': min([sample.id for sample in placeholder_samples]),
+        'omics_auth_token': get_jwt(user),
+        'wf_token': token.value,
+        'omics_url': os.environ['OMICSSERVER']
     }
     # perhaps move execution here?
-    return {'workflow': workflow, 'job': job, 'outputIds': output_ids}
+    return {'workflow': workflow, 'job': job, 'output_ids': [sample.id for sample in placeholder_samples]}
 
 
-def get_preprocessing_modules() -> List[Dict[str, Any]]:
+def get_preprocessing_modules() -> List[WorkflowModule]:
     """
     Get modules used for the preprocessing step of the sample upload process
     :return:
     """
-    modules = get_modules(f'{MODULEDIR}/sample-processing')
-    return modules
+    return get_modules(f'{MODULEDIR}/sample-processing')
 
 
-def get_parsing_modules() -> List[Dict[str, Any]]:
+def get_parsing_modules() -> List[WorkflowModule]:
     """
     Get the modules which may be used for the parsing step of the sample upload process
     :return:
     """
-    modules = get_modules(f'{MODULEDIR}/sample-parsing')
-    return modules
+    return get_modules(f'{MODULEDIR}/sample-parsing')

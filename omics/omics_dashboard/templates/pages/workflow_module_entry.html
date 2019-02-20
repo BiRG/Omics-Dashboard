@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% from 'components/text_viewer.html' import text_viewer %}
+{% from 'components/attribute_editor.html' import attribute_editor with context %}
+{% block headline %}{{ page_data.id }}{% endblock %}
+{% block content %}
+    {{ super() }}
+    {{ attribute_editor(page_data.attribute_table_data) }}
+    {{ text_viewer('CWL Module Definition', page_data.workflow_module_contents) }}
+{% endblock %}
