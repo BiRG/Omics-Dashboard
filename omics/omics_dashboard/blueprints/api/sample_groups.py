@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint
 
 import data_tools as dt
-from helpers import get_current_user, handle_exception
+from helpers import get_current_user, handle_exception, process_input_dict
 from data_tools.util import AuthException
 sample_groups_api = Blueprint('sample_groups_api', __name__, url_prefix='/api/sample_groups')
 
@@ -9,6 +9,14 @@ sample_groups_api = Blueprint('sample_groups_api', __name__, url_prefix='/api/sa
 @sample_groups_api.route('/', methods=['GET', 'POST'])
 def list_sample_groups():
     try:
+        current_user = get_current_user()
+        if request.method == 'POST':
+            new_data = process_input_dict(request.get_json(force=True))
+            if 'sample_ids' in new_data:
+                new_data['samples'] = [dt.samples.get_sample(current_user, sample_id) for sample_id in new_data['sample_ids']]
+                del new_data['sample_ids']
+            return jsonify(dt.sample_groups.create_sample_group(current_user, new_data).to_dict())
+
         return jsonify([sample_group.to_dict()
                         for sample_group in dt.sample_groups.get_sample_groups(get_current_user())])
     except Exception as e:

@@ -35,6 +35,8 @@ def get_item_link(record):
     elif isinstance(record, dt.db.Workflow):
         return url_for('workflows.render_workflow', workflow_id=record.id)
     elif isinstance(record, dt.jobserver_control.Job):
+        if record.id is None:
+            return url_for('jobs.render_job_list')
         return url_for('jobs.render_job', job_id=record.id)
     elif isinstance(record, dt.workflows.WorkflowModule):
         return url_for('workflows.render_workflow_module_list', path=record.path)
@@ -198,7 +200,7 @@ def process_input_dict(input_dict, set_permissions=False):
         'analysis_ids'
     }
     new_dict = {
-        key: (False if value.lower() == 'false' else True) if key in boolean_keys
+        key: (False if value.lower() == 'false' else True) if isinstance(value, str) and key in boolean_keys
         else (None if value == '' else value) if key in id_keys
         else value
         for key, value in input_dict.items()
