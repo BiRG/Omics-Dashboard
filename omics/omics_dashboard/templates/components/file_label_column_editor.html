@@ -74,7 +74,7 @@
 {% macro file_label_column_editor_script(update_url) %}
   <script>
     const changedRows = [];
-    function saveChanges() {
+    function saveLabelColumnChanges() {
         console.log(changedRows);
         fetch("{{ update_url }}", {
             method: 'PATCH',
@@ -91,7 +91,7 @@
     }
     $(document).ready(function(){
         const labelColumnTable = $('#labelColumnTable').dataTable( {
-            dom: 'Bfrtip',
+            dom: 'lBfrtip',
             select: false,
             buttons: [
                 {
@@ -100,7 +100,7 @@
                 },
                 {
                     text: 'Save Changes <i class="far fa-save"></i>',
-                    action:  saveChanges,
+                    action:  saveLabelColumnChanges,
                     className: 'btn-info'
                 },
                 {

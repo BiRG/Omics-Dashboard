@@ -6,6 +6,14 @@
   <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-primary pb-2">
     <div class="navbar-brand">Omics Dashboard @ {{ BRAND }}</div>
   </nav>
+  {% if error is not none %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+  {{ error }}
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+  </div>
+  {% endif %}
 {% endblock %}
 {% block content %}
 <!-- Login form -->

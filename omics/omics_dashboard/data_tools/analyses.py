@@ -1,5 +1,5 @@
 from data_tools.util import AuthException
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_read_permitted_records1
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
 from data_tools.db import Analysis, Collection, User, db
 from typing import List, Dict, Any
 
@@ -10,7 +10,7 @@ def get_analyses(user: User) -> List[Analysis]:
     :param user:
     :return:
     """
-    return get_read_permitted_records1(user, Analysis)
+    return get_all_read_permitted_records(user, Analysis)
 
 
 def get_analysis(user: User, analysis_id: int) -> Analysis:
@@ -36,7 +36,7 @@ def update_analysis(user: User, analysis: Analysis, new_data: Dict[str, Any]) ->
     """
     if is_write_permitted(user, analysis):
         for key, value in new_data.items():
-            if key is not 'id' and key in analysis.__dict__.keys():
+            if hasattr(analysis, key):
                 analysis.__setattr__(key, value)
         analysis.last_editor = user
         db.session.commit()
@@ -132,5 +132,5 @@ def get_attached_analyses(user: User, collection: Collection) -> List[Analysis]:
     :return:
     """
     if is_read_permitted(user, collection):
-        return get_read_permitted_records(user, collection.analyses)
+        return get_all_read_permitted_records(user, collection.analyses)
     raise AuthException(f'User {user.email} not permitted to access collection {collection.id}')

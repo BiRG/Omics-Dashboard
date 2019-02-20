@@ -44,6 +44,7 @@
   function generateInvitation() {
       const userGroupSelect = document.getElementById('{{ page_data.user_group_entry.id }}');
       const userGroupId = userGroupSelect.options[userGroupSelect.selectedIndex].value;
+      console.log(userGroupId);
       const inviteUrl = `{{ url_for('api.create_invitation') }}?primary_user_group_id=${userGroupId}`;
       fetch(inviteUrl)
            .then(res => res.json())

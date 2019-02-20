@@ -24,18 +24,22 @@ def render_registration():
             return render_template('pages/login.html', page_data=RegisterFormData(), invitation=invitation)
         if request.method == 'POST':
             print('method=POST')
-            data = {key: value for key, value in request.form.to_dict if value}
-            print(data)
+            data = {key: value for key, value in request.form.to_dict().items() if value}
+            print(f'data: {data}')
             valid_passwords = 'password1' in data and 'password2' in data and data['password1'] == data['password2']
+            print(f'valid_passwords: {valid_passwords}')
             if not valid_passwords:
                 print('invalid passwords')
                 return render_template('pages/login.html', page_data=RegisterFormData(),
-                                       invitation=invitation, error='Passwords do not match')
+                                       invitation=invitation, error='Passwords do not match'), 500
             new_data = {'email': data['email'], 'password': data['password1'], 'name': data['name'], 'admin': False}
+            print(new_data)
             print('registering user')
             dt.users.register_user(invitation, new_data)
             return redirect(url_for('browser.browser_login'))
     except Exception as e:
+        print('exception!')
+        print(e)
         return render_template('pages/login.html', page_data=RegisterFormData(), error=str(e))
 
 

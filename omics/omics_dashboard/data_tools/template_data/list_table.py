@@ -38,10 +38,8 @@ class ListTableRow:
             self.values['Last Modified By'] = ListTableCell(record.last_editor.name, get_item_link(record.last_editor)) if record.last_editor is not None else ListTableCell('None')
         if isinstance(record, NumericFileRecordMixin):
             row_count, column_count = record.get_dimensions()
-            print(f'row_count: {row_count}, column_count: {column_count}')
-            if row_count is not None or column_count is not None:
-                self.values['Rows'] = ListTableCell(row_count)
-                self.values['Columns'] = ListTableCell(column_count)
+            self.values['Rows'] = ListTableCell(row_count) if row_count is not None else ListTableCell('')
+            self.values['Columns'] = ListTableCell(column_count) if column_count is not None else ListTableCell('')
         if special_val_heading is not None and special_val is not None:
             self.values[special_val_heading] = ListTableCell(special_val)
         if isinstance(record, WorkflowModule):

@@ -35,7 +35,7 @@
               {% if row.values[heading].href is not none %}
               <a href="{{ row.values[heading].href }}">{{ row.values[heading].value }}</a>
               {% elif isinstance(row.values[heading].value, bool) %}
-              <i class="fas fa-check"></i>
+              {% if row.values[heading].value %}<i class="fas fa-check"></i>{% endif %}
               {% else %}
               {{ row.values[heading].value }}
               {% endif %}

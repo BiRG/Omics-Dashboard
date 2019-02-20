@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.db import Sample, User, db
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
@@ -23,7 +23,7 @@ def get_samples(user: User) -> List[Sample]:
     :param user:
     :return:
     """
-    return get_read_permitted_records(user, Sample.query.all())
+    return get_all_read_permitted_records(user, Sample)
 
 
 def get_sample_metadata(user: User, sample: Sample) -> Dict[str, Any]:
@@ -50,7 +50,7 @@ def get_all_sample_metadata(user: User) -> List[Dict]:
     :return:
     """
     return [get_sample_metadata(user, sample)
-            for sample in get_read_permitted_records(user, Sample.query.all())]
+            for sample in get_all_read_permitted_records(user, Sample)]
 
 
 def get_sample(user: User, sample_id: int) -> Sample:
@@ -81,15 +81,14 @@ def update_sample(user: User, sample: Sample, new_data: Dict[str, Any]) -> Dict[
         # file attributes and database attributes should be separated
         for key, value in new_data.items():
             print(f'{key}: {value}')
-            if key in sample.to_dict() and key not in {'filename', 'file_info'}:
+            if key in sample.to_dict() and key not in {'file_info', 'filename'}:
                 print('in sample.to_dict()')
                 sample.__setattr__(key, value)
         if 'file_info' in new_data:
             mdt.update_metadata(sample.filename, new_data['file_info'])
         sample.last_editor = user
-        print('commit')
+        sample.filename = f'/data/samples/{sample.id}.h5'
         db.session.commit()
-        print('return')
         return sample.to_dict()
     raise AuthException(f'User {user.email} is not permitted to modify sample {sample.id}')
 

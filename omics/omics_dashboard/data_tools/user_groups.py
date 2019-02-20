@@ -1,5 +1,5 @@
 from data_tools.util import AuthException, NotFoundException
-from data_tools.users import is_user_group_admin, get_read_permitted_records
+from data_tools.users import is_user_group_admin, get_read_permitted_records, get_all_read_permitted_records
 from data_tools.db import User, UserGroup, db
 from typing import List, Dict, Any
 
@@ -17,7 +17,7 @@ def get_user_groups(user: User) -> List[UserGroup]:
     Get a list of all user groups readable by user.
     :return:
     """
-    return get_read_permitted_records(user, UserGroup.query.all())
+    return get_all_read_permitted_records(user, UserGroup.query.all())
 
 
 def get_user_group(user: User, user_group_id: int) -> UserGroup:
@@ -89,6 +89,14 @@ def update_user_attachments(current_user: User, user_group: UserGroup, users: Li
     raise AuthException(f'User {current_user.id} not authorized to modify group {user_group.id}')
 
 
+def update_admins(current_user: User, user_group: UserGroup, users: List[User]) -> UserGroup:
+    if is_user_group_admin(current_user, user_group):
+        user_group.admins = users
+        db.session.commit()
+        return user_group
+    raise AuthException(f'User {current_user.id} not authorized to modify group {user_group.id}')
+
+
 def attach_user(current_user: User, target_user: User, user_group: UserGroup) -> UserGroup:
     """
     Make a user a member of a user group.
@@ -116,7 +124,11 @@ def elevate_user(current_user: User, target_user: User, user_group: UserGroup) -
     """
     if is_user_group_admin(current_user, user_group):
         if not is_user_group_admin(target_user, user_group):
+            print(f'elevate {target_user.id} in group {user_group.id}')
             user_group.admins.append(target_user)
+            if target_user not in user_group.members:
+                user_group.members.append(target_user)
+            print(user_group.to_dict())
             db.session.commit()
         return user_group
     raise AuthException(f'User{current_user.email} not authorized to modify group {user_group.id}')

@@ -44,7 +44,7 @@ def get_users(user: User) -> List[User]:
     Get a list of all users
     :return:
     """
-    return get_read_permitted_records(user, User.query.all())
+    return get_all_read_permitted_records(user, User)
     # return db.query_db('select id, name, email, admin from Users;')
 
 
@@ -121,6 +121,7 @@ def register_user(invitation_string: str, data: Dict) -> User:
         if invitation.primary_user_group is not None:
             user.primary_user_group = invitation.primary_user_group
             user.user_groups = [invitation.primary_user_group]
+            user.admin_user_groups = []
         db.session.add(user)
         db.session.delete(invitation)
         db.session.commit()
@@ -258,7 +259,7 @@ def is_user_group_admin(user: User, group: UserGroup) -> bool:
     :param group:
     :return:
     """
-    return user in group.admins or user.admin
+    return user.admin or (user in group.admins)
 
 
 def is_read_permitted(user: User, record: Any) -> bool:
@@ -273,7 +274,13 @@ def is_read_permitted(user: User, record: Any) -> bool:
     :return:
     """
     #  TODO: All of this stuff should be done with DB queries rather than loading all elements in memory first
-    return user.admin or record.all_can_read or (record.group_can_read and user in record.user_group.members)
+    if record is None:
+        return False
+    elif user.admin or record.all_can_read or record.owner_id == user.id:
+        return True
+    elif not hasattr(record, 'user_group') or hasattr(record, 'user_group') and record.user_group is None:
+        return False
+    return record.group_can_read and user in record.user_group.members
 
 
 def is_write_permitted(user: User, record: Any) -> bool:
@@ -283,14 +290,20 @@ def is_write_permitted(user: User, record: Any) -> bool:
     :param record:
     :return:
     """
-    return user.admin or user.id is record.owner_id \
-           or (record.group_can_write and user in record.user_group.members) \
-           or record.all_can_write
+    if record is None:
+        return False
+    elif user.admin or record.all_can_write or record.owner_id == user.id:
+        return True
+    elif not hasattr(record, 'user_group') or hasattr(record, 'user_group') and record.user_group is None:
+        return False
+    return record.group_can_write and (user in record.user_group.members)
 
 
 def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     """
     Get all the records in the list records which the user is allowed to read
+    Use get_all_read_permitted_records instead if you want to filter all records in existance,
+    This is best for smaller collections of records
     TODO: Do this at the query level instead of on all()
     :param user:
     :param records:
@@ -299,11 +312,19 @@ def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     return [record for record in records if is_read_permitted(user, record)]
 
 
-def get_read_permitted_records1(user: User, model: db.Model):
+def get_all_read_permitted_records(user: User, model: db.Model):
+    """
+    Get all of the records of the model model which the user is allowed to read.
+    This should be used in place of get_read_permitted_records when you need to filter
+    all records of a particular kind because it uses a db query that only loads the returned records
+    :param user:
+    :param model:
+    :return:
+    """
     if user.admin:
         return model.query.all()
     else:
-        return model.query.filter(model.all_can_read or (model.group_can_read and user.in_(model.user_group.members)))
+        return model.query.filter(model.all_can_read or (model.group_can_read and user.in_(model.user_group.members))).all()
 
 
 def get_user_name(user: User):

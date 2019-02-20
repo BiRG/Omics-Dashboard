@@ -52,7 +52,11 @@ def create_invitation():
     try:
         current_user = helpers.get_current_user()
         primary_user_group_id = request.args.get('primary_user_group_id')
-        primary_user_group = dt.user_groups.get_user_group(current_user, primary_user_group_id) if primary_user_group_id is not None else None
+        try:
+            primary_user_group = dt.user_groups.get_user_group(current_user, primary_user_group_id) if primary_user_group_id is not None else None
+        except dt.util.NotFoundException:
+            primary_user_group = None
+            pass
         return jsonify(dt.users.create_invitation(current_user, primary_user_group).to_dict())
     except Exception as e:
         return handle_exception(e)
@@ -61,7 +65,7 @@ def create_invitation():
 @api.route('/invitations', methods=['GET'])
 def list_invitations():
     try:
-        current_user = get_current_user()
+        current_user = helpers.get_current_user()
         return jsonify([invitation.to_dict() for invitation in dt.users.get_invitations(current_user)])
     except Exception as e:
         return handle_exception(e)
@@ -70,7 +74,7 @@ def list_invitations():
 @api.route('/invitations/<invitation_id>', methods=['GET', 'DELETE'])
 def get_invitation(invitation_id=None):
     try:
-        current_user = get_current_user()
+        current_user = helpers.get_current_user()
         invitation = dt.users.get_invitation(current_user, invitation_id)
         if request.method == 'DELETE':
             return jsonify(dt.users.delete_invitation(current_user, invitation))

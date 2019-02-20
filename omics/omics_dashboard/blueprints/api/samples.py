@@ -105,7 +105,13 @@ def upload_sample():
         user = get_current_user()
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
-        new_data = request.get_json(force=True)
+        new_data = {}
+        try:
+            new_data.update(process_input_dict(request.get_json()))
+        except:
+            new_data.update(process_input_dict(request.form))
+
+        print(new_data)
         filename = os.path.join(UPLOADDIR, str(uuid.uuid4()))
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')

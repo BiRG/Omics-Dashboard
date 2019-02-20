@@ -23,7 +23,7 @@
               <td class="record-attr-link" id="td-value-{{ value.label }}"><a href="{{ value.href }}">{{ value.value }}</a></td>
               {% elif value.select_options is not none %}
               <td class="record-attr-select-parent" id="td-value-{{ value.label }}">
-                <select class="selectpicker record-attr-select" data-attr-key="{{ value.label }}" data-live-search="true" {{ 'multiple' if value.select_multiple}}>
+                <select class="selectpicker record-attr-select" data-attr-key="{{ value.label }}" data-live-search="true" data-composite="{{ 'true' if value.select_composite else 'false' }}"{{ 'multiple' if value.select_multiple}}>
                 {% for option in value.select_options %}
                   <option value="{{ option.value }}" {{ 'selected' if option.selected }}>{{ option.contents }}</option>
                 {% endfor %}
@@ -44,9 +44,7 @@
 {% macro attribute_editor_script(update_url) %}
     <script>
         const changedAttributes = {};
-        function saveChanges(){
-            console.log('saveChanges');
-            console.log(changedAttributes);
+        function saveAttributeChanges(){
             fetch("{{ update_url }}", {
                 method: 'POST',
                 headers: {
@@ -58,21 +56,30 @@
         }
         $(document).ready(() => {
             $('#attributeEditor').DataTable({
-                dom: 'Bfrtip',
+                dom: 'lBfrtip',
                 select: false,
-                buttons: [{text: 'Save Changes <i class="far fa-save"></i>', action: saveChanges, className: 'btn-info'}]
+                buttons: [{text: 'Save Changes <i class="far fa-save"></i>', action: saveAttributeChanges, className: 'btn-info'}]
             });
             $('.record-attr-select').selectpicker();
             $('.record-attr-select').on('changed.bs.select', (e, clickedIndex, isSelected, previousValue) => {
                 const attributeName = $(e.target).data('attr-key');
-                changedAttributes[attributeName] = $(e.target).val().split(',')
-                    .map(tok => {
-                        try {
-                            return parseInt(tok);
-                        } catch(ParseException) {
-                            return tok;
-                        }
+                if ($(e.target).data('composite')) {
+                    $(e.target).children().each(function (index, value) {
+                        changedAttributes[$(value).val()] = $(value).is(':selected');
                     });
+                }
+                else if ($(e.target).val().length === 1){
+                    let processed = parseInt($(e.target).val());
+                    if (isNaN(processed)){ processed = $(e.target).val(); }
+                    changedAttributes[attributeName] = processed;
+                } else if ($(e.target).val().length > 1){
+                    let processed = $(e.target).val().map(value => {
+                        let processed_value = parseInt(value);
+                        if (isNaN(processed_value)) {processed_value = value;}
+                        return processed_value;
+                    });
+                    changedAttributes[attributeName] = processed;
+                }
             });
             // There is not event for contents of <td> changing
             $('.record-attr').blur((elem) => {

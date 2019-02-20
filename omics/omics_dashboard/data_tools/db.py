@@ -106,7 +106,8 @@ class User(db.Model):
     primary_user_group = db.relationship('UserGroup', foreign_keys=primary_user_group_id)
     user_groups = db.relationship('UserGroup', secondary=user_group_membership, back_populates='members')
     admin_user_groups = db.relationship('UserGroup', secondary=user_group_admin, back_populates='admins')
-    user_group = db.synonym(primary_user_group)
+    user_group = db.synonym('primary_user_group')
+    user_group_id = db.synonym('primary_user_group_id')
     owner_id = db.synonym('id')
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
@@ -150,6 +151,7 @@ class UserGroup(db.Model):
     user_group_id = db.synonym('id')  # make it belong to itself...
     creator = db.relationship('User', foreign_keys=[creator_id])
     owner = db.synonym('creator')
+    owner_id = db.synonym('creator_id')
 
     def to_dict(self):
         return {
@@ -197,9 +199,11 @@ class OmicsRecordMixin(object):
     def user_group(cls): return db.relationship(UserGroup, foreign_keys=[cls.user_group_id])
 
 
-class FileRecordMixin(object):
+class FileRecordMixin(OmicsRecordMixin):
     filename = db.Column(db.String)
     file_type = db.Column(db.String, default='hdf5')
+    data_path = '/data'
+    file_ext = '.h5'
 
     @staticmethod
     def delete_file(mapper, connection, target):
@@ -212,9 +216,14 @@ class FileRecordMixin(object):
             print('file not found')
             pass
 
+    @staticmethod
+    def synchronize_filename(target, value, oldvalue, initiator):
+        target.filename = f'{target.data_path}/{value}.{target.file_ext}'
+
     @classmethod
     def register(cls):
         event.listen(cls, 'after_delete', cls.delete_file)
+        event.listen(cls.id, 'set', cls.synchronize_filename)
 
     def get_file_metadata(self):
         """
@@ -272,6 +281,7 @@ class FileRecordMixin(object):
 
 class NumericFileRecordMixin(FileRecordMixin):
     file_type = 'hdf5'
+    file_ext = 'h5'
 
     def get_dimensions(self):
         return mdt.approximate_dims(self.filename) if self.file_exists() else (None, None)
@@ -305,11 +315,11 @@ class Analysis(OmicsRecordMixin, db.Model):
         }
 
 
-class Sample(OmicsRecordMixin, NumericFileRecordMixin, db.Model):
+class Sample(NumericFileRecordMixin, db.Model):
     __tablename__ = 'sample'
     user_group = db.relationship('UserGroup', back_populates='samples')
     sample_groups = db.relationship('SampleGroup', secondary=sample_group_membership, back_populates='samples')
-
+    data_path = '/data/samples'
     def to_dict(self):
         return {
             'id': self.id,
@@ -354,13 +364,14 @@ class SampleGroup(OmicsRecordMixin, db.Model):
         }
 
 
-class Collection(NumericFileRecordMixin, OmicsRecordMixin, db.Model):
+class Collection(NumericFileRecordMixin, db.Model):
     __tablename__ = 'collection'
     id = db.Column(db.Integer, primary_key=True)  # needed to make backref on children work properly
     user_group = db.relationship('UserGroup', back_populates='collections')
     analyses = db.relationship('Analysis', secondary=collection_analysis_membership, back_populates='collections')
     parent_id = db.Column(db.Integer, db.ForeignKey('collection.id'))
     children = db.relationship('Collection', backref=db.backref('parent', remote_side=[id]))
+    data_path = '/data/collections'
 
     def create_label_column(self, name: str, data_type: str='string'):
         mdt.add_column(self.filename, name, data_type)
@@ -385,13 +396,16 @@ class Collection(NumericFileRecordMixin, OmicsRecordMixin, db.Model):
         }
 
 
-class Workflow(FileRecordMixin, OmicsRecordMixin, db.Model):
+class Workflow(FileRecordMixin, db.Model):
     __tablename__ = 'workflow'
     workflow_language = db.Column(db.String, default='cwl')
     file_type = db.Column(db.String, default='yaml')
+    file_ext = db.synonym('workflow_language')
 
     user_group = db.relationship('UserGroup', back_populates='workflows')
     analyses = db.relationship('Analysis', secondary=workflow_analysis_membership, back_populates='workflows')
+
+    data_path = '/data/workflows'
 
     def get_file_info(self):
         if self.file_type == 'json':

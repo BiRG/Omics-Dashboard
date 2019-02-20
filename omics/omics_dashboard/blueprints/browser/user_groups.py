@@ -1,7 +1,7 @@
 from flask import request, redirect, url_for, render_template, Blueprint
 
 from data_tools.user_groups import get_user_groups, get_user_group, create_user_group, delete_user_group
-from data_tools.users import get_read_permitted_records
+from data_tools.users import get_read_permitted_records, get_all_read_permitted_records
 from data_tools.db import User
 from data_tools.template_data.form import UserGroupCreateFormData
 from data_tools.template_data.entry_page import UserGroupPageData
@@ -50,8 +50,7 @@ def render_create_user_group():
         if request.method == 'GET':
             selected_user_ids = {int(token) for token in request.args.get('sample_ids').strip('"').split(',')} \
                 if request.args.get('user_ids', '') else {}
-            selected_users = get_read_permitted_records(current_user,
-                                                        User.query.filter(User.id.in_(selected_user_ids)).all())  # DB query more efficient than using data_tools method here
+            selected_users = get_all_read_permitted_records(current_user, User)
             return render_template('pages/create.html',
                                    page_data=UserGroupCreateFormData(current_user, selected_users))
     except Exception as e:

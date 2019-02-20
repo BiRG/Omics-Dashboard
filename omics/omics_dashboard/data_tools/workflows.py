@@ -4,7 +4,8 @@ from typing import List, Dict, Any
 from ruamel import yaml
 import json
 
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
+    get_all_read_permitted_records
 from data_tools.util import AuthException, NotFoundException, DATADIR, MODULEDIR
 from data_tools.db import User, Workflow, db
 
@@ -76,7 +77,7 @@ def get_workflows(user: User) -> List[Workflow]:
     :param user:
     :return:
     """
-    return get_read_permitted_records(user, Workflow.query.all())
+    return get_all_read_permitted_records(user, Workflow)
 
 
 def get_workflow(user: User, workflow_id: int) -> Workflow:

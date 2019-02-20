@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 import data_tools as dt
 from data_tools.file_tools.collection_tools import validate_update
 from data_tools.util import DATADIR, UPLOADDIR
-from helpers import get_current_user, handle_exception
+from helpers import get_current_user, handle_exception, process_input_dict
 
 collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collections')
 
@@ -115,14 +115,18 @@ def upload_collection():
         user = get_current_user()
         # for request from MATLAB client that doesn't support multipart/form-data
         # file is base64 encoded.
-        new_data = request.get_json()
-        print([key for key in new_data.keys()])
+        new_data = {}
+        try:
+            new_data.update(process_input_dict(request.get_json()))
+        except:
+            new_data.update(process_input_dict(request.form))
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')
         filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
         if 'file' in request.files:
             if request.files['file'].filename == '':
                 raise ValueError('No file uploaded')
+            print('file in request.files')
             request.files['file'].save(filename)
         else:
             with open(filename, 'wb') as file:

@@ -1,13 +1,25 @@
 from flask import Blueprint, jsonify, request
 import data_tools as dt
-from helpers import get_current_user, handle_exception
+from helpers import get_current_user, handle_exception, process_input_dict
 analyses_api = Blueprint('analyses_api', __name__, url_prefix='/api/analyses')
 
 
 @analyses_api.route('/', methods=['GET', 'POST'])
 def list_analyses():
     try:
+        print('list_analyses')
         user = get_current_user()
+        print(request.method)
+        if request.method == 'POST':
+            print('POST')
+            new_data = request.get_json(force=True)
+            print(new_data)
+            if 'collection_ids' in new_data:
+                collections = [dt.collections.get_collection(user, collection_id) for collection_id in new_data['collection_ids']]
+            else:
+                collections = None
+            analysis = dt.analyses.create_analysis(user, new_data, collections)
+            return jsonify(analysis.to_dict())
         return jsonify([analysis.to_dict() for analysis in dt.analyses.get_analyses(user)])
     except Exception as e:
         return handle_exception(e)
@@ -43,6 +55,8 @@ def get_analysis(analysis_id=None):
             return jsonify(analysis.to_dict())
         if request.method == 'POST':
             analysis = dt.analyses.get_analysis(user, analysis_id)
+            print(f'req_body: {request.get_json(force=True)}')
+            print(f'analysis: {analysis.to_dict()}')
             return jsonify(dt.analyses.update_analysis(user, analysis, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':
             analysis = dt.analyses.get_analysis(user, analysis_id)

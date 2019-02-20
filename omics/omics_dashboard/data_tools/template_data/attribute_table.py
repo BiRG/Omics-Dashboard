@@ -20,13 +20,15 @@ class AttributeTableRow:
                  editable: bool = False,
                  href: str = None,
                  select_options: List[SelectOption] = None,
-                 select_multiple: bool = False):
+                 select_multiple: bool = False,
+                 select_composite: bool = False):
         self.label = label
         self.value = value
         self.editable = editable
         self.href = href
         self.select_options = select_options
         self.select_multiple = select_multiple
+        self.select_composite = select_composite
 
 
 class FileAttributeTableRow:
@@ -80,13 +82,12 @@ class AttributeTableData(PageData):
                                                          record.owner.name if record.owner is not None else None,
                                                          False,
                                                          get_item_link(record.owner) if record.owner is not None else None)
-            if is_read_permitted(current_user, record.user_group):
-                user_group_options = [SelectOption(group.id, group.name, group is record.user_group)
+            user_group_options = [SelectOption(group.id, group.name, group is record.user_group)
                                       for group in UserGroup.query.filter(UserGroup.members.contains(current_user)).all()]
-                self.values['User Group'] = AttributeTableRow('user_group',
-                                                              record.user_group.name if record.user_group is not None else None,
-                                                              self.editable, None,
-                                                              user_group_options, False)
+            self.values['User Group'] = AttributeTableRow('user_group_id',
+                                                          record.user_group.name if record.user_group is not None else None,
+                                                          self.editable, None,
+                                                          user_group_options, False)
             permissions_options = [
                 SelectOption('all_can_read', 'Anyone can view?', record.all_can_read),
                 SelectOption('group_can_read', 'User group members can view?', record.group_can_read),
@@ -96,7 +97,7 @@ class AttributeTableData(PageData):
             self.values['Permissions'] = AttributeTableRow('permissions', None,
                                                            is_write_permitted(current_user, record),
                                                            select_options=permissions_options,
-                                                           select_multiple=True)
+                                                           select_multiple=True, select_composite=True)
         if isinstance(record, Collection):
             if record.parent is not None and is_read_permitted(current_user, record.parent):
                 self.values['Parent Collection'] = AttributeTableRow('parent', record.parent.name, href=get_item_link(record.parent))

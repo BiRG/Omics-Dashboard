@@ -6,7 +6,7 @@ import data_tools.file_tools.collection_tools as ct
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.db import Collection, User, Sample, db
 from data_tools.file_tools.h5_merge import h5_merge
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 from data_tools.analyses import get_analysis
 
@@ -25,7 +25,7 @@ def get_collections(user: User) -> List[Collection]:
     :param user:
     :return:
     """
-    return get_read_permitted_records(user, Collection.query.all())
+    return get_all_read_permitted_records(user, Collection)
 
 
 def get_collection_file_info(collection: Collection):
@@ -57,7 +57,7 @@ def get_all_collection_metadata(user: User) -> List[Dict[str, Any]]:
     :return:
     """
     return [get_collection_metadata(user, collection)
-            for collection in get_read_permitted_records(user, Collection.query.all())]
+            for collection in get_all_read_permitted_records1(user, Collection)]
 
 
 def get_collection(user: User, collection_id: int) -> Collection:
@@ -132,8 +132,8 @@ def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Co
         new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
         shutil.copy(filename, new_collection.filename)
         os.remove(filename)
-        new_data['creator_id'] = user.id
-        new_data['owner_id'] = user.id
+        new_data['creator_id'] = user.id if 'creator_id' not in new_data else new_data['creator_id']
+        new_data['owner_id'] = user.id if 'owner_id' not in new_data else new_data['owner_id']
         update_collection(user, new_collection, new_data)  # apply metadata
         db.session.commit()
         return new_collection
