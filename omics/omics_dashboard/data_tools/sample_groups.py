@@ -13,7 +13,7 @@ def get_sample_groups(user: User) -> List[SampleGroup]:
     :param user:
     :return:
     """
-    return get_all_read_permitted_records(user, SampleGroup.query.all())
+    return get_all_read_permitted_records(user, SampleGroup)
 
 
 def get_sample_group(user: User, group_id: int) -> SampleGroup:

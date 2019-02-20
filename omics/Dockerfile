@@ -1,5 +1,5 @@
 FROM node:8-slim
-ARG OMICSSERVER=http://foo.bar
+ARG OMICSSERVER
 ADD workflow-editor /app
 WORKDIR /app
 RUN sed -ri "s|(omicsUrl: )'(.*)'|\1'"$OMICSSERVER"'|g" src/environments/environment.prod.ts
