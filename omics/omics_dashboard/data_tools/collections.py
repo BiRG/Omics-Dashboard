@@ -109,6 +109,7 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
     :return:
     """
     if is_write_permitted(user, collection):
+        print(f'path: {path}, i: {i}, j: {j}, val: {val}')
         ct.update_array(collection.filename, path, i, j, val)
         return collection
     raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}.')
