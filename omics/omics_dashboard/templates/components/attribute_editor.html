@@ -81,10 +81,14 @@
                     changedAttributes[attributeName] = processed;
                 }
             });
-            // There is not event for contents of <td> changing
-            $('.record-attr').blur((elem) => {
-                changedAttributes[$(elem.target).data('attr-key')] = $(elem.target).text();
-            });
         });
+        const recordAttrs = document.querySelectorAll('.record-attr');
+        for (let i = 0; i < recordAttrs.length; ++i){
+            recordAttrs[i].addEventListener('input',
+                                            function() {
+                                                changedAttributes[recordAttrs[i].dataset.attrKey] = recordAttrs[i].textContent;
+                                            },
+                                            false);
+        }
     </script>
 {% endmacro %}

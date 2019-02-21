@@ -51,16 +51,20 @@
                 select: false,
                 buttons: [{text: 'Save Changes <i class="far fa-save"></i>', action: saveFileChanges, className: 'btn-info'}]
             });
-            $('.file-attr').blur(function () {
-                const dtype = $(this).data('attr-dtype');
-                const attributeName = $(this).data('attr-key');
-                let newValue = $(this).text();
-                if (dtype === 'float64')
-                    newValue = parseFloat(newValue);
-                else if (dtype === 'int64')
-                    newValue = parseInt(newValue);
-                changedFileAttributes[attributeName] = newValue;
-            });
         });
+        const fileAttrs = document.querySelectorAll('.file-attr');
+        for (let i = 0; i < fileAttrs.length; ++i){
+            fileAttrs[i].addEventListener('input',
+                                          function() {
+                                              const dtype = fileAttrs[i].dataset.attrDtype;
+                                              const attributeName = fileAttrs[i].dataset.attrKey;
+                                              let newValue = fileAttrs[i].textContent;
+                                              if (dtype === 'float64')
+                                                  newValue = parseFloat(newValue);
+                                              else if (dtype === 'int64')
+                                                  newValue = parseInt(newValue);
+                                              changedFileAttributes[attributeName] = newValue;
+                                          });
+        }
     </script>
 {% endmacro %}

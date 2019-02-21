@@ -88,9 +88,9 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
         for key, value in new_data.items():
             if key in collection.to_dict() and key not in {'filename', 'file_info'}:
                 collection.__setattr__(key, value)
-        if 'file_into' in new_data:
+        if 'file_info' in new_data:
             mdt.update_metadata(collection.filename,
-                                {key: value for key, value in new_data['file_info']})
+                                {key: value for key, value in new_data['file_info'].items()})
         collection.last_editor = user
         db.session.commit()
         return collection
