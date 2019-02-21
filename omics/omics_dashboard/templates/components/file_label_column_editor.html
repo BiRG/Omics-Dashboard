@@ -102,6 +102,8 @@
     $(document).ready(function(){
         const labelColumnTable = $('#labelColumnTable').dataTable( {
             dom: 'lBfrtip',
+            colReorder: true,
+            keys: true,
             select: false,
             buttons: [
                 {
