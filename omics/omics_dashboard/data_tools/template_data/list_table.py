@@ -59,7 +59,6 @@ class FileListTableRow:
                 value_editable = editable if key not in {'max_row_count', 'max_col_count', 'date_modified'} else False
                 self.values[key] = ListTableCell(value, None, value_editable)
             row_count, column_count = record.get_dimensions()
-            print(f'row_count: {row_count}, column_count: {column_count}')
             self.values['Rows'] = ListTableCell(row_count)
             self.values['Columns'] = ListTableCell(column_count)
         if special_val_heading is not None and special_val is not None:
