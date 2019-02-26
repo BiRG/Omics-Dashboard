@@ -1,7 +1,7 @@
 from typing import List, Any
 
 from data_tools.collections import get_collections
-from data_tools.db import User, Collection, Sample, UserGroup
+from data_tools.db import User, Collection, Sample
 from data_tools.sample_creation import get_parsing_modules, get_preprocessing_modules
 from data_tools.samples import get_samples
 from data_tools.user_groups import get_included_groups
@@ -59,8 +59,9 @@ class AnalysisCreateFormData(CreateFormData):
         super(AnalysisCreateFormData, self).__init__(current_user, 'Create Analysis')
         self.entries.append(FormEntry('groupWriteCheckbox', 'group_can_write',
                                       'User group members can edit or delete?', True, 'checkbox'))
-        collection_options = [SelectOption(collection.id, collection.name, collection in selected_collections)
-                              for collection in get_collections(current_user)]
+        collection_options = [
+            SelectOption(collection.id, f'{collection.id}: {collection.name}', collection in selected_collections)
+            for collection in get_collections(current_user)]
         self.entries.append(FormEntry('collectionSelect', 'collections', 'Collections', input_type='select',
                                       select_options=collection_options, select_multiple=True))
 
@@ -72,7 +73,7 @@ class CollectionCreateFormData(CreateFormData):
         super(CollectionCreateFormData, self).__init__(current_user, 'Create Collection')
         self.entries.append(FormEntry('groupWriteCheckbox', 'group_can_write',
                                       'User group members can edit or delete?', False, 'checkbox'))
-        sample_options = [SelectOption(sample.id, sample.name, sample in selected_samples)
+        sample_options = [SelectOption(sample.id, f'{sample.id}: {sample.name}', sample in selected_samples)
                           for sample in get_samples(current_user)]
         sort_by_options = [SelectOption('base_sample_id', 'Sample ID', True)]
         if len(selected_samples):
