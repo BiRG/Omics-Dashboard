@@ -7,6 +7,7 @@ UserGroup provides User metadata but User provides only UserGroup ids
 import json
 import os
 
+import bcrypt
 import ruamel.yaml as yaml
 import sqlalchemy as sa
 from flask_sqlalchemy import Model, SQLAlchemy, event
@@ -111,6 +112,16 @@ class User(db.Model):
     owner_id = db.synonym('id')
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
+
+    def set_password(self, plain_password: str):
+        self.password = bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, plain_password: str) -> bool:
+        return bcrypt.checkpw(bytes(plain_password, 'utf-8'), bytes(self.password, 'utf-8'))
+
+    @staticmethod
+    def hash_password(plain_password: str) -> str:
+        return bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     def to_dict(self, sanitized=True):
         dict_rep = {
