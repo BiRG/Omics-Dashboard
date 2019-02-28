@@ -204,7 +204,7 @@ class OmicsRecordMixin(object):
     all_can_write = db.Column(db.Boolean, default=False)
 
     @declared_attr
-    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'))
+    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'), default=None)
 
     @declared_attr
     def user_group(cls): return db.relationship(UserGroup, foreign_keys=[cls.user_group_id])
@@ -256,7 +256,7 @@ class FileRecordMixin(OmicsRecordMixin):
         provides deep dive on structure of file
         :return:
         """
-        # to extend to different file types, insert checks here
+        # to extend to different file types, insert checks here (or overload in child class)
         if self.filename is not None:
             if self.file_type == 'hdf5':
                 return mdt.get_collection_info(self.filename)

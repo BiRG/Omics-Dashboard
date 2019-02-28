@@ -196,6 +196,7 @@ def process_input_dict(input_dict, set_permissions=False):
     id_keys = {
         'user_group_id',
         'primary_user_group_id',
+        'sample_ids',
         'collection_ids',
         'analysis_ids'
     }

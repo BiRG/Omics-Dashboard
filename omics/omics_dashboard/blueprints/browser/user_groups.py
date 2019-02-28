@@ -39,12 +39,11 @@ def render_create_user_group():
         current_user = get_current_user()
         if request.method == 'POST':
             data = {
-                'admin_ids': [int(val) for val in request.form.getlist('admins')],
-                'member_ids': [int(val) for val in request.form.getlist('members')],
+                'admin_ids': [int(val) for val in request.form.getlist('admin_ids')],
+                'member_ids': [int(val) for val in request.form.getlist('member_ids')],
                 'name': request.form.get('name'),
                 'description': request.form.get('description')
             }
-            print(data)
             user_group = create_user_group(current_user, data)
             return redirect(url_for('user_groups.render_user_group', user_group_id=user_group.id))
         if request.method == 'GET':

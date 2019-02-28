@@ -100,7 +100,7 @@ class AttributeTableData(PageData):
                                                            select_multiple=True, select_composite=True)
         if isinstance(record, Collection):
             if record.parent is not None and is_read_permitted(current_user, record.parent):
-                self.values['Parent Collection'] = AttributeTableRow('parent', record.parent.name, href=get_item_link(record.parent))
+                self.values['Parent Collection'] = AttributeTableRow('parent', f'{record.parent.name} (Collection {record.parent.id})', href=get_item_link(record.parent))
             else:
                 self.values['Parent Collection'] = AttributeTableRow('parent', 'None')
         if isinstance(record, Job):
