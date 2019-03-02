@@ -57,7 +57,7 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
 
     if is_write_permitted(user, sample_group):
         for key, value in new_data.items():
-            if key in sample_group.to_dict():
+            if hasattr(sample_group, key):
                 sample_group.__setattr__(key, value)
         sample_group.last_editor = user
         db.session.commit()

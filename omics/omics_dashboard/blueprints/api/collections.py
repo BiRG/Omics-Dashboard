@@ -53,7 +53,7 @@ def get_collection(collection_id=None):
             # or list thereof (POST should be used to update entire arrays).
             if not isinstance(new_data, list):
                 new_data = [new_data]
-
+            print(new_data)
             # improperly formatted patch requests will throw error before anything changed
             for patch_data in new_data:
                 validate_update(collection.filename, patch_data['path'], patch_data['i'],

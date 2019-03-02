@@ -1,33 +1,12 @@
 import datetime
 import os
+from typing import List, Dict, Any
 
 import jwt
-from typing import List, Dict, Any, Type
-
-from data_tools.util import AuthException, NotFoundException, DATADIR
-import bcrypt
 from xkcdpass import xkcd_password as xp
-from data_tools.db import User, UserGroup, UserInvitation, Base, db
-from flask_sqlalchemy import Model
 
-
-def hash_password(password: str) -> str:
-    """
-    Hash a password using bcrpyt and get the hashed password as a str
-    :param password:
-    :return:
-    """
-    return bcrypt.hashpw(bytes(password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-
-def check_password(password: str, hashed_password: str) -> bool:
-    """
-    Check the presented password against a hashed password
-    :param password:
-    :param hashed_password:
-    :return:
-    """
-    return bcrypt.checkpw(bytes(password, 'utf-8'), bytes(hashed_password, 'utf-8'))
+from data_tools.db import User, UserGroup, UserInvitation, db
+from data_tools.util import AuthException, NotFoundException
 
 
 def get_all_users() -> List[User]:
@@ -36,7 +15,6 @@ def get_all_users() -> List[User]:
     :return:
     """
     return [user for user in User.query.all()]
-    # return db.query_db('select id, name, email, admin from Users;')
 
 
 def get_users(user: User) -> List[User]:
@@ -45,7 +23,6 @@ def get_users(user: User) -> List[User]:
     :return:
     """
     return get_all_read_permitted_records(user, User)
-    # return db.query_db('select id, name, email, admin from Users;')
 
 
 def get_user(user: User, target_user_id: int) -> User:
@@ -98,7 +75,7 @@ def create_user(current_user: User, data: Dict[str, Any]) -> User:
         if User.query.filter_by(email=data['email']).count():
             raise ValueError('This email is already in use!')
         new_user = User(email=data['email'], name=data['name'], admin=data['admin'],
-                        password=hash_password(data['password']), active=True)
+                        password=User.hash_password(data['password']), active=True)
         db.session.add(new_user)
         db.session.commit()
         return new_user
@@ -117,7 +94,7 @@ def register_user(invitation_string: str, data: Dict) -> User:
     invitation = UserInvitation.query.filter_by(value=invitation_string).first()
     if invitation is not None:
         user = User(email=data['email'], name=data['name'], admin=data['admin'],
-                    active=True, password=hash_password(data['password']))
+                    active=True, password=User.hash_password(data['password']))
         if invitation.primary_user_group is not None:
             user.primary_user_group = invitation.primary_user_group
             user.user_groups = [invitation.primary_user_group]
@@ -145,7 +122,7 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
                 raise ValueError('This email is already in use!')
         for key, value in new_data.items():
             if key == 'password':
-                target_user.password = hash_password(value)
+                target_user.password = User.hash_password(value)
             elif key in target_user.to_dict():
                 target_user.__setattr__(key, value)
         db.session.commit()
@@ -213,8 +190,8 @@ def validate_login(email: str, password: str) -> User:
     :return:
     """
     user = User.query.filter_by(email=email).first()
-    if user is None or not check_password(password, user.password):
-        raise ValueError('Invalid username/password')
+    if user is None or not user.check_password(password):
+        raise ValueError('Invalid username/password.')
     return user
 
 
@@ -225,8 +202,7 @@ def get_jwt_by_email(email: str, password: str) -> str:
     :param password:
     :return:
     """
-    validate_login(email, password)
-    user_data = User.query.filter_by(email=email).first().to_dict()
+    user_data = validate_login(email, password).to_dict()
     user_data['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
 

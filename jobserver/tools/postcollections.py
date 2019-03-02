@@ -4,13 +4,15 @@ import os
 import sys
 import json
 import shutil
+import requests
+
 
 def update_metadata(filename, new_data):
     with h5py.File(filename, 'r+') as file:
         file.attrs.update(new_data)
 
 
-input_filenames = sys.argv[1:len(sys.argv) - 2]
+output_filenames = sys.argv[1:len(sys.argv) - 2]
 omics_url = sys.argv[len(sys.argv) - 2]
 auth_token = f'JWT {sys.argv[len(sys.argv) - 1]}'
 output = []

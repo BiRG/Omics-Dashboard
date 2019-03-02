@@ -7,6 +7,7 @@ UserGroup provides User metadata but User provides only UserGroup ids
 import json
 import os
 
+import bcrypt
 import ruamel.yaml as yaml
 import sqlalchemy as sa
 from flask_sqlalchemy import Model, SQLAlchemy, event
@@ -112,6 +113,16 @@ class User(db.Model):
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
 
+    def set_password(self, plain_password: str):
+        self.password = bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, plain_password: str) -> bool:
+        return bcrypt.checkpw(bytes(plain_password, 'utf-8'), bytes(self.password, 'utf-8'))
+
+    @staticmethod
+    def hash_password(plain_password: str) -> str:
+        return bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
+
     def to_dict(self, sanitized=True):
         dict_rep = {
             'id': self.id,
@@ -193,7 +204,7 @@ class OmicsRecordMixin(object):
     all_can_write = db.Column(db.Boolean, default=False)
 
     @declared_attr
-    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'))
+    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'), default=None)
 
     @declared_attr
     def user_group(cls): return db.relationship(UserGroup, foreign_keys=[cls.user_group_id])
@@ -245,7 +256,7 @@ class FileRecordMixin(OmicsRecordMixin):
         provides deep dive on structure of file
         :return:
         """
-        # to extend to different file types, insert checks here
+        # to extend to different file types, insert checks here (or overload in child class)
         if self.filename is not None:
             if self.file_type == 'hdf5':
                 return mdt.get_collection_info(self.filename)
