@@ -1,7 +1,7 @@
 from typing import List, Any
 
 from data_tools.collections import get_collections
-from data_tools.db import User, Collection, Sample, UserGroup
+from data_tools.db import User, Collection, Sample
 from data_tools.sample_creation import get_parsing_modules, get_preprocessing_modules
 from data_tools.samples import get_samples
 from data_tools.user_groups import get_included_groups
@@ -59,9 +59,10 @@ class AnalysisCreateFormData(CreateFormData):
         super(AnalysisCreateFormData, self).__init__(current_user, 'Create Analysis')
         self.entries.append(FormEntry('groupWriteCheckbox', 'group_can_write',
                                       'User group members can edit or delete?', True, 'checkbox'))
-        collection_options = [SelectOption(collection.id, collection.name, collection in selected_collections)
-                              for collection in get_collections(current_user)]
-        self.entries.append(FormEntry('collectionSelect', 'collections', 'Collections', input_type='select',
+        collection_options = [
+            SelectOption(collection.id, f'{collection.id}: {collection.name}', collection in selected_collections)
+            for collection in get_collections(current_user)]
+        self.entries.append(FormEntry('collectionSelect', 'collection_ids', 'Collections', input_type='select',
                                       select_options=collection_options, select_multiple=True))
 
 
@@ -72,14 +73,14 @@ class CollectionCreateFormData(CreateFormData):
         super(CollectionCreateFormData, self).__init__(current_user, 'Create Collection')
         self.entries.append(FormEntry('groupWriteCheckbox', 'group_can_write',
                                       'User group members can edit or delete?', False, 'checkbox'))
-        sample_options = [SelectOption(sample.id, sample.name, sample in selected_samples)
+        sample_options = [SelectOption(sample.id, f'{sample.id}: {sample.name}', sample in selected_samples)
                           for sample in get_samples(current_user)]
         sort_by_options = [SelectOption('base_sample_id', 'Sample ID', True)]
         if len(selected_samples):
             common_attributes = [key for key in selected_samples[0].get_file_attributes().keys()
                                  if all([key in sample.get_file_attributes() for sample in selected_samples])]
             sort_by_options = sort_by_options + [SelectOption(attr, attr, False) for attr in common_attributes]
-        self.entries.append(FormEntry('sampleSelect', 'samples', 'Samples', input_type='select',
+        self.entries.append(FormEntry('sampleSelect', 'sample_ids', 'Samples', input_type='select',
                                       select_options=sample_options, select_multiple=True))
         self.entries.append(FormEntry('sortBySelect', 'sort_by', 'Sort By', input_type='select',
                                       select_options=sort_by_options))
@@ -118,9 +119,9 @@ class UserGroupCreateFormData:
         user_options = [SelectOption(user.id, user.name, user in selected_users) for user in get_users(current_user)]
         admin_options = [SelectOption(user.id, user.name, user.id == current_user.id)
                          for user in get_users(current_user)]
-        self.entries.append(FormEntry('memberSelect', 'members', 'Members (you will be a member))',
+        self.entries.append(FormEntry('memberSelect', 'member_ids', 'Members (you will be a member))',
                                       input_type='select', select_options=user_options, select_multiple=True))
-        self.entries.append(FormEntry('adminSelect', 'admins', 'Admins (you will be an admin)',
+        self.entries.append(FormEntry('adminSelect', 'admin_ids', 'Admins (you will be an admin)',
                                       input_type='select', select_options=admin_options, select_multiple=True))
 
 

@@ -88,9 +88,9 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
         for key, value in new_data.items():
             if key in collection.to_dict() and key not in {'filename', 'file_info'}:
                 collection.__setattr__(key, value)
-        if 'file_into' in new_data:
+        if 'file_info' in new_data:
             mdt.update_metadata(collection.filename,
-                                {key: value for key, value in new_data['file_info']})
+                                {key: value for key, value in new_data['file_info'].items()})
         collection.last_editor = user
         db.session.commit()
         return collection
@@ -109,6 +109,7 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
     :return:
     """
     if is_write_permitted(user, collection):
+        print(f'path: {path}, i: {i}, j: {j}, val: {val}')
         ct.update_array(collection.filename, path, i, j, val)
         return collection
     raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}.')

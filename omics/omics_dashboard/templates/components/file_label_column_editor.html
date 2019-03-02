@@ -73,8 +73,18 @@
 
 {% macro file_label_column_editor_script(update_url) %}
   <script>
-    const changedRows = [];
+    const changedLabels = {};
     function saveLabelColumnChanges() {
+        const changedRows = []
+        for (const [path, rows] of Object.entries(changedLabels)){
+            for (const [row, value] of Object.entries(rows)){
+                changedRows.push({
+                    i: row,
+                    path: path,
+                    new_value: value
+                });
+            }  
+        }     
         console.log(changedRows);
         fetch("{{ update_url }}", {
             method: 'PATCH',
@@ -92,6 +102,8 @@
     $(document).ready(function(){
         const labelColumnTable = $('#labelColumnTable').dataTable( {
             dom: 'lBfrtip',
+            colReorder: true,
+            keys: true,
             select: false,
             buttons: [
                 {
@@ -139,14 +151,23 @@
         $('.btn-outline-primary').removeClass('btn-secondary');
         $('.btn-primary').removeClass('btn-secondary');
         //keep track of whether a value has been edited
-        $('.column-value').blur((elem) => {
-            changedRows.push({
-                i: $(elem.target).data('row-number'),
-                path: $(elem.target).data('column-key'),
-                new_value: $(elem.target).text()
-            });
-        });
         labelColumnTable.api().columns.adjust().fixedColumns().relayout();
     } );
+  
+    const columnValues = document.querySelectorAll('.column-value');
+    for (let i = 0; i < columnValues.length; ++i){
+        columnValues[i].addEventListener('input', 
+                                         function() {
+                                             const row = columnValues[i].dataset.rowNumber;
+                                             const path = columnValues[i].dataset.columnKey;
+                                             const new_value = columnValues[i].textContent;
+                                             if (path in changedLabels){
+                                                 changedLabels[path][row] = new_value
+                                             } else {
+                                                 changedLabels[path] = {[row]: new_value};
+                                             }
+                                         },
+                                         false);
+    }  
   </script>
 {% endmacro %}

@@ -44,9 +44,9 @@ def render_create_collection():
         current_user = get_current_user()
         if request.method == 'POST':
             form_data = process_input_dict(request.form.to_dict(), True)
-            samples = [dt.samples.get_sample(current_user, sample_id) for sample_id in request.form.getlist('samples')]
-            if 'sample' in form_data:
-                del form_data['samples']
+            samples = [dt.samples.get_sample(current_user, sample_id) for sample_id in request.form.getlist('sample_ids')]
+            if 'sample_ids' in form_data:
+                del form_data['sample_ids']
             sort_by = form_data['sort_by']
             del form_data['sort_by']
             collection = dt.collections.create_collection(current_user, samples, form_data, sort_by=sort_by)
