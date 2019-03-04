@@ -56,6 +56,11 @@ class Job:
         self.end = job_data['end'] if 'end' in job_data else None
         self.status = job_data['status'] if 'status' in job_data else None
         self.active = True
+        log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
+        self.logs = {key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()} for key, value in log_response.json()['calls'].items()}
+
+    def get_flattened_logs():
+        return {f'{key}.{inner_key}': inner_value for key, value in nested.items() for inner_key, inner_value in value.items()}
 
     def cancel(self):
         response = requests.post(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/abort')
@@ -81,7 +86,8 @@ class Job:
             'submission': self.submission,
             'start': self.start,
             'end': self.end,
-            'status': self.status
+            'status': self.status,
+            'logs': self.logs
         }
 
 

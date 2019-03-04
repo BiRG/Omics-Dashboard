@@ -76,14 +76,16 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
         path for path in paths
         if all(file[path].shape[dim_ind] == file[align_at].shape[dim_ind] for file in files) 
     ) if align_at is not None else set()
-    alignment_paths.remove(align_at)
+    if align_at in alignment_paths:
+        alignment_paths.remove(align_at)
 
     merge_paths = set(
         path for path in paths
         if path not in alignment_paths
         and all(path in file and paths_agree(file, files[0], path, dim_ind) for file in files)
     )
-    merge_paths.remove(align_at)
+    if align_at in merge_paths:
+        merge_paths.remove(align_at)
 
     with h5py.File(outfilename, "w", driver="core") as outfile:
         # handle alignment of vectors
