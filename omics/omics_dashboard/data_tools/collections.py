@@ -257,6 +257,28 @@ def copy_collection(user: User, collection: Collection) -> Collection:
     return new_collection
 
 
+def merge_collections(user: User, collections: List[Collection]) -> Collection:
+    first_collection = collections.pop(0)
+    new_collection = Collection(user_group=first_collection.user_group,
+                                analyses=first_collection.analyses,
+                                name='Copy of ' + first_collection.name,
+                                description=first_collection.description,
+                                group_can_read=first_collection.group_can_read,
+                                group_can_write=first_collection.group_can_write,
+                                all_can_read=first_collection.all_can_read,
+                                all_can_write=first_collection.all_can_write,
+                                owner=user,
+                                creator=user,
+                                last_editor=user)
+    db.session.add(new_collection)
+    db.session.commit()
+    new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
+    db.session.commit()
+    shutil.copy(first_collection.filename, new_collection.filename)
+    h5_merge()
+    return new_collection
+
+
 def create_new_label_dataset(user: User, collection: Collection, name: str, data_type: str = 'string'):
     if is_write_permitted(user, collection):
         collection.create_label_column(name, data_type)

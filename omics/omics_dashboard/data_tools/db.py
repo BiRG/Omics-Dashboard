@@ -12,7 +12,7 @@ import ruamel.yaml as yaml
 import sqlalchemy as sa
 from flask_sqlalchemy import Model, SQLAlchemy, event
 from sqlalchemy.ext.declarative import declared_attr
-
+from data_tools.util import DATADIR
 import data_tools.file_tools.metadata_tools as mdt
 
 
@@ -213,14 +213,12 @@ class OmicsRecordMixin(object):
 class FileRecordMixin(OmicsRecordMixin):
     filename = db.Column(db.String)
     file_type = db.Column(db.String, default='hdf5')
-    data_path = '/data'
-    file_ext = '.h5'
+    data_path = DATADIR
+    file_ext = 'h5'
 
     @staticmethod
     def delete_file(mapper, connection, target):
         try:
-            print('delete_file')
-            print(target.name)
             if target.filename is not None:
                 os.remove(target.filename)
         except FileNotFoundError:
@@ -232,7 +230,12 @@ class FileRecordMixin(OmicsRecordMixin):
         target.filename = f'{target.data_path}/{value}.{target.file_ext}'
 
     @classmethod
-    def register(cls):
+    def register_listeners(cls):
+        """
+        If the inherited class manages files (controls their names and deletions), listen for record deletion and id
+        change and rename or delete the file when necessary.
+        :return:
+        """
         event.listen(cls, 'after_delete', cls.delete_file)
         event.listen(cls.id, 'set', cls.synchronize_filename)
 
@@ -330,7 +333,8 @@ class Sample(NumericFileRecordMixin, db.Model):
     __tablename__ = 'sample'
     user_group = db.relationship('UserGroup', back_populates='samples')
     sample_groups = db.relationship('SampleGroup', secondary=sample_group_membership, back_populates='samples')
-    data_path = '/data/samples'
+    data_path = f'{DATADIR}/samples'
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -382,7 +386,8 @@ class Collection(NumericFileRecordMixin, db.Model):
     analyses = db.relationship('Analysis', secondary=collection_analysis_membership, back_populates='collections')
     parent_id = db.Column(db.Integer, db.ForeignKey('collection.id'))
     children = db.relationship('Collection', backref=db.backref('parent', remote_side=[id]))
-    data_path = '/data/collections'
+    data_path = f'{DATADIR}/collections'
+    kind = db.Column(db.String, default='data')  # should be 'data' or 'results'
 
     def create_label_column(self, name: str, data_type: str='string'):
         mdt.add_column(self.filename, name, data_type)
@@ -407,6 +412,25 @@ class Collection(NumericFileRecordMixin, db.Model):
         }
 
 
+class ExternalFile(FileRecordMixin, db.Model):
+    __tablename__ = 'external_file'
+    data_path = f'{DATADIR}/external'
+    file_ext = ''  # Only used by FileRecordMixin models that are "registered" but should be blank here.
+    file_type = db.Column(db.String, default='txt')  # just change default value
+
+    @staticmethod
+    def delete_file(mapper, connection, target):
+        raise RuntimeError('delete_file not supported on ExternalFile')
+
+    @staticmethod
+    def synchronize_filename(target, value, oldvalue, initiator):
+        raise RuntimeError('synchronize_filename not supported on ExternalFile')
+
+    @classmethod
+    def register_listeners(cls):
+        raise RuntimeError('register_listeners not supported on ExternalFile')
+
+
 class Workflow(FileRecordMixin, db.Model):
     __tablename__ = 'workflow'
     workflow_language = db.Column(db.String, default='cwl')
@@ -416,7 +440,7 @@ class Workflow(FileRecordMixin, db.Model):
     user_group = db.relationship('UserGroup', back_populates='workflows')
     analyses = db.relationship('Analysis', secondary=workflow_analysis_membership, back_populates='workflows')
 
-    data_path = '/data/workflows'
+    data_path = f'{DATADIR}/workflows'
 
     def get_file_info(self):
         if self.file_type == 'json':
@@ -481,7 +505,7 @@ class JobserverToken(db.Model):
             'value': self.value
         }
 
-
-Workflow.register()
-Sample.register()
-Collection.register()
+# Do not register ExternalFile because we don't manage their filenames!
+Workflow.register_listeners()
+Sample.register_listeners()
+Collection.register_listeners()

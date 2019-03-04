@@ -40,20 +40,21 @@ def interpolate(files: List[h5py.File], align_path: str, target_path: str, conca
     # make new_align a m x 1 or 1 x n instead of 1D
     return new_align, aligned
 
+
 def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reserved_paths: list=list(),
     sort_by: str='base_sample_id', align_at: str=None) -> None:
     """
     Merge a list of hdf5 files into a single file
     :param infilenames: A list of filenames to merge
     :param outfilename: Location of output file
-    :param orintation: Whether to concatenate vertically ("vert") or horizontally ("horiz")
+    :param orientation: Whether to concatenate vertically ("vert") or horizontally ("horiz")
     :param reserved_paths: Paths that are assumed identical between collections
     :param sort_by: the name of the field in the final collection to sort columns/rows by
     :param align_at: the name of the label field to sort records by
     """
-    
-    
+
     files = [h5py.File(filename, "r", driver="core") for filename in infilenames]
+
 
     # collect all common paths between the files
     concat_fn = np.vstack if orientation == 'vert' else np.hstack
@@ -93,7 +94,7 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str='vert', reser
             print(f'alignment_paths: {alignment_paths}')
             for path in alignment_paths:
                 align, aligned = interpolate(files, align_at, path, concat_fn)
-                align_shape = [1,1]
+                align_shape = [1, 1]
                 align_shape[dim_ind] = align.size
                 aligned_shape = [len(files), len(files)]
                 aligned_shape[dim_ind] = align.size
