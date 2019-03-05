@@ -4,11 +4,11 @@ from typing import List, Dict, Any
 
 import data_tools.file_tools.collection_tools as ct
 import data_tools.file_tools.metadata_tools as mdt
+from data_tools.analyses import get_analysis
 from data_tools.db import Collection, User, Sample, db
 from data_tools.file_tools.h5_merge import h5_merge
 from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
-from data_tools.analyses import get_analysis
 
 
 def get_all_collections() -> List[Collection]:
@@ -57,7 +57,7 @@ def get_all_collection_metadata(user: User) -> List[Dict[str, Any]]:
     :return:
     """
     return [get_collection_metadata(user, collection)
-            for collection in get_all_read_permitted_records1(user, Collection)]
+            for collection in get_all_read_permitted_records(user, Collection)]
 
 
 def get_collection(user: User, collection_id: int) -> Collection:
@@ -72,7 +72,7 @@ def get_collection(user: User, collection_id: int) -> Collection:
         raise NotFoundException(f'No collection with id {collection_id}')
     if is_read_permitted(user, collection):
         return collection
-    raise AuthException(f'User {user.id} is not authorized to view collection {collection.id}')
+    raise AuthException(f'User {user.email} is not authorized to view collection {collection.id}')
 
 
 def update_collection(user: User, collection: Collection, new_data: Dict[str, Any]) -> Collection:
@@ -94,7 +94,7 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
         collection.last_editor = user
         db.session.commit()
         return collection
-    raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to modify collection {collection.id}')
 
 
 def update_collection_array(user: User, collection: Collection, path: str, i: int, j: int, val) -> Collection:
@@ -112,7 +112,7 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
         print(f'path: {path}, i: {i}, j: {j}, val: {val}')
         ct.update_array(collection.filename, path, i, j, val)
         return collection
-    raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}.')
+    raise AuthException(f'User {user.email} is not permitted to modify collection {collection.id}.')
 
 
 def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Collection:
@@ -151,7 +151,7 @@ def download_collection(user: User, collection: Collection) -> Dict[str, str]:
     """
     if is_read_permitted(user, collection):
         return {'filename': os.path.basename(collection.filename)}
-    raise AuthException(f'User {user.id} is not permitted to access collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to access collection {collection.id}')
 
 
 def download_collection_dataset(user: User, collection: Collection, path: str) -> Dict[str,  str]:
@@ -166,7 +166,7 @@ def download_collection_dataset(user: User, collection: Collection, path: str) -
     csv_filename = f'{os.path.basename(os.path.normpath(path))}.csv'
     if is_read_permitted(user, collection):
         return {'csv': mdt.get_csv(collection.filename, path), 'cd': f'attachment; filename={csv_filename}'}
-    raise AuthException(f'User {user.id} is not permitted to access collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to access collection {collection.id}')
 
 
 def download_collection_dataframe(user: User, collection: Collection, single_column: bool = False,
@@ -184,7 +184,7 @@ def download_collection_dataframe(user: User, collection: Collection, single_col
     if is_read_permitted(user, collection):
         return {data_format: ct.get_dataframe(collection.filename, single_column, data_format, json_orient),
                 'cd': f'attachment; filename={collection.id}.{data_format}'}
-    raise AuthException(f'User {user.id} is not permitted to access collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to access collection {collection.id}')
 
 
 def list_collection_paths(user: User, collection: Collection) -> List[str]:
@@ -196,7 +196,7 @@ def list_collection_paths(user: User, collection: Collection) -> List[str]:
     """
     if is_read_permitted(user, collection):
         return mdt.get_dataset_paths(collection.filename)
-    raise AuthException(f'User {user.id} is not permitted to access collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to access collection {collection.id}')
 
 
 def create_collection(user: User,
@@ -234,7 +234,7 @@ def delete_collection(user: User, collection: Collection) -> Dict[str, str]:
         db.session.delete(collection)
         db.session.commit()  # event will handle file deletion
         return {'message': f'collection {collection_id} removed'}
-    raise AuthException(f'User {user.id} is not permitted to modify collection {collection.id}')
+    raise AuthException(f'User {user.email} is not permitted to modify collection {collection.id}')
 
 
 def copy_collection(user: User, collection: Collection) -> Collection:
@@ -275,7 +275,6 @@ def merge_collections(user: User, collections: List[Collection]) -> Collection:
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
     shutil.copy(first_collection.filename, new_collection.filename)
-    h5_merge()
     return new_collection
 
 
