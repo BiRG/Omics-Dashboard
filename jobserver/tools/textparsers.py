@@ -26,7 +26,7 @@ def parse_txt_xy(filename):
     with io.open(filename, 'r', encoding='ascii', errors='ignore') as file:
         raw_data = [s.replace(' ', '') for s in file]
     
-    split_numeric = [s.split('\t') for s in raw_data if s[0] == '-' or ord(s[0]) in range(ord('0'), ord('9'))]
+    split_numeric = [s.split('\t') for s in raw_data if s[0] == '-' or ord(s[0]) in range(ord('0'), ord('9') + 1)]
     split_metadata = [s[1:].replace("\n", "").split(':') for s in raw_data if s[0] == '$']
     data = np.asarray(split_numeric).astype(np.double)
     data = np.transpose(data) # vertical in the input, horizontal in output
