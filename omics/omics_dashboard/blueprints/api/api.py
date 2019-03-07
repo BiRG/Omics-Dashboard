@@ -4,9 +4,10 @@ import shutil
 from flask import request, session, jsonify, Blueprint, url_for
 
 import data_tools as dt
-from data_tools.util import TMPDIR
 import helpers
+from data_tools.util import TMPDIR
 from helpers import handle_exception
+
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
@@ -20,12 +21,13 @@ def send_ok():
 @api.route('/login', methods=['POST'])
 def login():
     credentials = request.get_json(force=True)
-    if dt.users.validate_login(credentials['email'], credentials['password']):
+    try:
+        dt.users.validate_login(credentials['email'], credentials['password'])
         session['user'] = dt.users.get_user_by_email(credentials['email']).to_dict()
         session['logged_in'] = True
         return jsonify(session['user']), 200
-    else:
-        return jsonify({"message": "authentication failed"}), 403
+    except Exception as e:
+        return jsonify({'message': 'authentication failed', 'exception': str(e)}), 403
 
 
 @api.route('/logout')
