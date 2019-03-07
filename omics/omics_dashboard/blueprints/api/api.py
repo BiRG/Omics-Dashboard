@@ -94,7 +94,7 @@ def finalize_job():
         token = body['wf_token']
         path = f'{TMPDIR}/{token}'
         info = json.load(open(f'{path}/wfdata.json', 'r'))
-        if dt.jobserver_control.check_jobserver_token(token) and dt.users.is_write_permitted(user, info):
+        if dt.jobserver_control.check_jobserver_token(token) and (user.admin or info['owner'] == user.id): 
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
