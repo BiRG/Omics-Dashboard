@@ -260,15 +260,15 @@ def copy_collection(user: User, collection: Collection) -> Collection:
 
 def merge_collections(user: User, collections: List[Collection], new_data: Dict[str, Any]) -> Collection:
     infilenames = [collection.filename for collection in collections]
-    first_collection = collections.pop(0)
-    new_collection = Collection(user_group=first_collection.user_group,
-                                analyses=first_collection.analyses,
-                                name='Copy of ' + first_collection.name,
-                                description=first_collection.description,
-                                group_can_read=first_collection.group_can_read,
-                                group_can_write=first_collection.group_can_write,
-                                all_can_read=first_collection.all_can_read,
-                                all_can_write=first_collection.all_can_write,
+    collection_id_str = ' + '.join([str(collection.id) for collection in collections])
+    new_collection = Collection(user_group=collections[0].user_group,
+                                analyses=collections[0].analyses,
+                                name=f'{collections[0].name} (Collections {collection_id_str})',
+                                description=collections[0].description,
+                                group_can_read=collections[0].group_can_read,
+                                group_can_write=collections[0].group_can_write,
+                                all_can_read=collections[0].all_can_read,
+                                all_can_write=collections[0].all_can_write,
                                 owner=user,
                                 creator=user,
                                 last_editor=user)
