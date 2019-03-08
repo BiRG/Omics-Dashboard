@@ -8,12 +8,14 @@ import json
 import os
 
 import bcrypt
+import magic
 import ruamel.yaml as yaml
 import sqlalchemy as sa
 from flask_sqlalchemy import Model, SQLAlchemy, event
 from sqlalchemy.ext.declarative import declared_attr
-from data_tools.util import DATADIR
+
 import data_tools.file_tools.metadata_tools as mdt
+from data_tools.util import DATADIR
 
 
 class Base(Model):
@@ -94,6 +96,18 @@ workflow_analysis_membership = db.Table('workflow_analysis_membership', db.Model
                                                                 onupdate='CASCADE',
                                                                 ondelete='CASCADE'),
                                                   primary_key=True))
+
+external_file_analysis_membership = db.Table('external_file_analysis_membership', db.Model.metadata,
+                                             db.Column('external_file_id', db.Integer,
+                                                       db.ForeignKey('external_file.id',
+                                                                     onupdate='CASCADE',
+                                                                     ondelete='CASCADE'),
+                                                       primary_key=True),
+                                             db.Column('analysis_id', db.Integer,
+                                                       db.ForeignKey('analysis.id',
+                                                                     onupdate='CASCADE',
+                                                                     ondelete='CASCADE'),
+                                                       primary_key=True))
 
 
 class User(db.Model):
@@ -308,6 +322,8 @@ class Analysis(OmicsRecordMixin, db.Model):
     __tablename__ = 'analysis'
 
     collections = db.relationship('Collection', secondary=collection_analysis_membership, back_populates='analyses')
+    external_files = db.relationship('ExternalFile', secondary=external_file_analysis_membership,
+                                     back_populates='analyses')
     workflows = db.relationship('Workflow', secondary=workflow_analysis_membership, back_populates='analyses')
     user_group = db.relationship('UserGroup', back_populates='analyses')
 
@@ -325,7 +341,8 @@ class Analysis(OmicsRecordMixin, db.Model):
             'all_can_write': self.all_can_write,
             'user_group_id': self.user_group_id,
             'collections': [collection.to_dict() for collection in self.collections],
-            'workflows': [workflow.to_dict() for workflow in self.workflows]
+            'workflows': [workflow.to_dict() for workflow in self.workflows],
+            'external_files': [external_file.to_dict() for external_file in self.external_files]
         }
 
 
@@ -416,7 +433,10 @@ class ExternalFile(FileRecordMixin, db.Model):
     __tablename__ = 'external_file'
     data_path = f'{DATADIR}/external'
     file_ext = ''  # Only used by FileRecordMixin models that are "registered" but should be blank here.
-    file_type = db.Column(db.String, default='txt')  # just change default value
+    analyses = db.relationship('Analysis', secondary=external_file_analysis_membership, back_populates='external_files')
+
+    @property
+    def file_type(self): return magic.from_file(self.filename, mime=True)
 
     @staticmethod
     def delete_file(mapper, connection, target):
@@ -429,6 +449,29 @@ class ExternalFile(FileRecordMixin, db.Model):
     @classmethod
     def register_listeners(cls):
         raise RuntimeError('register_listeners not supported on ExternalFile')
+
+    def get_file_info(self):
+        stat = os.stat(self.filename)
+        return {key: getattr(stat, key) for key in dir(stat) if key.startswith('st_')}
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'creator_id': self.creator_id,
+            'owner_id': self.owner_id,
+            'last_editor_id': self.owner_id,
+            'group_can_read': self.group_can_read,
+            'group_can_write': self.group_can_write,
+            'all_can_read': self.all_can_read,
+            'all_can_write': self.all_can_write,
+            'user_group_id': self.user_group_id,
+            'filename': self.filename,
+            'file_type': self.file_type,
+            'analysis_ids': [analysis.id for analysis in self.analyses],
+            'file_info': self.get_file_info() if self.file_exists() else {}
+        }
 
 
 class Workflow(FileRecordMixin, db.Model):
@@ -504,6 +547,7 @@ class JobserverToken(db.Model):
             'id': self.id,
             'value': self.value
         }
+
 
 # Do not register ExternalFile because we don't manage their filenames!
 Workflow.register_listeners()

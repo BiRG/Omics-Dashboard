@@ -43,7 +43,7 @@ class CreateFormData:
                                            user_group is current_user.primary_user_group)
                               for user_group in get_included_groups(current_user, current_user)]
         self.entries = [
-            FormEntry('nameInput', 'name', 'Name', 'Enter name',),
+            FormEntry('nameInput', 'name', 'Name', 'Enter name'),
             FormEntry('descriptionTextArea', 'description', 'Description', 'Enter description', 'textarea'),
             FormEntry('userGroupSelect', 'user_group_id', 'User Group', '', 'select', select_options=user_group_options),
             FormEntry('allReadCheckbox', 'all_can_read', 'Anyone can view?', True, 'checkbox'),
@@ -64,6 +64,13 @@ class AnalysisCreateFormData(CreateFormData):
             for collection in get_collections(current_user)]
         self.entries.append(FormEntry('collectionSelect', 'collection_ids', 'Collections', input_type='select',
                                       select_options=collection_options, select_multiple=True))
+
+
+class ExternalFileCreateFormData(CreateFormData):
+    def __init__(self, current_user: User):
+        super(ExternalFileCreateFormData, self).__init__(current_user, 'Create External File Record')
+        self.entries.append(FormEntry('filenameInput', 'filename', 'Filename /data/external/', 'Enter filename'))
+        self.entries.append(FormEntry('fileInput', 'file', 'File', input_type='file', select_multiple=False))
 
 
 class CollectionCreateFormData(CreateFormData):

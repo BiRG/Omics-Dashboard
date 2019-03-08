@@ -45,7 +45,7 @@
   </div>
 {% endmacro %}
 
-{% macro collection_list_script(attach_url) %}
+{% macro collection_list_script(attach_url, merge_url) %}
   <script>
   /*
     $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
@@ -80,6 +80,28 @@
                     className: 'btn-secondary'
                 },
                 {
+                    text: 'Merge <i class="fas fa-arrow-right"></i><i class="fas fa-arrow-left"></i>',
+                    action: function () {
+                        const collectionIds = [];
+                        const row_data = this.rows({selected: true}).ids().map(function (x) {
+                            return x.split('-')[1];
+                        });
+                        for (let i = 0; i < row_data.length; ++i) collectionIds.push(parseInt(row_data[i]));
+                        if (collectionIds.length > 0) {
+                            fetch('{{ merge_url }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({collection_ids: collectionIds})
+                            }).then(() => location.reload(true));
+                        }
+                    },
+                    className: 'btn-warning'
+                },
+                {
                     text: 'Attach <i class="fas fa-paperclip"></i>',
                     action: function(){
                         const collectionIds = [];
@@ -103,7 +125,7 @@
                     text: 'Detach <i class="fas fa-minus-circle"></i>',
                     action: function(){
                         //something weird happens with rows...
-                        console.log('Detach')
+                        console.log('Detach');
                         const collectionIds = [];
                         const row_data = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1];});
                         for (let i = 0; i < row_data.length; ++i) collectionIds.push(parseInt(row_data[i]));

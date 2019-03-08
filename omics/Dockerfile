@@ -8,7 +8,7 @@ RUN /app/node_modules/@angular/cli/bin/ng build --prod --deployUrl=/omics/static
 
 FROM python:3.7-slim
 RUN pip install --upgrade pip
-RUN apt -y update && apt -y install build-essential gcc gfortran libpcre3-dev
+RUN apt -y update && apt -y install build-essential gcc gfortran libpcre3-dev libmagic1
 ADD omics_dashboard/requirements.txt .
 RUN pip install -r requirements.txt
 RUN rm requirements.txt

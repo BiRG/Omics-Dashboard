@@ -110,7 +110,6 @@ def download_collection(collection_id=None):
 
 @collections_api.route('/upload', methods=['POST'])
 def upload_collection():
-    #  TODO: support files encoded as base64 in application/json and actual files in multipart/form-data
     try:
         user = get_current_user()
         # for request from MATLAB client that doesn't support multipart/form-data
@@ -158,10 +157,10 @@ def merge_collections():
     try:
         current_user = get_current_user()
         # new collection keeps attributes of first collection in list
-        collection_ids = request.get_json(force=True)['collection_ids']
-        new_collection = dt.collections.merge_collections(current_user,
-                                                          [dt.collections.get_collection(current_user, collection_id)
-                                                           for collection_id in collection_ids])
-
+        new_data = request.get_json(force=True)
+        collections = [dt.collections.get_collection(current_user, collection_id) for collection_id in new_data['collection_ids']]
+        del new_data['collection_ids']
+        new_collection = dt.collections.merge_collections(current_user, collections, new_data)
+        return jsonify(new_collection.to_dict())
     except Exception as e:
         return handle_exception(e)

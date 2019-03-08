@@ -54,7 +54,22 @@ def get_external_file_by_path(user: User, filename: str) -> ExternalFile:
     raise AuthException(f'User {user.id} is not authorized to view external file record for {filename}')
 
 
-def update_external_file(user: User, external_file: ExternalFile, new_data: Dict[str, Any]) -> ExternalFile:
+def create_external_file(user: User, new_data: Dict[str, Any]) -> ExternalFile:
+    """
+    Create a new external file record (will not create the file at all, use upload for that)
+    :param user:
+    :param new_data:
+    :return:
+    """
+    external_file = ExternalFile(name=new_data['name'], creator=user, owner=user)
+    db.session.add(external_file)
+    db.session.commit()
+    update_external_file(user, external_file, new_data)
+    return external_file
+
+
+def update_external_file(user: User, external_file: ExternalFile, new_data: Dict[str, Any],
+                         move_file: bool = False) -> ExternalFile:
     """
     Update the data in the external file record
     :param user:
@@ -63,6 +78,10 @@ def update_external_file(user: User, external_file: ExternalFile, new_data: Dict
     :return:
     """
     if is_write_permitted(user, external_file):
+        if move_file and 'filename' in new_data:
+            original_filename = external_file.filename
+            shutil.copy(original_filename, new_data['filename'])
+            os.remove(original_filename)
         for key, value in new_data.items():
             if hasattr(external_file, key):
                 external_file.__setattr__(key, value)
@@ -82,18 +101,25 @@ def upload_external_file(user: User, filename: str, new_data: Dict[str, Any]) ->
     """
     new_external_file = ExternalFile(owner=user, creator=user, last_editor=user, name=new_data['name'])
     db.session.add(new_external_file)
-
+    db.session.commit()
     # make directories if necessary up to specified filename
     # consider relative paths relative to '/data/external'
-    if 'filename' in new_data:
+    if 'filename' in new_data and new_data['filename']:
         if os.path.isabs(new_data['filename']):
-            new_filename = os.path.normpath(f'/data/external/{new_data["filename"]}')
+            new_external_file.filename = os.path.normpath(new_data['filename'])
         else:
-            new_filename = os.path.normpath(new_data['filename'])
+            new_external_file.filename = os.path.normpath(f'/data/external/{new_data["filename"]}')
     else:
-        new_filename = f'/data/external/{new_external_file.id}/{os.path.basename(filename)}'
-    os.makedirs(os.path.dirname(new_filename))
-    shutil.copy(filename, new_filename)
+        new_external_file.filename = f'/data/external/{new_external_file.id}/{os.path.basename(filename)}'
+    if 'filename' in new_data:
+        del new_data['filename']
+    if os.path.isfile(new_external_file.filename):
+        db.session.delete(new_external_file)
+        db.session.commit()
+        os.remove(filename)
+        raise ValueError('File already exists! Please specify a different filename.')
+    os.makedirs(os.path.dirname(new_external_file.filename))
+    shutil.copy(filename, new_external_file.filename)
     os.remove(filename)
     update_external_file(user, new_external_file, new_data)
     db.session.commit()

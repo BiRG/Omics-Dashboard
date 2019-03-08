@@ -46,11 +46,14 @@ def interpolate(files: List[h5py.File], align_path: str, target_path: str, conca
 
 
 def make_2d(arr, dim_ind):
+    print(f'shape: {arr.shape}')
+    print(f'len(shape): {len(arr.shape)}')
     if len(arr.shape) < 2:
         # if dim_ind is 0, we want this to be a row vector
         # if dim_ind is 1, we want this to be a column vector
         new_shape = [arr.size, arr.size]
         new_shape[dim_ind] = 1
+        print(f'new_shape: {new_shape}')
         return np.reshape(arr, new_shape)
     return arr
 
@@ -106,10 +109,8 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str = 'vert', res
     with h5py.File(outfilename, "w", driver="core") as outfile:
         # handle alignment of vectors
         if align_at is not None:
-            print(f'alignment_paths: {alignment_paths}')
             for path in alignment_paths:
                 align, aligned = interpolate(files, align_at, path, concat_fn)
-                print(align.shape)
                 align_shape = [1, 1]
                 align_shape[dim_ind] = align.size
                 outfile.create_dataset(path,
@@ -127,7 +128,7 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str = 'vert', res
                                        maxshape=(None, None))
             else:
                 outfile.create_dataset(path,
-                                       data=concat_fn([file[path] for file in files]),
+                                       data=concat_fn([make_2d(file[path], dim_ind) for file in files]),
                                        maxshape=(None, None), dtype=files[0][path].dtype)
         # have to handle some attrs differently
         ignored_attrs = {'name', 'description', 'createdBy', 'owner', 'allPermissions', 'groupPermissions'}
@@ -165,5 +166,9 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str = 'vert', res
                         print(f'Failed on key: {key}: key not found.\n{e}')
                     except TypeError as e:
                         print(f'failed on key: {key}: incompatible dimensions.\n{e}')
+        else:
+            for key, value in files[0].attrs.items():
+                outfile.attrs[key] = value
+
     for file in files:
         file.close()

@@ -223,7 +223,8 @@ def create_collection(user: User,
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
-    h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x', sort_by=sort_by)
+    h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x',
+             sort_by=sort_by, merge_attributes=True)
     update_collection(user, new_collection, new_data)
     return new_collection
 
@@ -257,11 +258,13 @@ def copy_collection(user: User, collection: Collection) -> Collection:
     return new_collection
 
 
-def merge_collections(user: User, collections: List[Collection]) -> Collection:
+def merge_collections(user: User, collections: List[Collection], new_data: Dict[str, Any]) -> Collection:
+    collection_id_str = ' + '.join([str(collection.id) for collection in collections])
+    infilenames = [collection.filename for collection in collections]
     first_collection = collections.pop(0)
     new_collection = Collection(user_group=first_collection.user_group,
                                 analyses=first_collection.analyses,
-                                name='Copy of ' + first_collection.name,
+                                name=f'{first_collection.name} (Collections {collection_id_str})',
                                 description=first_collection.description,
                                 group_can_read=first_collection.group_can_read,
                                 group_can_write=first_collection.group_can_write,
@@ -274,8 +277,11 @@ def merge_collections(user: User, collections: List[Collection]) -> Collection:
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
-    shutil.copy(first_collection.filename, new_collection.filename)
-    return new_collection
+    # shutil.copy(first_collection.filename, new_collection.filename)
+
+    h5_merge(infilenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x',
+             merge_attributes=False)
+    return update_collection(user, new_collection, new_data)
 
 
 def create_new_label_dataset(user: User, collection: Collection, name: str, data_type: str = 'string'):
