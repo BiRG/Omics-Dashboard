@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from typing import List, Dict, Any
 
@@ -280,6 +281,11 @@ def merge_collections(user: User, collections: List[Collection], new_data: Dict[
     return update_collection(user, new_collection, new_data)
 
 
-def create_new_label_dataset(user: User, collection: Collection, name: str, data_type: str = 'string'):
+def create_new_label_dataset(user: User, collection: Collection, name: str, data_type: str = 'string') -> Dict[str, str]:
     if is_write_permitted(user, collection):
-        collection.create_label_column(name, data_type)
+        if re.match('^[^\d\W]\w*$', name):
+            collection.create_label_column(name, data_type)
+            return({'message': f'Created dataset {name} in collection {collection.id}.'})
+        raise ValueError(f'Suggested name {name} is not valid.')
+    raise AuthException(f'User {user.email} not permitted to modify collection {collection.id}.')
+
