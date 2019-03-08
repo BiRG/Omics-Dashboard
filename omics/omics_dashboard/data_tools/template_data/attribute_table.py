@@ -120,7 +120,7 @@ class AttributeTableData(PageData):
             self.values['File Type'] = AttributeTableRow('file_type', record.file_type)
             file_info = record.get_file_info()
             size_mb = file_info['st_size'] / (1024 * 1024.0)
-            self.values['Size'] = f'{size_mb:.3f} MB'
+            self.values['Size'] = AttributeTableRow('file_size', f'{size_mb:.3f} MB')
             self.values['File Modified'] = AttributeTableRow('file_mtime',
                                                              datetime.fromtimestamp(file_info['st_mtime']).strftime(
                                                                  '%-d %b %Y %H:%M'))
