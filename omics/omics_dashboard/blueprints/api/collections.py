@@ -158,10 +158,10 @@ def merge_collections():
     try:
         current_user = get_current_user()
         # new collection keeps attributes of first collection in list
-        collection_ids = request.get_json(force=True)['collection_ids']
-        new_collection = dt.collections.merge_collections(current_user,
-                                                          [dt.collections.get_collection(current_user, collection_id)
-                                                           for collection_id in collection_ids])
+        new_data = request.get_json(force=True)['collection_ids']
+        collections = [dt.collections.get_collection(current_user, collection_id) for collection_id in new_data['collection_ids']]
+        del new_data['collection_ids']
+        new_collection = dt.collections.merge_collections(current_user, collections)
 
     except Exception as e:
         return handle_exception(e)
