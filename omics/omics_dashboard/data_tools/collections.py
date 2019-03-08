@@ -259,6 +259,7 @@ def copy_collection(user: User, collection: Collection) -> Collection:
 
 
 def merge_collections(user: User, collections: List[Collection], new_data: Dict[str, Any]) -> Collection:
+    infilenames = [collection.filename for collection in collections]
     first_collection = collections.pop(0)
     new_collection = Collection(user_group=first_collection.user_group,
                                 analyses=first_collection.analyses,
@@ -275,8 +276,6 @@ def merge_collections(user: User, collections: List[Collection], new_data: Dict[
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
-    shutil.copy(first_collection.filename, new_collection.filename)
-    infilenames = [collection.filename for collection in collections]
     h5_merge(infilenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x')
     return update_collection(user, new_collection, new_data)
 
