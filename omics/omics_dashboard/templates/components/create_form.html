@@ -1,6 +1,6 @@
 {% macro form_checkbox_entry(entry_data) %}
   <div class="form-group form-check">
-    <input type="checkbox" class="form-check-input" id="{{ entry_data.id }}" name="{{ entry_data.name }}" value="true" {{ 'checked' if entry_data.value }}>
+    <input type="checkbox" class="form-check-input" id="{{ entry_data.id | make_valid_tag }}" name="{{ entry_data.name }}" value="true" {{ 'checked' if entry_data.value }}>
     <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
   </div>
 {% endmacro %}
@@ -8,7 +8,7 @@
 {% macro form_textarea_entry(entry_data) %}
   <div class="form-group">
     <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
-    <textarea id="{{ entry_data.id }}" class="form-control" name="{{ entry_data.name }}" rows="3" style="height: 131px;"></textarea>
+    <textarea id="{{ entry_data.id | make_valid_tag }}" class="form-control" name="{{ entry_data.name }}" rows="3" style="height: 131px;"></textarea>
   </div>
 {% endmacro %}
 
@@ -32,7 +32,7 @@
     {% else %}
         <div class="form-group">
           <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
-          <input type="{{ entry_data.input_type }}" class="form-control" name="{{ entry_data.name }}" id="{{ entry_data.id }}" placeholder="{{ entry_data.value }}">
+          <input type="{{ entry_data.input_type }}" class="form-control" name="{{ entry_data.name }}" id="{{ entry_data.id | make_valid_tag }}" placeholder="{{ entry_data.value }}">
         </div>
     {% endif %}
 {% endmacro %}

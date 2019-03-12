@@ -98,12 +98,18 @@
             },
             credentials: 'same-origin',
             body: JSON.stringify(changedRows)
-        }).then(res => res.json()).then(data => {console.log(data); activateModal('Updated Collection', data.message);});
+        }).then(res => res.json()).then(data => {
+            console.log(data);
+            activateModal('Updated Collection', data.message);
+        });
     }
     function showAddColumnModal() {
         $('#createColumnModal').modal()
     }
     $(document).ready(function(){
+        $('#modal').on('hidden.bs.modal', function () {
+            location.reload();
+        });
         const labelColumnTable = $('#labelColumnTable').dataTable( {
             dom: 'lBfrtip',
             colReorder: true,

@@ -30,7 +30,7 @@ from data_tools.db import db, User
 from data_tools.users import get_user_name
 from data_tools.util import DATADIR
 from data_tools.util import UPLOADDIR
-from helpers import log_exception
+from helpers import log_exception, make_valid_tag, make_tag_from_name
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URI'] if 'DB_URI' in os.environ else f'sqlite:///{DATADIR}/omics.db'
@@ -112,6 +112,8 @@ app.jinja_env.globals.update(get_analyses=dt.analyses.get_analyses)
 app.jinja_env.globals.update(get_collections=dt.collections.get_collections)
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime.datetime)
+app.jinja_env.filters['make_valid_tag'] = make_valid_tag
+app.jinja_env.filters['make_tag_from_name'] = make_tag_from_name
 app.jinja_env.globals.update(int=int)
 app.jinja_env.globals.update(str=str)
 app.jinja_env.globals.update(bool=bool)

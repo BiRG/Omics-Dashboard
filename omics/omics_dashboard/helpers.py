@@ -217,3 +217,11 @@ def process_input_dict(input_dict, set_permissions=False):
     return new_dict
 
 
+def make_valid_tag(s):
+    for c in ' !"#$%&\'()*+,./:;<=>?@[\]^`{|}~':
+        s = s.replace(c, '')
+    return s
+
+
+def make_tag_from_name(s):
+    return s.lower().replace(' ', '-')

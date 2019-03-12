@@ -27,7 +27,7 @@
             </tfoot>
             <tbody>
             {% for row in collections.rows %}
-              <tr id="tr-{{ row.values['ID'].value }}" data-collection-id="{{ row.values['ID'].value }}">
+              <tr id="tr-{{ row.values['ID'].value | make_valid_tag }}" data-collection-id="{{ row.values['ID'].value }}">
               {% for key in collections.headings %}
                 {% if row.values[key].href is not none %}
                 <td><a href="{{ row.values[key].href }}">{{ row.values[key].value }}</a></td>

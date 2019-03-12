@@ -100,6 +100,7 @@ class JobPageData(EntryPageData):
     def __init__(self, current_user: User, job: Job):
         super(JobPageData, self).__init__(current_user, job, 'Job')
         self.job_chart_url = url_for('jobs_api.get_chart_metadata', job_id=job.id)
+        self.logs = job.get_flattened_logs()
 
 
 class WorkflowPageData(EntryPageData):

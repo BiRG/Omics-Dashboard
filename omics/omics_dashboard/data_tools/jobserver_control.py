@@ -33,6 +33,7 @@ class Job:
         self.all_can_write = False
         self.group_can_read = True
         self.group_can_write = False
+        self.logs = {}
         try:
             self.refresh()
         except NotFoundException:
@@ -56,13 +57,17 @@ class Job:
         self.end = job_data['end'] if 'end' in job_data else None
         self.status = job_data['status'] if 'status' in job_data else None
         self.active = True
-        log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
+
+    def get_flattened_logs(self):
+        self.get_logs()
         try:
-            self.logs = {key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()} for key, value in log_response.json()['calls'].items()}
-        except:    
-            self.logs = log_response.text
-    def get_flattened_logs():
-        return {f'{key}.{inner_key}': inner_value for key, value in nested.items() for inner_key, inner_value in value.items()}
+            return {
+                f'{key}.{inner_key}': inner_value
+                for key, value in self.logs.items()
+                for inner_key, inner_value in value.items()
+            }
+        except Exception:
+            return {}
 
     def cancel(self):
         response = requests.post(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/abort')
@@ -78,6 +83,15 @@ class Job:
               f'?expandSubWorkflows=true&includeKeys={"&includeKeys=".join(include_keys)}'
         response = requests.get(url)
         return response.json()
+
+    def get_logs(self):
+        log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
+        try:
+            self.logs = {
+                key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()}
+                for key, value in log_response.json()['calls'].items()}
+        except Exception:
+            self.logs = {'logs': log_response.text}
 
     def to_dict(self):
         return {
