@@ -173,6 +173,6 @@ class WorkflowModuleAttributeTableData:
         self.editable = False
         # since we loaded from yaml, non-primitives should be only list or dict
         self.values = {
-            key: value for key, value in workflow_module.get_workflow_module_contents().items()
+            key: AttributeTableRow(key, value) for key, value in workflow_module.get_workflow_module_contents().items()
             if not (isinstance(value, list) or isinstance(value, dict))
         }
