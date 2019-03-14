@@ -40,7 +40,6 @@ for output_filename, collection_id in zip(output_filenames, collection_ids):
                files=files)
     res.raise_for_status()
     output.append(json.loads(res.text))
-print(json.dumps(output))
 res = post(f'{omics_url}/api/finalize', 
      	   headers={'Authorization': auth_token},
            json={'wf_token': wf_token})
