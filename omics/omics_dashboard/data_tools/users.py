@@ -123,7 +123,7 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
         for key, value in new_data.items():
             if key == 'password':
                 target_user.password = User.hash_password(value)
-            elif key in target_user.to_dict():
+            elif key in target_user.to_dict() and key not in {'active', 'admin', 'admin_group_ids'}:
                 target_user.__setattr__(key, value)
         db.session.commit()
         return target_user
@@ -191,7 +191,7 @@ def validate_login(email: str, password: str) -> User:
     """
     user = User.query.filter_by(email=email).first()
     if user is None or not user.check_password(password):
-        raise ValueError('Invalid username/password.')
+        raise AuthException('Invalid username/password.')
     return user
 
 
