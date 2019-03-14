@@ -6,5 +6,5 @@
 {% endblock %}
 {% block scripts %}
   {{ super() }}
-  {{ collection_list_script(page_data.attach_url) }}
+    {{ collection_list_script(page_data.attach_url, page_data.merge_url) }}
 {% endblock %}

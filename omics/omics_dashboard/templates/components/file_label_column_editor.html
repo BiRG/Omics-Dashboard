@@ -46,25 +46,29 @@
           <span aria-hidden="true"><i class="far fa-close"></i></span>
         </button>
       </div>
-      <div class="modal-body" id="modalBody">
-        <form class="px-4 py-2" method="post">
+      <div class="modal-body" id=createColumnModalBody">
+        <form class="needs-validation" method="post" id="createColumnForm" novalidate>
           <div class="form-group">
             <label for="datasetNameInput">Name</label>
-            <input name="dataset_name" id="datasetNameInput">
+            <input name="dataset_name" id="datasetNameInput" pattern="[^\d\W]\w*" class="form-control" required>
+            <div class="invalid-feedback">You have not entered a valid field name.</div>
+            <small id="datasetNameHelp" class="text-muted">
+              Field names can contain letters, numbers or the underscore '_' and must start with a letter. <code>snake_case</code> names shorter than 32 characters are recommended.
+            </small>
           </div>
           <div class="form-group">
             <label for="dtypeSelect">Data Type</label>
-            <select id="dtypeSelect" name="dtype">
+            <select id="dtypeSelect" class="form-control" name="dtype">
               <option value="integer">Integer</option>
               <option value="float">Floating-point</option>
               <option value="string">String</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-primary">Create</button>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" form="createColumnForm" class="btn btn-primary">Create</button>
       </div>
     </div>
   </div>
@@ -94,12 +98,18 @@
             },
             credentials: 'same-origin',
             body: JSON.stringify(changedRows)
-        }).then(res => res.json()).then(data => {console.log(data); activateModal('Updated Collection', data.message);});
+        }).then(res => res.json()).then(data => {
+            console.log(data);
+            activateModal('Updated Collection', data.message);
+        });
     }
     function showAddColumnModal() {
         $('#createColumnModal').modal()
     }
     $(document).ready(function(){
+        $('#modal').on('hidden.bs.modal', function () {
+            location.reload();
+        });
         const labelColumnTable = $('#labelColumnTable').dataTable( {
             dom: 'lBfrtip',
             colReorder: true,
@@ -169,5 +179,20 @@
                                          },
                                          false);
     }  
+    (function() {
+        'use strict';
+        window.addEventListener('load', function() {
+            const forms = document.getElementsByClassName('needs-validation');
+            const validation = Array.prototype.filter.call(forms, function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })()
   </script>
 {% endmacro %}

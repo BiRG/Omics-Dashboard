@@ -1,0 +1,16 @@
+{% extends 'entry.html' %}
+{% from 'components/macros.html' import list_table, download_button %}
+{% block headline %}
+    {{ super() }}
+    <p>
+        {{ download_button(page_data.download_url) }}
+    </p>
+{% endblock %}
+{% block content %}
+    {{ super() }}
+    {{ list_table(page_data.analysis_table_data) }}
+{%- endblock %}
+
+{% block postcontent %}
+    {{ dangerzone(page_data.name, 'Deleting this record WILL NOT delete the file on disk.') }}
+{%- endblock %}

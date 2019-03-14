@@ -1,14 +1,16 @@
+from datetime import datetime
 from typing import Any, List, Union
 
-from data_tools.db import User, OmicsRecordMixin, UserGroup, FileRecordMixin, SampleGroup, Sample, Collection
-from data_tools.workflows import WorkflowModule
-from data_tools.jobserver_control import Job, get_job
-from data_tools.template_data.page import PageData
-
-from data_tools.template_data.form import SelectOption
-from data_tools.users import is_write_permitted, is_read_permitted
-from helpers import get_item_link
 from flask import url_for
+
+from data_tools.db import User, OmicsRecordMixin, UserGroup, FileRecordMixin, SampleGroup, Sample, Collection, \
+    ExternalFile, Base
+from data_tools.jobserver_control import Job, get_job
+from data_tools.template_data.form import SelectOption
+from data_tools.template_data.page import PageData
+from data_tools.users import is_write_permitted, is_read_permitted
+from data_tools.workflows import WorkflowModule
+from helpers import get_item_link
 
 
 class AttributeTableRow:
@@ -98,11 +100,13 @@ class AttributeTableData(PageData):
                                                            is_write_permitted(current_user, record),
                                                            select_options=permissions_options,
                                                            select_multiple=True, select_composite=True)
+
         if isinstance(record, Collection):
             if record.parent is not None and is_read_permitted(current_user, record.parent):
                 self.values['Parent Collection'] = AttributeTableRow('parent', f'{record.parent.name} (Collection {record.parent.id})', href=get_item_link(record.parent))
             else:
                 self.values['Parent Collection'] = AttributeTableRow('parent', 'None')
+            self.values['Kind'] = AttributeTableRow('kind', record.kind)
         if isinstance(record, Job):
             self.values['Type'] = AttributeTableRow('type', record.type)
             self.values['Status'] = AttributeTableRow('status', record.status)
@@ -111,6 +115,19 @@ class AttributeTableData(PageData):
             self.values['Ended'] = AttributeTableRow('end', record.end)
             if is_read_permitted(current_user, record.owner):
                 self.values['Submitted By'] = AttributeTableRow('owner', record.owner.name, href=get_item_link(record.owner))
+        if isinstance(record, ExternalFile):
+            self.values['Path'] = AttributeTableRow('filename', record.filename)
+            self.values['File Type'] = AttributeTableRow('file_type', record.file_type)
+            file_info = record.get_file_info()
+            size_mb = file_info['st_size'] / (1024 * 1024.0)
+            self.values['Size'] = AttributeTableRow('file_size', f'{size_mb:.3f} MB')
+            self.values['File Modified'] = AttributeTableRow('file_mtime',
+                                                             datetime.fromtimestamp(file_info['st_mtime']).strftime(
+                                                                 '%-d %b %Y %H:%M'))
+        if isinstance(record, Base):
+            self.values['Date Created'] = AttributeTableRow('created_on', record.created_on.strftime('%-d %b %Y %H:%M'))
+            self.values['Date Modified'] = AttributeTableRow('updated_on',
+                                                             record.updated_on.strftime('%-d %b %Y %H:%M'))
 
 
 class FileAttributeTableData(PageData):

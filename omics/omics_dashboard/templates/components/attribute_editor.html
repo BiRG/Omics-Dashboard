@@ -17,10 +17,10 @@
           </thead>
           <tbody>
           {% for key, value in table_data.values.items() %}
-            <tr id="{{ value.label }}">
-              <td id="td-key-{{ value.label }}">{{ key }}</td>
+            <tr id="{{ value.label | make_valid_tag }}">
+              <td id="td-key-{{ value.label | make_valid_tag }}">{{ key }}</td>
               {% if value.href is not none %}
-              <td class="record-attr-link" id="td-value-{{ value.label }}"><a href="{{ value.href }}">{{ value.value }}</a></td>
+              <td class="record-attr-link" id="td-value-{{ value.label | make_valid_tag }}"><a href="{{ value.href }}">{{ value.value }}</a></td>
               {% elif value.select_options is not none %}
               <td class="record-attr-select-parent" id="td-value-{{ value.label }}">
                 <select class="selectpicker record-attr-select" data-attr-key="{{ value.label }}" data-live-search="true" data-composite="{{ 'true' if value.select_composite else 'false' }}"{{ 'multiple' if value.select_multiple}}>
