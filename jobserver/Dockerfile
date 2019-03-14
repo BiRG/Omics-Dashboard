@@ -15,10 +15,11 @@ RUN wget --quiet https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O
 RUN tar xvf docker.tgz
 RUN ln -s /docker/docker /usr/bin/docker
 
-ADD tools/*.py /usr/local/bin/
-RUN chmod +x /usr/local/bin/*.py
+#ADD tools/*.py /usr/local/bin/
+#RUN chmod +x /usr/local/bin/*.py
 ADD cromwell.conf /
 RUN sed -ri "s|(password = )\"(.*)\"|\1\""$MYSQL_PASSWORD"\"|g" /cromwell.conf
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+ENV PATH="/modules/sbin:/modules/bin:${PATH}"
 ENTRYPOINT /entrypoint.sh
