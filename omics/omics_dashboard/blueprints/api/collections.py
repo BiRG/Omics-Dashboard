@@ -117,7 +117,7 @@ def upload_collection():
         new_data = {}
         try:
             new_data.update(process_input_dict(request.get_json()))
-        except:
+        finally:
             new_data.update(process_input_dict(request.form))
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')

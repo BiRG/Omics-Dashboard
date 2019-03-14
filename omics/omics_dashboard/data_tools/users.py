@@ -120,10 +120,18 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
             email_count = User.query.filter_by(email=new_data['email']).count
             if email_count:
                 raise ValueError('This email is already in use!')
+
         for key, value in new_data.items():
             if key == 'password':
                 target_user.password = User.hash_password(value)
-            elif key in target_user.to_dict():
+            elif key == 'active' and current_user.admin:
+                target_user.active = value
+            elif key == 'admin' and current_user.admin:
+                target_user.admin = value
+            # note that if you want to make a user an admin of a user group, do it by editing the user group
+            # note that if you want to make a use an admin, do it through elevation.
+            elif key in target_user.to_dict() and key not in {'password', 'active', 'admin', 'admin_group_ids',
+                                                              'group_ids'}:
                 target_user.__setattr__(key, value)
         db.session.commit()
         return target_user
@@ -191,7 +199,7 @@ def validate_login(email: str, password: str) -> User:
     """
     user = User.query.filter_by(email=email).first()
     if user is None or not user.check_password(password):
-        raise ValueError('Invalid username/password.')
+        raise AuthException('Invalid username/password.')
     return user
 
 
