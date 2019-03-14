@@ -8,6 +8,7 @@ import json
 import shutil
 from requests import post
 
+
 def update_metadata(filename, new_data):
     with h5py.File(filename, 'r+') as file:
         file.attrs.update(new_data)

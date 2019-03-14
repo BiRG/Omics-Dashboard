@@ -6,7 +6,7 @@ infilenames = sys.argv[1:len(sys.argv)-1]
 nameprefix = sys.argv[len(sys.argv)-1]
 for infilename in infilenames:
     outfilename = f'{os.environ["HOME"]}/{os.path.basename(infilename)}.h5'
-    data = tp.parseTxtXY(infilename)
+    data = tp.parse_txt_xy(infilename)
     data['metadata']['name'] = f'{nameprefix}: {os.path.basename(infilename)}'
-    tp.saveSampleFile(outfilename, data['data'], data['metadata'])
+    tp.save_sample_file(outfilename, data['data'], data['metadata'])
 sys.exit(0)

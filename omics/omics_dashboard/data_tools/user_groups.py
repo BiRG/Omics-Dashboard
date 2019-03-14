@@ -17,7 +17,7 @@ def get_user_groups(user: User) -> List[UserGroup]:
     Get a list of all user groups readable by user.
     :return:
     """
-    return get_all_read_permitted_records(user, UserGroup.query.all())
+    return get_all_read_permitted_records(user, UserGroup)
 
 
 def get_user_group(user: User, user_group_id: int) -> UserGroup:

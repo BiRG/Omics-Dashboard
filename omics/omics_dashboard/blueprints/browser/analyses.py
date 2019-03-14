@@ -24,11 +24,13 @@ def render_create_analysis():
     try:
         current_user = get_current_user()
         if request.method == 'POST':
-            collection_ids = [int(collection_id) for collection_id in request.form.getlist('collections')]
+            new_data = process_input_dict(request.form.to_dict(), True)
+            if 'collection_ids' in new_data:
+                del new_data['collection_ids']
+            collection_ids = [int(collection_id) for collection_id in request.form.getlist('collection_ids')]
             collections = Collection.query.filter(Collection.id.in_(collection_ids)).all()
-            analysis = dt.analyses.create_analysis(current_user, process_input_dict(request.form.to_dict(), True), collections)
+            analysis = dt.analyses.create_analysis(current_user, new_data, collections)
             return redirect(url_for('analyses.render_analysis', analysis_id=analysis.id))
-
         selected_collection_ids = [int(token) for token in request.args.get('collection_ids').strip('"').split(',')] \
             if request.args.get('sample_ids', '') else []
         selected_collections = Collection.query.filter(Collection.id.in_(selected_collection_ids)).all()

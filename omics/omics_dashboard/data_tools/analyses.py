@@ -52,6 +52,7 @@ def create_analysis(user: User, data: Dict[str, Any], collections: List[Collecti
     :param collections:
     :return:
     """
+    print(f'data: {data}')
     analysis = Analysis(creator=user,
                         owner=user,
                         last_editor=user,

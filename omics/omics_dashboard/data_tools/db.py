@@ -7,12 +7,15 @@ UserGroup provides User metadata but User provides only UserGroup ids
 import json
 import os
 
+import bcrypt
+import magic
 import ruamel.yaml as yaml
 import sqlalchemy as sa
 from flask_sqlalchemy import Model, SQLAlchemy, event
 from sqlalchemy.ext.declarative import declared_attr
 
 import data_tools.file_tools.metadata_tools as mdt
+from data_tools.util import DATADIR
 
 
 class Base(Model):
@@ -94,6 +97,18 @@ workflow_analysis_membership = db.Table('workflow_analysis_membership', db.Model
                                                                 ondelete='CASCADE'),
                                                   primary_key=True))
 
+external_file_analysis_membership = db.Table('external_file_analysis_membership', db.Model.metadata,
+                                             db.Column('external_file_id', db.Integer,
+                                                       db.ForeignKey('external_file.id',
+                                                                     onupdate='CASCADE',
+                                                                     ondelete='CASCADE'),
+                                                       primary_key=True),
+                                             db.Column('analysis_id', db.Integer,
+                                                       db.ForeignKey('analysis.id',
+                                                                     onupdate='CASCADE',
+                                                                     ondelete='CASCADE'),
+                                                       primary_key=True))
+
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -111,6 +126,16 @@ class User(db.Model):
     owner_id = db.synonym('id')
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
+
+    def set_password(self, plain_password: str):
+        self.password = bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, plain_password: str) -> bool:
+        return bcrypt.checkpw(bytes(plain_password, 'utf-8'), bytes(self.password, 'utf-8'))
+
+    @staticmethod
+    def hash_password(plain_password: str) -> str:
+        return bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     def to_dict(self, sanitized=True):
         dict_rep = {
@@ -193,7 +218,7 @@ class OmicsRecordMixin(object):
     all_can_write = db.Column(db.Boolean, default=False)
 
     @declared_attr
-    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'))
+    def user_group_id(cls): return db.Column(db.Integer, db.ForeignKey('user_group.id'), default=None)
 
     @declared_attr
     def user_group(cls): return db.relationship(UserGroup, foreign_keys=[cls.user_group_id])
@@ -202,14 +227,12 @@ class OmicsRecordMixin(object):
 class FileRecordMixin(OmicsRecordMixin):
     filename = db.Column(db.String)
     file_type = db.Column(db.String, default='hdf5')
-    data_path = '/data'
-    file_ext = '.h5'
+    data_path = DATADIR
+    file_ext = 'h5'
 
     @staticmethod
     def delete_file(mapper, connection, target):
         try:
-            print('delete_file')
-            print(target.name)
             if target.filename is not None:
                 os.remove(target.filename)
         except FileNotFoundError:
@@ -221,7 +244,12 @@ class FileRecordMixin(OmicsRecordMixin):
         target.filename = f'{target.data_path}/{value}.{target.file_ext}'
 
     @classmethod
-    def register(cls):
+    def register_listeners(cls):
+        """
+        If the inherited class manages files (controls their names and deletions), listen for record deletion and id
+        change and rename or delete the file when necessary.
+        :return:
+        """
         event.listen(cls, 'after_delete', cls.delete_file)
         event.listen(cls.id, 'set', cls.synchronize_filename)
 
@@ -245,7 +273,7 @@ class FileRecordMixin(OmicsRecordMixin):
         provides deep dive on structure of file
         :return:
         """
-        # to extend to different file types, insert checks here
+        # to extend to different file types, insert checks here (or overload in child class)
         if self.filename is not None:
             if self.file_type == 'hdf5':
                 return mdt.get_collection_info(self.filename)
@@ -294,6 +322,8 @@ class Analysis(OmicsRecordMixin, db.Model):
     __tablename__ = 'analysis'
 
     collections = db.relationship('Collection', secondary=collection_analysis_membership, back_populates='analyses')
+    external_files = db.relationship('ExternalFile', secondary=external_file_analysis_membership,
+                                     back_populates='analyses')
     workflows = db.relationship('Workflow', secondary=workflow_analysis_membership, back_populates='analyses')
     user_group = db.relationship('UserGroup', back_populates='analyses')
 
@@ -311,7 +341,8 @@ class Analysis(OmicsRecordMixin, db.Model):
             'all_can_write': self.all_can_write,
             'user_group_id': self.user_group_id,
             'collections': [collection.to_dict() for collection in self.collections],
-            'workflows': [workflow.to_dict() for workflow in self.workflows]
+            'workflows': [workflow.to_dict() for workflow in self.workflows],
+            'external_files': [external_file.to_dict() for external_file in self.external_files]
         }
 
 
@@ -319,7 +350,8 @@ class Sample(NumericFileRecordMixin, db.Model):
     __tablename__ = 'sample'
     user_group = db.relationship('UserGroup', back_populates='samples')
     sample_groups = db.relationship('SampleGroup', secondary=sample_group_membership, back_populates='samples')
-    data_path = '/data/samples'
+    data_path = f'{DATADIR}/samples'
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -371,10 +403,56 @@ class Collection(NumericFileRecordMixin, db.Model):
     analyses = db.relationship('Analysis', secondary=collection_analysis_membership, back_populates='collections')
     parent_id = db.Column(db.Integer, db.ForeignKey('collection.id'))
     children = db.relationship('Collection', backref=db.backref('parent', remote_side=[id]))
-    data_path = '/data/collections'
+    data_path = f'{DATADIR}/collections'
+    kind = db.Column(db.String, default='data')  # should be 'data' or 'results'
 
     def create_label_column(self, name: str, data_type: str='string'):
         mdt.add_column(self.filename, name, data_type)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'creator_id': self.creator_id,
+            'owner_id': self.owner_id,
+            'last_editor_id': self.owner_id,
+            'group_can_read': self.group_can_read,
+            'group_can_write': self.group_can_write,
+            'all_can_read': self.all_can_read,
+            'all_can_write': self.all_can_write,
+            'user_group_id': self.user_group_id,
+            'filename': self.filename,
+            'file_type': self.file_type,
+            'analysis_ids': [analysis.id for analysis in self.analyses],
+            'file_info': self.get_file_info() if self.file_exists() else {}
+        }
+
+
+class ExternalFile(FileRecordMixin, db.Model):
+    __tablename__ = 'external_file'
+    data_path = f'{DATADIR}/external'
+    file_ext = ''  # Only used by FileRecordMixin models that are "registered" but should be blank here.
+    analyses = db.relationship('Analysis', secondary=external_file_analysis_membership, back_populates='external_files')
+
+    @property
+    def file_type(self): return magic.from_file(self.filename, mime=True)
+
+    @staticmethod
+    def delete_file(mapper, connection, target):
+        raise RuntimeError('delete_file not supported on ExternalFile')
+
+    @staticmethod
+    def synchronize_filename(target, value, oldvalue, initiator):
+        raise RuntimeError('synchronize_filename not supported on ExternalFile')
+
+    @classmethod
+    def register_listeners(cls):
+        raise RuntimeError('register_listeners not supported on ExternalFile')
+
+    def get_file_info(self):
+        stat = os.stat(self.filename)
+        return {key: getattr(stat, key) for key in dir(stat) if key.startswith('st_')}
 
     def to_dict(self):
         return {
@@ -405,7 +483,7 @@ class Workflow(FileRecordMixin, db.Model):
     user_group = db.relationship('UserGroup', back_populates='workflows')
     analyses = db.relationship('Analysis', secondary=workflow_analysis_membership, back_populates='workflows')
 
-    data_path = '/data/workflows'
+    data_path = f'{DATADIR}/workflows'
 
     def get_file_info(self):
         if self.file_type == 'json':
@@ -471,6 +549,7 @@ class JobserverToken(db.Model):
         }
 
 
-Workflow.register()
-Sample.register()
-Collection.register()
+# Do not register ExternalFile because we don't manage their filenames!
+Workflow.register_listeners()
+Sample.register_listeners()
+Collection.register_listeners()

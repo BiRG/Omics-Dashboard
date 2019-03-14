@@ -36,3 +36,4 @@ urllib3
 xkcdpass
 sqlalchemy
 Flask-SQLAlchemy
+python-magic

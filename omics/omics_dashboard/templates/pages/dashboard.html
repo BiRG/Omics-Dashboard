@@ -10,3 +10,13 @@
   {{ list_table(page_data.collection_table_data) }}
   {{ list_table(page_data.user_group_table_data) }}
 {% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script>
+  $(document).ready(() => {
+    $('#your-analyses-table').dataTable({ dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
+    $('#your-collections-table').dataTable({ dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
+    $('#your-user-groups-table').dataTable({dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
+  })
+  </script>
+{% endblock %}

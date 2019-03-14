@@ -13,7 +13,7 @@ def get_sample_groups(user: User) -> List[SampleGroup]:
     :param user:
     :return:
     """
-    return get_all_read_permitted_records(user, SampleGroup.query.all())
+    return get_all_read_permitted_records(user, SampleGroup)
 
 
 def get_sample_group(user: User, group_id: int) -> SampleGroup:
@@ -57,7 +57,7 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
 
     if is_write_permitted(user, sample_group):
         for key, value in new_data.items():
-            if key in sample_group.to_dict():
+            if hasattr(sample_group, key):
                 sample_group.__setattr__(key, value)
         sample_group.last_editor = user
         db.session.commit()

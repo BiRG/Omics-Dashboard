@@ -1,3 +1,4 @@
+import datetime
 import os
 import traceback
 
@@ -5,18 +6,13 @@ import jwt
 from flask import url_for, session, request, render_template, redirect, jsonify
 
 import data_tools as dt
-import datetime
 from data_tools.util import LoginError, DATADIR
+
 log_file_name = f'{DATADIR}/logs/omics.log'
 
 
 def get_user_display_data(user_id):
     return get_profile_link(user_id), dt.users.get_user_name(user_id)
-
-
-def get_user_group_display_data(user_group_id):
-    return (url_for('user_groups.render_user_group', user_group_id=user_group_id),
-            dt.user_groups.get_user_group_name(user_group_id))
 
 
 def get_item_link(record):
@@ -35,9 +31,13 @@ def get_item_link(record):
     elif isinstance(record, dt.db.Workflow):
         return url_for('workflows.render_workflow', workflow_id=record.id)
     elif isinstance(record, dt.jobserver_control.Job):
+        if record.id is None:
+            return url_for('jobs.render_job_list')
         return url_for('jobs.render_job', job_id=record.id)
     elif isinstance(record, dt.workflows.WorkflowModule):
         return url_for('workflows.render_workflow_module_list', path=record.path)
+    elif isinstance(record, dt.db.ExternalFile):
+        return url_for('external_files.render_external_file', external_file_id=record.id)
     return '#'
 
 
@@ -56,6 +56,8 @@ def get_update_url(record):
         return url_for('user_groups_api.get_user_group', user_group_id=record.id)
     elif isinstance(record, dt.db.User):
         return url_for('users_api.get_user', user_id=record.id)
+    elif isinstance(record, dt.db.ExternalFile):
+        return url_for('external_files_api.get_external_file', external_file_id=record.id)
     return '#'
 
 
@@ -78,6 +80,8 @@ def get_list_url(record):
         return url_for('jobs.render_job_list', job_id=record.id)
     elif isinstance(record, dt.workflows.WorkflowModule):
         return url_for('workflows.render_workflow_module_list')
+    elif isinstance(record, dt.db.ExternalFile):
+        return url_for('external_files.render_external_file_list')
     return '#'
 
 
@@ -86,6 +90,8 @@ def get_download_url(record):
         return url_for('collections_api.download_collection', collection_id=record.id)
     elif isinstance(record, dt.db.Sample):
         return url_for('samples_api.download_sample', sample_id=record.id)
+    elif isinstance(record, dt.db.ExternalFile):
+        return url_for('external_files_api.download_external_file', external_file_id=record.id)
     return '#'
 
 
@@ -194,11 +200,12 @@ def process_input_dict(input_dict, set_permissions=False):
     id_keys = {
         'user_group_id',
         'primary_user_group_id',
+        'sample_ids',
         'collection_ids',
         'analysis_ids'
     }
     new_dict = {
-        key: (False if value.lower() == 'false' else True) if key in boolean_keys
+        key: (False if value.lower() == 'false' else True) if isinstance(value, str) and key in boolean_keys
         else (None if value == '' else value) if key in id_keys
         else value
         for key, value in input_dict.items()
@@ -210,3 +217,12 @@ def process_input_dict(input_dict, set_permissions=False):
     return new_dict
 
 
+def make_valid_tag(s):
+    if isinstance(s, str):
+        for c in ' !"#$%&\'()*+,./:;<=>?@[\]^`{|}~':
+            s = s.replace(c, '')
+    return s
+
+
+def make_tag_from_name(s):
+    return s.lower().replace(' ', '-') if isinstance(s, str) else s

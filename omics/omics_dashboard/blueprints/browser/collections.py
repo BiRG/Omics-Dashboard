@@ -1,12 +1,13 @@
 from flask import render_template, request, redirect, url_for, Blueprint
 
 import data_tools as dt
-from data_tools.collections import get_collections, get_collection, delete_collection, update_collection
-from helpers import get_current_user, handle_exception_browser, process_input_dict
-from data_tools.template_data.form import CollectionCreateFormData
-from data_tools.template_data.entry_page import CollectionPageData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.collections import get_collections, get_collection, delete_collection
 from data_tools.db import Sample
+from data_tools.template_data.entry_page import CollectionPageData
+from data_tools.template_data.form import CollectionCreateFormData
+from data_tools.template_data.list_table import ListTableData
+from helpers import get_current_user, handle_exception_browser, process_input_dict
+
 collections = Blueprint('collections', __name__, url_prefix='/collections')
 
 
@@ -44,9 +45,9 @@ def render_create_collection():
         current_user = get_current_user()
         if request.method == 'POST':
             form_data = process_input_dict(request.form.to_dict(), True)
-            samples = [dt.samples.get_sample(current_user, sample_id) for sample_id in request.form.getlist('samples')]
-            if 'sample' in form_data:
-                del form_data['samples']
+            samples = [dt.samples.get_sample(current_user, sample_id) for sample_id in request.form.getlist('sample_ids')]
+            if 'sample_ids' in form_data:
+                del form_data['sample_ids']
             sort_by = form_data['sort_by']
             del form_data['sort_by']
             collection = dt.collections.create_collection(current_user, samples, form_data, sort_by=sort_by)

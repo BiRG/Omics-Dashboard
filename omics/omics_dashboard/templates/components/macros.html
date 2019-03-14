@@ -5,8 +5,8 @@
 
 {% macro selector(form_entry_data)  %}
   <div class="form-group">
-    <label for="{{ form_entry_data.id }}">{{ form_entry_data.label }}</label>
-    <select id="{{ form_entry_data.id }}" name="{{ form_entry_data.name }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if  form_entry_data.select_multiple }}>
+    <label for="{{ form_entry_data.id | make_valid_tag }}">{{ form_entry_data.label }}</label>
+    <select id="{{ form_entry_data.id | make_valid_tag }}" name="{{ form_entry_data.name }}" class="form-control selectpicker" data-live-search="true" {{ 'multiple' if  form_entry_data.select_multiple }}>
       {% for item in form_entry_data.select_options %}
       <option value="{{ item.value }}" {{ 'selected' if item.selected }}>{{ item.contents }}</option>
       {% endfor %}
@@ -19,7 +19,7 @@
     <div class="card w-100">
       <h4 class="card-header text-white bg-primary">{{ table_data.title }}</h4>
       <div class="card-body">
-        <table id="{{ table_data.title.lower().replace(' ', '-') }}-table" class="data-table table table-striped table-bordered" cellspacing="0" width="auto">
+        <table id="{{ table_data.title | make_tag_from_name }}-table" class="table table-striped table-bordered" cellspacing="0" width="auto">
           <thead>
           <tr>
             {% for heading in table_data.headings %}

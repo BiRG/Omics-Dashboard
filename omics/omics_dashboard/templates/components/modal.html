@@ -20,12 +20,17 @@
   </div>
 {% endmacro %}
 
-{% macro modal_script() %}
+{% macro modal_script(refresh_on_close=false) %}
   <script>
     function activateModal(title, message) {
       $('#modalLabel').text(title);
       $('#modalBody').text(message);
       $('#modal').modal();
     }
+    {% if refresh_on_close %}
+    $('#modal').on('hidden.bs.modal', function () {
+        location.reload();
+    });
+    {% endif %}
   </script>
 {% endmacro %}
