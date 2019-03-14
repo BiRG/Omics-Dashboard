@@ -1,6 +1,6 @@
 from typing import Any, Union, List
 
-from data_tools.db import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample
+from data_tools.db import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
 from data_tools.template_data.page import PageData
 from data_tools.users import is_write_permitted
 from data_tools.workflows import WorkflowModule
@@ -46,6 +46,8 @@ class ListTableRow:
             if 'ID' in self.values: self.values.pop('ID')
             self.values['Package'] = ListTableCell(record.package_name)
             self.values['Subpackage'] = ListTableCell(record.subpackage_name)
+        if isinstance(record, ExternalFile):
+            self.values['Path'] = ListTableCell(record.filename)
 
 
 class FileListTableRow:

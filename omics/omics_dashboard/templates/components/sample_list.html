@@ -19,7 +19,7 @@
           </thead>
           <tbody>
           {% for row in samples.rows %}
-            <tr id="tr-{{ row.values['ID'].value }}" data-sample-id="{{ row.values['ID'].value }}">
+            <tr id="tr-{{ row.values['ID'].value | make_valid_tag }}" data-sample-id="{{ row.values['ID'].value }}">
               {% for key in samples.headings %}
                 {% if row.values[key].href is not none %}
               <td><a href="{{ row.values[key].href }}">{{ row.values[key].value }}</a></td>

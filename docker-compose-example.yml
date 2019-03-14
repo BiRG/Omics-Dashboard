@@ -11,6 +11,7 @@ services:
     env_file: common.env
     volumes:
       - data:/data
+      - ${EXTERNALDIR}:/data/external  
       - ${MODULEDIR}:/modules
       - jobserverexecution:/cromwell-executions
       - tmp:/tmp  
@@ -21,6 +22,7 @@ services:
     privileged: true
     volumes:
       - data:/data
+      - ${EXTERNALDIR}:/data/external  
       - ${MODULEDIR}:/modules
       - /var/run/docker.sock:/var/run/docker.sock
       - tmp:/tmp
@@ -44,6 +46,7 @@ services:
       - ${HOSTPORT}:80
     volumes:
       - data:/data
+      - ${EXTERNALDIR}:/data/external  
     depends_on:
       - jobserver
       - omics

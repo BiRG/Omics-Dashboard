@@ -33,6 +33,7 @@ class Job:
         self.all_can_write = False
         self.group_can_read = True
         self.group_can_write = False
+        self.logs = {}
         try:
             self.refresh()
         except NotFoundException:
@@ -57,6 +58,17 @@ class Job:
         self.status = job_data['status'] if 'status' in job_data else None
         self.active = True
 
+    def get_flattened_logs(self):
+        self.get_logs()
+        try:
+            return {
+                f'{key}.{inner_key}': inner_value
+                for key, value in self.logs.items()
+                for inner_key, inner_value in value.items()
+            }
+        except Exception:
+            return {}
+
     def cancel(self):
         response = requests.post(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/abort')
         return response.json()
@@ -72,6 +84,15 @@ class Job:
         response = requests.get(url)
         return response.json()
 
+    def get_logs(self):
+        log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
+        try:
+            self.logs = {
+                key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()}
+                for key, value in log_response.json()['calls'].items()}
+        except Exception:
+            self.logs = {'logs': log_response.text}
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -81,7 +102,8 @@ class Job:
             'submission': self.submission,
             'start': self.start,
             'end': self.end,
-            'status': self.status
+            'status': self.status,
+            'logs': self.logs
         }
 
 

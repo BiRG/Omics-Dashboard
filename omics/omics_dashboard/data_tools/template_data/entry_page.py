@@ -3,18 +3,19 @@ from typing import Union
 from flask import url_for
 
 from data_tools.collections import get_collections
-from data_tools.samples import get_samples
-from data_tools.db import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup
+from data_tools.db import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
+    ExternalFile
 from data_tools.jobserver_control import Job
-from data_tools.template_data.attribute_table import AttributeTableData, FileAttributeTableData, WorkflowModuleAttributeTableData, DatasetSummaryTableData
+from data_tools.samples import get_samples
+from data_tools.template_data.attribute_table import AttributeTableData, FileAttributeTableData, \
+    WorkflowModuleAttributeTableData, DatasetSummaryTableData
+from data_tools.template_data.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
 from data_tools.template_data.label_column_table import LabelColumnTableData
 from data_tools.template_data.list_table import ListTableData, FileListTableData
 from data_tools.template_data.page import PageData
-from data_tools.template_data.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
 from data_tools.users import is_write_permitted, get_read_permitted_records
 from data_tools.workflows import WorkflowModule
 from helpers import get_update_url, get_list_url, get_download_url
-import ruamel.yaml as yaml
 
 
 class EntryPageData(PageData):
@@ -41,6 +42,15 @@ class FileEntryPageData(EntryPageData):
         self.file_attribute_table_data = FileAttributeTableData(current_user, record)
         self.dataset_summary_table_data = DatasetSummaryTableData(current_user, record)
         self.download_url = get_download_url(record)
+
+
+class ExternalFilePageData(EntryPageData):
+    def __init__(self,
+                 current_user: User,
+                 external_file: ExternalFile):
+        super(ExternalFilePageData, self).__init__(current_user, external_file, 'External File')
+        self.analysis_table_data = ListTableData(current_user, external_file.analyses, 'Analyses')
+        self.download_url = get_download_url(external_file)
 
 
 class CollectionPageData(FileEntryPageData):
@@ -83,12 +93,14 @@ class AnalysisPageData(EntryPageData):
                                                    'Collections',
                                                    attached, 'Attached')
         self.attach_url = url_for('analyses_api.attach_collection', analysis_id=analysis.id)
+        self.merge_url = url_for('collections_api.merge_collections')
 
 
 class JobPageData(EntryPageData):
     def __init__(self, current_user: User, job: Job):
         super(JobPageData, self).__init__(current_user, job, 'Job')
         self.job_chart_url = url_for('jobs_api.get_chart_metadata', job_id=job.id)
+        self.logs = job.get_flattened_logs()
 
 
 class WorkflowPageData(EntryPageData):
