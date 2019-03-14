@@ -114,6 +114,7 @@ class WorkflowModulePageData(EntryPageData):
         super(WorkflowModulePageData, self).__init__(current_user, workflow_module, 'Workflow Module')
         self.workflow_module_contents = workflow_module.get_workflow_module_contents(as_text=True)
         self.attribute_table_data = WorkflowModuleAttributeTableData(workflow_module)
+        print(self.attribute_table_data.values)
 
 
 class UserPageData(EntryPageData):
