@@ -129,7 +129,6 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
             elif key == 'admin' and current_user.admin:
                 target_user.admin = value
             # note that if you want to make a user an admin of a user group, do it by editing the user group
-            # note that if you want to make a use an admin, do it through elevation.
             elif key in target_user.to_dict() and key not in {'password', 'active', 'admin', 'admin_group_ids',
                                                               'group_ids'}:
                 target_user.__setattr__(key, value)
