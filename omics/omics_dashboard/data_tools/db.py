@@ -6,6 +6,7 @@ UserGroup provides User metadata but User provides only UserGroup ids
 """
 import json
 import os
+from typing import Dict, Any
 
 import bcrypt
 import magic
@@ -30,8 +31,23 @@ class Base(Model):
     owner_id = None
     user_group_id = None
 
+    protected_keys = {
+        'created_on',
+        'updated_on',
+    }
+
+    admin_keys = set()
+
     def to_dict(self):
         return {'id': self.id}
+
+    def update(self, new_data: Dict[str, Any], admin: bool = False):
+        def invalid(val):
+            return val in self.protected_keys if admin else (val in self.protected_keys | self.admin_keys)
+
+        for key, value in new_data.items():
+            if hasattr(self, key) and not invalid(key):
+                self.__setattr__(key, value)
 
 
 db = SQLAlchemy(model_class=Base)
@@ -127,6 +143,13 @@ class User(db.Model):
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
 
+    admin_keys = {
+        'active',
+        'admin',
+        'id',
+        'owner_id'
+    }
+
     def set_password(self, plain_password: str):
         self.password = bcrypt.hashpw(bytes(plain_password, 'utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -146,7 +169,9 @@ class User(db.Model):
             'active': self.active,
             'primary_user_group_id': self.primary_user_group_id,
             'group_ids': [group.id for group in self.user_groups],
-            'admin_group_ids': [group.id for group in self.admin_user_groups]
+            'admin_group_ids': [group.id for group in self.admin_user_groups],
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
         if not sanitized:
             dict_rep['password'] = self.password
@@ -185,7 +210,9 @@ class UserGroup(db.Model):
             'name': self.name,
             'description': self.description,
             'members': [member.to_dict() for member in self.members],
-            'admins': [admin.to_dict() for admin in self.admins]
+            'admins': [admin.to_dict() for admin in self.admins],
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -223,12 +250,27 @@ class OmicsRecordMixin(object):
     @declared_attr
     def user_group(cls): return db.relationship(UserGroup, foreign_keys=[cls.user_group_id])
 
+    admin_keys = {
+        'creator',
+        'creator_id',
+        'last_editor',
+        'last_editor_id'
+    }
+
 
 class FileRecordMixin(OmicsRecordMixin):
     filename = db.Column(db.String)
     file_type = db.Column(db.String, default='hdf5')
     data_path = DATADIR
     file_ext = 'h5'
+
+    admin_keys = {
+        'creator',
+        'creator_id',
+        'last_editor',
+        'last_editor_id',
+        'filename'
+    }
 
     @staticmethod
     def delete_file(mapper, connection, target):
@@ -342,7 +384,9 @@ class Analysis(OmicsRecordMixin, db.Model):
             'user_group_id': self.user_group_id,
             'collections': [collection.to_dict() for collection in self.collections],
             'workflows': [workflow.to_dict() for workflow in self.workflows],
-            'external_files': [external_file.to_dict() for external_file in self.external_files]
+            'external_files': [external_file.to_dict() for external_file in self.external_files],
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -368,7 +412,9 @@ class Sample(NumericFileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'sample_group_ids': [group.id for group in self.sample_groups],
-            'file_info': self.get_file_info() if self.file_exists() else {}
+            'file_info': self.get_file_info() if self.file_exists() else {},
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -392,7 +438,9 @@ class SampleGroup(OmicsRecordMixin, db.Model):
             'all_can_write': self.all_can_write,
             'user_group_id': self.user_group_id,
             'upload_job_id': self.upload_job_id,
-            'samples': [sample.to_dict() for sample in self.samples]
+            'samples': [sample.to_dict() for sample in self.samples],
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -425,7 +473,9 @@ class Collection(NumericFileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'file_info': self.get_file_info() if self.file_exists() else {}
+            'file_info': self.get_file_info() if self.file_exists() else {},
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -470,7 +520,9 @@ class ExternalFile(FileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'file_info': self.get_file_info() if self.file_exists() else {}
+            'file_info': self.get_file_info() if self.file_exists() else {},
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -515,7 +567,9 @@ class Workflow(FileRecordMixin, db.Model):
             'file_type': self.file_type,
             'workflow_language': self.workflow_language,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'workflow_definition': self.get_file_info()
+            'workflow_definition': self.get_file_info(),
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -534,7 +588,9 @@ class UserInvitation(db.Model):
             'id': self.id,
             'creator_id': self.creator_id,
             'primary_user_group_id': self.primary_user_group_id,
-            'value': self.value
+            'value': self.value,
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -545,7 +601,9 @@ class JobserverToken(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'value': self.value
+            'value': self.value,
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat()
         }
 
 
@@ -553,3 +611,19 @@ class JobserverToken(db.Model):
 Workflow.register_listeners()
 Sample.register_listeners()
 Collection.register_listeners()
+
+
+def validate_update_dict(record: db.Model, user: User, new_data: Dict[str, Any]):
+    protected_keys = {
+        'created_on',
+        'updated_on',
+    }
+    admin_keys = {
+        'owner_id',
+        'creator_id'
+    }
+
+    def invalid(key):
+        return key in protected_keys if user.admin else (key in protected_keys | admin_keys)
+
+    return {key: value for key, value in new_data if hasattr(record, key) and not invalid(key)}

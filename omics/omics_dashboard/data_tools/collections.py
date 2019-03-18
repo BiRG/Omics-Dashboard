@@ -86,9 +86,7 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
     """
     if is_write_permitted(user, collection):
         # file attributes and database attributes should be separated
-        for key, value in new_data.items():
-            if key in collection.to_dict() and key not in {'filename', 'file_info'}:
-                collection.__setattr__(key, value)
+        collection.update(new_data)
         if 'file_info' in new_data:
             mdt.update_metadata(collection.filename,
                                 {key: value for key, value in new_data['file_info'].items()})

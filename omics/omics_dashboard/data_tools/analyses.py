@@ -1,7 +1,8 @@
-from data_tools.util import AuthException
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
-from data_tools.db import Analysis, Collection, User, db
 from typing import List, Dict, Any
+
+from data_tools.db import Analysis, Collection, User, db
+from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.util import AuthException
 
 
 def get_analyses(user: User) -> List[Analysis]:
@@ -35,9 +36,7 @@ def update_analysis(user: User, analysis: Analysis, new_data: Dict[str, Any]) ->
     :return:
     """
     if is_write_permitted(user, analysis):
-        for key, value in new_data.items():
-            if hasattr(analysis, key):
-                analysis.__setattr__(key, value)
+        analysis.update(new_data)
         analysis.last_editor = user
         db.session.commit()
         return analysis

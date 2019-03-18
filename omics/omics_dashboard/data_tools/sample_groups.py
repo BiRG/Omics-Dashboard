@@ -1,10 +1,9 @@
-import json
-from data_tools.samples import get_sample_metadata
-from data_tools.util import AuthException, NotFoundException, DATADIR
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
-from data_tools.db import User, Sample, SampleGroup, db
-import data_tools.file_tools.metadata_tools as mdt
 from typing import List, Dict, Any
+
+from data_tools.db import User, Sample, SampleGroup, db
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
+    get_all_read_permitted_records
+from data_tools.util import AuthException, NotFoundException
 
 
 def get_sample_groups(user: User) -> List[SampleGroup]:
@@ -56,9 +55,7 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
     """
 
     if is_write_permitted(user, sample_group):
-        for key, value in new_data.items():
-            if hasattr(sample_group, key):
-                sample_group.__setattr__(key, value)
+        sample_group.update(new_data)
         sample_group.last_editor = user
         db.session.commit()
         return sample_group

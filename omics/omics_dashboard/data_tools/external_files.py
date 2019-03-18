@@ -82,9 +82,7 @@ def update_external_file(user: User, external_file: ExternalFile, new_data: Dict
             original_filename = external_file.filename
             shutil.copy(original_filename, new_data['filename'])
             os.remove(original_filename)
-        for key, value in new_data.items():
-            if hasattr(external_file, key):
-                external_file.__setattr__(key, value)
+        external_file.update(new_data)
         external_file.last_editor = user
         db.session.commit()
         return external_file

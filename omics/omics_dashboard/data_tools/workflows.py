@@ -1,13 +1,12 @@
+import json
 import os
 from typing import List, Dict, Any
 
 from ruamel import yaml
-import json
 
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
-    get_all_read_permitted_records
-from data_tools.util import AuthException, NotFoundException, DATADIR, MODULEDIR
 from data_tools.db import User, Workflow, db
+from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.util import AuthException, NotFoundException, DATADIR, MODULEDIR
 
 
 class WorkflowModule:
@@ -104,9 +103,7 @@ def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any]) ->
     :return:
     """
     if is_write_permitted(user, workflow):
-        for key, value in new_data.items():
-            if key in workflow.to_dict() and key is not 'filename':
-                workflow.__setattr__(key, value)
+        workflow.update(new_data)
         if 'workflow_definition' in new_data:
             if workflow.file_type == 'json':
                 json.dump(new_data['workflow_definition'], open(workflow.filename, 'w+'))

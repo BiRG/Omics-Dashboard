@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.db import Sample, User, db
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
@@ -79,11 +79,7 @@ def update_sample(user: User, sample: Sample, new_data: Dict[str, Any]) -> Dict[
     """
     if is_write_permitted(user, sample):
         # file attributes and database attributes should be separated
-        for key, value in new_data.items():
-            print(f'{key}: {value}')
-            if key in sample.to_dict() and key not in {'file_info', 'filename'}:
-                print('in sample.to_dict()')
-                sample.__setattr__(key, value)
+        sample.update(new_data)
         if 'file_info' in new_data:
             mdt.update_metadata(sample.filename, new_data['file_info'])
         sample.last_editor = user
