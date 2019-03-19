@@ -42,6 +42,8 @@ def create_user_group(user: User, data: Dict[str, Any]) -> UserGroup:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     if user.id not in data['member_ids']:
         data['member_ids'].append(user.id)
     if user.id not in data['admin_ids']:
@@ -67,6 +69,9 @@ def update_user_group(user: User, user_group: UserGroup, new_data: Dict[str, Any
     :return:
     """
     if is_user_group_admin(user, user_group):
+        if 'id' in new_data:
+            if UserGroup.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'User group with id {new_data["id"]} already exists!')
         user_group.update(new_data)
         db.session.commit()
         return user_group

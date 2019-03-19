@@ -36,6 +36,9 @@ def update_analysis(user: User, analysis: Analysis, new_data: Dict[str, Any]) ->
     :return:
     """
     if is_write_permitted(user, analysis):
+        if 'id' in new_data:
+            if Analysis.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Analysis with id {new_data["id"]} already exists!')
         analysis.update(new_data)
         analysis.last_editor = user
         db.session.commit()
@@ -51,7 +54,8 @@ def create_analysis(user: User, data: Dict[str, Any], collections: List[Collecti
     :param collections:
     :return:
     """
-    print(f'data: {data}')
+    if 'id' in data:  # cannot create with designated id
+        del data['id']
     analysis = Analysis(creator=user,
                         owner=user,
                         last_editor=user,

@@ -86,6 +86,9 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
     """
     if is_write_permitted(user, collection):
         # file attributes and database attributes should be separated
+        if 'id' in new_data:
+            if Collection.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Collection with id {new_data["id"]} already exists!')
         collection.update(new_data)
         if 'file_info' in new_data:
             mdt.update_metadata(collection.filename,
@@ -200,31 +203,33 @@ def list_collection_paths(user: User, collection: Collection) -> List[str]:
 
 def create_collection(user: User,
                       samples: List[Sample],
-                      new_data: Dict[str, Any],
+                      data: Dict[str, Any],
                       sort_by: str = 'base_sample_id') -> Collection:
     """
     Create a new collection by concatenating samples. Collection metadata is set with new_data
     :param user:
     :param samples:
-    :param new_data: Collection attributes
+    :param data: Collection attributes
     :param sort_by:
     :return:
     """
-    new_data['owner_id'] = user.id
-    new_data['creator_id'] = user.id
+    data['owner_id'] = user.id
+    data['creator_id'] = user.id
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     print('check permissions on samples:\n')
     for sample in samples:
         if not is_read_permitted(user, sample):
             raise AuthException(f'User {user.id} is not permitted to access sample {sample.id}')
     filenames = [sample.filename for sample in samples]
-    new_collection = Collection(owner=user, creator=user, last_editor=user, name=new_data['name'])
+    new_collection = Collection(owner=user, creator=user, last_editor=user, name=data['name'])
     db.session.add(new_collection)
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
     h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x',
              sort_by=sort_by, merge_attributes=True)
-    update_collection(user, new_collection, new_data)
+    update_collection(user, new_collection, data)
     return new_collection
 
 
@@ -283,7 +288,7 @@ def create_new_label_dataset(user: User, collection: Collection, name: str, data
     if is_write_permitted(user, collection):
         if re.match('^[^\d\W]\w*$', name):
             collection.create_label_column(name, data_type)
-            return({'message': f'Created dataset {name} in collection {collection.id}.'})
+            return {'message': f'Created dataset {name} in collection {collection.id}.'}
         raise ValueError(f'Suggested name {name} is not valid.')
     raise AuthException(f'User {user.email} not permitted to modify collection {collection.id}.')
 

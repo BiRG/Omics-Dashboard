@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from typing import List, Dict, Any
 
 from ruamel import yaml
@@ -53,7 +54,9 @@ class WorkflowModule:
             'package_description': self.package_description,
             'subpackage': self.subpackage_name,
             'subpackage_description': self.subpackage_description,
-            'tool_definition': self.get_workflow_module_contents()
+            'tool_definition': self.get_workflow_module_contents(),
+            'created_on': datetime.fromtimestamp(os.path.getctime(self.path)).isoformat(),
+            'updated_on': datetime.fromtimestamp(os.path.getmtime(self.path)).isoformat()
         }
 
 
@@ -103,6 +106,9 @@ def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any]) ->
     :return:
     """
     if is_write_permitted(user, workflow):
+        if 'id' in new_data:
+            if Workflow.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Workflow with id {new_data["id"]} already exists!')
         workflow.update(new_data)
         if 'workflow_definition' in new_data:
             if workflow.file_type == 'json':
@@ -123,6 +129,8 @@ def create_workflow(user: User, data: Dict[str, Any]) -> Workflow:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with designated id
+        del data['id']
     workflow = Workflow(creator=user, owner=user, last_editor=user, name=data['name'])
     db.session.add(workflow)
     db.session.commit()

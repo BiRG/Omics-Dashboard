@@ -2,6 +2,7 @@ from flask import jsonify, request, Blueprint
 
 import data_tools as dt
 from helpers import get_current_user, handle_exception
+
 workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows')
 
 
@@ -21,6 +22,15 @@ def get_workflow_modules():
         if request.args.get('path'):
             return jsonify(dt.workflows.get_module(request.args.get('path')).to_dict())
         return jsonify([module.to_dict() for module in dt.workflows.get_modules()])
+    except Exception as e:
+        return handle_exception(e)
+
+
+@workflows_api.route('/workflow_modules/<module_id>')
+def get_workflow_module(module_id=None):
+    try:
+        get_current_user()
+        return jsonify(dt.workflows.get_module_by_id(module_id).to_dict())
     except Exception as e:
         return handle_exception(e)
 

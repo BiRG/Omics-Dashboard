@@ -37,6 +37,8 @@ def create_sample_group(user: User, data: Dict[str, Any]) -> SampleGroup:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with designated id
+        del data['id']
     name = data['name'] if 'name' in data else data['sample_group_name'] if 'sample_group_name' in data else ''
     sample_group = SampleGroup(owner=user, creator=user, last_editor=user, name=name)
     db.session.add(sample_group)
@@ -55,6 +57,9 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
     """
 
     if is_write_permitted(user, sample_group):
+        if 'id' in new_data:
+            if SampleGroup.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Sample group with id {new_data["id"]} already exists!')
         sample_group.update(new_data)
         sample_group.last_editor = user
         db.session.commit()
