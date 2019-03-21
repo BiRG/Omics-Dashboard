@@ -6,6 +6,7 @@ from flask import request, jsonify, Blueprint, send_from_directory
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
+from data_tools.users import is_write_permitted
 from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -20,7 +21,7 @@ def list_external_files():
             return jsonify(
                 [external_file.to_dict() for external_file in dt.external_files.get_external_files(current_user)])
         if request.method == 'POST':
-            # this will only create a record. the "upload" route should be used to both create the record and upload a file
+            # this will only create a record. the "upload" route should be used to both create the record and upload
             return jsonify(dt.external_files.create_external_file(current_user, request.get_json(force=True)).to_dict())
     except Exception as e:
         return handle_exception(e)
@@ -32,7 +33,8 @@ def get_external_file(external_file_id=None):
         current_user = get_current_user()
         external_file = dt.external_files.get_external_file(current_user, external_file_id)
         if request.method == 'GET':
-            return jsonify(external_file.to_dict())
+            return jsonify({**external_file.to_dict(),
+                            'is_write_permitted': is_write_permitted(current_user, external_file)})
         if request.method == 'POST':
             new_data = request.get_json(force=True)
             move_file = 'filename' in new_data and 'move_file' in new_data and new_data['move_file']

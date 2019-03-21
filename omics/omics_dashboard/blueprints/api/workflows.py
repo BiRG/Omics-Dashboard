@@ -1,6 +1,7 @@
 from flask import jsonify, request, Blueprint
 
 import data_tools as dt
+from data_tools.users import is_write_permitted
 from helpers import get_current_user, handle_exception
 
 workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows')
@@ -41,7 +42,7 @@ def get_workflow(workflow_id=None):
         user = get_current_user()
         workflow = dt.workflows.get_workflow(user, workflow_id)
         if request.method == 'GET':
-            return jsonify(workflow.to_dict())
+            return jsonify({**workflow.to_dict(), 'is_write_permitted': is_write_permitted(user, workflow)})
         if request.method == 'POST':
             return jsonify(dt.workflows.update_workflow(user, workflow, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':

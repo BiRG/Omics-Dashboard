@@ -6,8 +6,10 @@ from flask import jsonify, request, make_response, send_from_directory, redirect
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.util import DATADIR, UPLOADDIR
+from data_tools.users import is_write_permitted
+from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
+
 samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
 
 
@@ -25,7 +27,7 @@ def get_sample(sample_id=None):
         user = get_current_user()
         sample = dt.samples.get_sample(user, sample_id)
         if request.method == 'GET':
-            return jsonify(sample.to_dict())
+            return jsonify({**sample.to_dict(), 'is_write_permitted': is_write_permitted(user, sample)})
         if request.method == 'POST':
             if 'file' in request.files:
                 print('File upload')

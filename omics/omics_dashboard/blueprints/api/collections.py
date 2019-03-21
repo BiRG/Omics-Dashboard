@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 
 import data_tools as dt
 from data_tools.file_tools.collection_tools import validate_update
+from data_tools.users import is_write_permitted
 from data_tools.util import DATADIR, UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -38,7 +39,7 @@ def get_collection(collection_id=None):
         user = get_current_user()
         collection = dt.collections.get_collection(user, collection_id)
         if request.method == 'GET':
-            return jsonify(collection.to_dict())
+            return jsonify({**collection.to_dict(), 'is_write_permitted': is_write_permitted(user, collection)})
 
         if request.method == 'DELETE':
             return jsonify(dt.collections.delete_collection(user, collection))
