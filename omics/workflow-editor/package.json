@@ -32,9 +32,9 @@
     "angular2-draggable": "^2.1.8"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "~0.7.0",
+    "@angular-devkit/build-angular": "^0.13.6",
     "@angular/cli": "~7.3.1",
-    "@angular/compiler-cli": "^7.2.4",
+    "@angular/compiler-cli": "^7.2.10",
     "@angular/language-service": "^7.2.4",
     "@types/jasmine": "~2.8.6",
     "@types/jasminewd2": "~2.0.3",
@@ -42,7 +42,7 @@
     "codelyzer": "~4.2.1",
     "jasmine-core": "~2.99.1",
     "jasmine-spec-reporter": "~4.2.1",
-    "karma": "^3.0.0",
+    "karma": "^4.0.1",
     "karma-chrome-launcher": "~2.2.0",
     "karma-coverage-istanbul-reporter": "~2.0.0",
     "karma-jasmine": "~1.1.1",
