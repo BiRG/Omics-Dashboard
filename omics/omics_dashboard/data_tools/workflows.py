@@ -109,7 +109,7 @@ def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any], fi
     """
     if is_write_permitted(user, workflow):
         if 'id' in new_data:
-            if workflow.id != new_data['id'] and Workflow.query.filter_by(id=new_data['id']) is not None:
+            if workflow.id != int(new_data['id']) and Workflow.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Workflow with id {new_data["id"]} already exists!')
         workflow.update(new_data)
         if 'workflow_definition' in new_data:

@@ -83,7 +83,7 @@ def update_external_file(user: User, external_file: ExternalFile, new_data: Dict
     """
     if is_write_permitted(user, external_file):
         if 'id' in new_data:
-            if external_file.id != new_data['id'] and ExternalFile.query.filter_by(id=new_data['id']) is not None:
+            if external_file.id != int(new_data['id']) and ExternalFile.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'External file with id {new_data["id"]} already exists!')
         if move_file and 'filename' in new_data:
             original_filename = external_file.filename

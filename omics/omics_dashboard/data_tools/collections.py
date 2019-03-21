@@ -87,7 +87,7 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
     if is_write_permitted(user, collection):
         # file attributes and database attributes should be separated
         if 'id' in new_data:
-            if collection.id != new_data['id'] and Collection.query.filter_by(id=new_data['id']) is not None:
+            if collection.id != int(new_data['id']) and Collection.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Collection with id {new_data["id"]} already exists!')
         collection.update(new_data)
         if filename is not None:

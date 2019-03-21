@@ -81,7 +81,7 @@ def update_sample(user: User, sample: Sample, new_data: Dict[str, Any], filename
     if is_write_permitted(user, sample):
         # file attributes and database attributes should be separated
         if 'id' in new_data:
-            if sample.id != new_data['id'] and Sample.query.filter_by(id=new_data['id']) is not None:
+            if sample.id != int(new_data['id']) and Sample.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Sample with id {new_data["id"]} already exists!')
         sample.update(new_data)
         if 'file_info' in new_data:

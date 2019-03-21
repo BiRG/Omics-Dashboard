@@ -70,7 +70,7 @@ def update_user_group(user: User, user_group: UserGroup, new_data: Dict[str, Any
     """
     if is_user_group_admin(user, user_group):
         if 'id' in new_data:
-            if user_group.id != new_data['id'] and UserGroup.query.filter_by(id=new_data['id']) is not None:
+            if user_group.id != int(new_data['id']) and UserGroup.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'User group with id {new_data["id"]} already exists!')
         user_group.update(new_data)
         db.session.commit()
