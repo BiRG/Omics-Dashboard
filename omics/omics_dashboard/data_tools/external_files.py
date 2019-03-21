@@ -54,37 +54,46 @@ def get_external_file_by_path(user: User, filename: str) -> ExternalFile:
     raise AuthException(f'User {user.id} is not authorized to view external file record for {filename}')
 
 
-def create_external_file(user: User, new_data: Dict[str, Any]) -> ExternalFile:
+def create_external_file(user: User, data: Dict[str, Any]) -> ExternalFile:
     """
     Create a new external file record (will not create the file at all, use upload for that)
     :param user:
-    :param new_data:
+    :param data:
     :return:
     """
-    external_file = ExternalFile(name=new_data['name'], creator=user, owner=user)
+    if 'id' in data:  # cannot create with designated id
+        del data['id']
+    external_file = ExternalFile(name=data['name'], creator=user, owner=user)
     db.session.add(external_file)
     db.session.commit()
-    update_external_file(user, external_file, new_data)
+    update_external_file(user, external_file, data)
     return external_file
 
 
 def update_external_file(user: User, external_file: ExternalFile, new_data: Dict[str, Any],
-                         move_file: bool = False) -> ExternalFile:
+                         move_file: bool = False, filename: str = None) -> ExternalFile:
     """
     Update the data in the external file record
     :param user:
     :param external_file:
     :param new_data:
+    :param move_file:
+    :param filename:
     :return:
     """
     if is_write_permitted(user, external_file):
+        if 'id' in new_data:
+            if external_file.id != int(new_data['id']) and ExternalFile.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'External file with id {new_data["id"]} already exists!')
         if move_file and 'filename' in new_data:
             original_filename = external_file.filename
             shutil.copy(original_filename, new_data['filename'])
             os.remove(original_filename)
-        for key, value in new_data.items():
-            if hasattr(external_file, key):
-                external_file.__setattr__(key, value)
+        if filename is not None:
+            os.remove(external_file.filename)
+            shutil.copy(filename, external_file.filename)
+            os.remove(filename)
+        external_file.update(new_data)
         external_file.last_editor = user
         db.session.commit()
         return external_file

@@ -1,10 +1,9 @@
-import json
-from data_tools.samples import get_sample_metadata
-from data_tools.util import AuthException, NotFoundException, DATADIR
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
-from data_tools.db import User, Sample, SampleGroup, db
-import data_tools.file_tools.metadata_tools as mdt
 from typing import List, Dict, Any
+
+from data_tools.db import User, Sample, SampleGroup, db
+from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
+    get_all_read_permitted_records
+from data_tools.util import AuthException, NotFoundException
 
 
 def get_sample_groups(user: User) -> List[SampleGroup]:
@@ -38,6 +37,8 @@ def create_sample_group(user: User, data: Dict[str, Any]) -> SampleGroup:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with designated id
+        del data['id']
     name = data['name'] if 'name' in data else data['sample_group_name'] if 'sample_group_name' in data else ''
     sample_group = SampleGroup(owner=user, creator=user, last_editor=user, name=name)
     db.session.add(sample_group)
@@ -56,9 +57,10 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
     """
 
     if is_write_permitted(user, sample_group):
-        for key, value in new_data.items():
-            if hasattr(sample_group, key):
-                sample_group.__setattr__(key, value)
+        if 'id' in new_data:
+            if sample_group.id != new_data['id'] and SampleGroup.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Sample group with id {new_data["id"]} already exists!')
+        sample_group.update(new_data)
         sample_group.last_editor = user
         db.session.commit()
         return sample_group

@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 
 import data_tools as dt
 from data_tools.file_tools.collection_tools import validate_update
+from data_tools.users import is_write_permitted
 from data_tools.util import DATADIR, UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -38,14 +39,30 @@ def get_collection(collection_id=None):
         user = get_current_user()
         collection = dt.collections.get_collection(user, collection_id)
         if request.method == 'GET':
-            return jsonify(collection.to_dict())
+            return jsonify({**collection.to_dict(), 'is_write_permitted': is_write_permitted(user, collection)})
 
         if request.method == 'DELETE':
             return jsonify(dt.collections.delete_collection(user, collection))
 
-        new_data = request.get_json(force=True)
+        if request.content_type == 'application/json':
+            new_data = process_input_dict(request.get_json(force=True))
+        else:
+            new_data = process_input_dict(request.form.to_dict())
 
         if request.method == 'POST':
+            if 'file' in request.files or 'file' in new_data:
+                filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
+                if 'file' in request.files:
+                    if request.files['file'].filename == '':
+                        raise ValueError('No file uploaded')
+                    request.files['file'].save(filename)
+                else:
+                    with open(filename, 'wb') as file:
+                        collection_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+                        file.write(collection_file_data)
+                        del new_data['file']
+                if dt.util.validate_file(filename):
+                    return jsonify(dt.collections.update_collection(user, collection, new_data, filename).to_dict())
             return jsonify(dt.collections.update_collection(user, collection, new_data).to_dict())
 
         if request.method == 'PATCH':

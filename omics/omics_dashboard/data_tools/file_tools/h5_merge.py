@@ -58,7 +58,7 @@ def make_2d(arr, dim_ind):
     return arr
 
 
-def h5_merge(infilenames: list, outfilename: str, orientation: str = 'vert', reserved_paths: list = List[str],
+def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert', reserved_paths: List[str] = None,
              sort_by: str = 'base_sample_id', align_at: str = None, merge_attributes: bool = False) -> None:
     """
     Merge a list of hdf5 files into a single file
@@ -69,7 +69,8 @@ def h5_merge(infilenames: list, outfilename: str, orientation: str = 'vert', res
     :param sort_by: the name of the field in the final collection to sort columns/rows by
     :param align_at: the name of the label field to sort records by
     """
-
+    if reserved_paths is None:
+        reserved_paths = []
     files = [h5py.File(filename, "r", driver="core") for filename in infilenames]
 
     # collect all common paths between the files

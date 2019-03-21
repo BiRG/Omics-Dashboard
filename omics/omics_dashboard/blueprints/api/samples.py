@@ -6,8 +6,10 @@ from flask import jsonify, request, make_response, send_from_directory, redirect
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.util import DATADIR, UPLOADDIR
+from data_tools.users import is_write_permitted
+from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
+
 samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
 
 
@@ -25,20 +27,29 @@ def get_sample(sample_id=None):
         user = get_current_user()
         sample = dt.samples.get_sample(user, sample_id)
         if request.method == 'GET':
-            return jsonify(sample.to_dict())
+            return jsonify({**sample.to_dict(), 'is_write_permitted': is_write_permitted(user, sample)})
+
+        if request.content_type == 'application/json':
+            new_data = process_input_dict(request.get_json(force=True))
+        else:
+            new_data = process_input_dict(request.form.to_dict())
+
         if request.method == 'POST':
-            if 'file' in request.files:
-                print('File upload')
-                print(request.files)
+            if 'file' in request.files or 'file' in new_data:
                 filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
-                request.files['file'].save(filename)
-                if dt.util.validate_file(filename):
-                    dt.samples.upload_sample(user, filename, process_input_dict(request.form), sample_id)
+                if 'file' in request.files:
+                    if request.files['file'].filename == '':
+                        raise ValueError('No file uploaded')
+                    request.files['file'].save(filename)
                 else:
-                    raise ValueError('invalid content type')
-            else:
-                dt.samples.update_sample(user, sample, process_input_dict(request.get_json(force=True)))
-            return jsonify(sample.to_dict())
+                    with open(filename, 'wb') as file:
+                        sample_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+                        file.write(sample_file_data)
+                        del new_data['file']
+                if dt.util.validate_file(filename):
+                    return jsonify(dt.samples.update_sample(user, sample, new_data, filename).to_dict())
+            return jsonify(dt.samples.update_sample(user, sample, new_data).to_dict())
+
         if request.method == 'DELETE':
             return jsonify(dt.samples.delete_sample(user, dt.samples.get_sample(user, sample_id)))
     except Exception as e:

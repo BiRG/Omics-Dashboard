@@ -1,7 +1,9 @@
 from flask import request, jsonify, Blueprint
 
 import data_tools as dt
+from data_tools.users import is_write_permitted
 from helpers import get_current_user, handle_exception
+
 users_api = Blueprint('users_api', __name__, url_prefix='/api/users')
 
 
@@ -23,7 +25,8 @@ def get_user(user_id=None):
         current_user = get_current_user()
         target_user = dt.users.get_user(current_user, user_id)
         if request.method == 'GET':
-            return jsonify(target_user.to_dict())
+            return jsonify(
+                {**target_user.to_dict(), 'is_write_permitted': is_write_permitted(current_user, target_user)})
         if request.method == 'POST':
             return jsonify(dt.users.update_user(current_user, target_user, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':

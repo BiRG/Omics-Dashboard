@@ -71,6 +71,8 @@ def create_user(current_user: User, data: Dict[str, Any]) -> User:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     if current_user.admin:
         if User.query.filter_by(email=data['email']).count():
             raise ValueError('This email is already in use!')
@@ -115,6 +117,9 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
     :return:
     """
     if current_user is target_user or current_user.admin:
+        if 'id' in new_data:
+            if target_user.id != int(new_data['id']) and User.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'User with id {new_data["id"]} already exists!')
         # if new password provided, hash it
         if 'email' in new_data:
             email_count = User.query.filter_by(email=new_data['email']).count
@@ -198,7 +203,7 @@ def validate_login(email: str, password: str) -> User:
     """
     user = User.query.filter_by(email=email).first()
     if user is None or not user.check_password(password):
-        raise ValueError('Invalid username/password.')
+        raise AuthException('Invalid username/password.')
     return user
 
 

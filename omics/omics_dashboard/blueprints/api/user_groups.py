@@ -1,7 +1,9 @@
 from flask import request, jsonify, Blueprint
 
 import data_tools as dt
+from data_tools.users import is_write_permitted
 from helpers import get_current_user, handle_exception
+
 user_groups_api = Blueprint('user_groups_api', __name__, url_prefix='/api/user_groups')
 
 
@@ -24,7 +26,7 @@ def get_user_group(user_group_id=None):
         user = get_current_user()
         user_group = dt.user_groups.get_user_group(user, user_group_id)
         if request.method == 'GET':
-            return jsonify(user_group.to_dict())
+            return jsonify({**user_group.to_dict(), 'is_write_permitted': is_write_permitted(user, user_group)})
         if request.method == 'POST':
             new_data = request.get_json(force=True)
             if 'member_ids' in new_data:

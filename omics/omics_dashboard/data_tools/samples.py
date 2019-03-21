@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.db import Sample, User, db
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, get_all_read_permitted_records
+from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
@@ -68,28 +68,32 @@ def get_sample(user: User, sample_id: int) -> Sample:
     raise AuthException(f'User {user.email} is not permitted to access sample {sample_id}')
 
 
-def update_sample(user: User, sample: Sample, new_data: Dict[str, Any]) -> Dict[str, Any]:
+def update_sample(user: User, sample: Sample, new_data: Dict[str, Any], filename: str = None) -> Sample:
     """
     Change the attributes of the sample file with sample_id
     If a key exists in both the file and the db, it will be updated in both.
     :param user:
     :param sample:
     :param new_data:
+    :param filename:
     :return:
     """
     if is_write_permitted(user, sample):
         # file attributes and database attributes should be separated
-        for key, value in new_data.items():
-            print(f'{key}: {value}')
-            if key in sample.to_dict() and key not in {'file_info', 'filename'}:
-                print('in sample.to_dict()')
-                sample.__setattr__(key, value)
+        if 'id' in new_data:
+            if sample.id != int(new_data['id']) and Sample.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'Sample with id {new_data["id"]} already exists!')
+        sample.update(new_data)
         if 'file_info' in new_data:
             mdt.update_metadata(sample.filename, new_data['file_info'])
+        if filename is not None:
+            os.remove(sample.filename)
+            shutil.copy(filename, sample.filename)
+            os.remove(filename)
         sample.last_editor = user
         sample.filename = f'/data/samples/{sample.id}.h5'
         db.session.commit()
-        return sample.to_dict()
+        return sample
     raise AuthException(f'User {user.email} is not permitted to modify sample {sample.id}')
 
 
@@ -132,6 +136,8 @@ def upload_sample(user: User, filename: str, data: Dict, sample_id: int = None) 
     :param sample_id:
     :return:
     """
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     if validate_file(filename):
         sample = Sample.query.filter_by(id=sample_id).first()
         name = data['name'] if 'name' in data else ''
@@ -140,10 +146,8 @@ def upload_sample(user: User, filename: str, data: Dict, sample_id: int = None) 
             db.session.add(sample)
             db.session.commit()
         sample.filename = f'{DATADIR}/samples/{sample.id}.h5'
-        print('copying')
         shutil.copy(filename, sample.filename)
         os.remove(filename)
-        print('updating')
         # reconcile file metadata with sample when possible:
         file_attrs = sample.get_file_attributes()
         new_data = {key: value for key, value in data.items()}
@@ -188,6 +192,8 @@ def create_placeholder_sample(user: User, data: Dict[str, Any]) -> Sample:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     sample = Sample(creator=user, owner=user, last_editor=user, name=data['name'])
     db.session.add(sample)
     db.session.commit()

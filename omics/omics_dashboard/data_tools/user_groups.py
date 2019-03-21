@@ -1,7 +1,8 @@
-from data_tools.util import AuthException, NotFoundException
-from data_tools.users import is_user_group_admin, get_read_permitted_records, get_all_read_permitted_records
-from data_tools.db import User, UserGroup, db
 from typing import List, Dict, Any
+
+from data_tools.db import User, UserGroup, db
+from data_tools.users import is_user_group_admin, get_read_permitted_records, get_all_read_permitted_records
+from data_tools.util import AuthException, NotFoundException
 
 
 def get_all_user_groups() -> List[UserGroup]:
@@ -41,6 +42,8 @@ def create_user_group(user: User, data: Dict[str, Any]) -> UserGroup:
     :param data:
     :return:
     """
+    if 'id' in data:  # cannot create with specified id
+        del data['id']
     if user.id not in data['member_ids']:
         data['member_ids'].append(user.id)
     if user.id not in data['admin_ids']:
@@ -66,9 +69,10 @@ def update_user_group(user: User, user_group: UserGroup, new_data: Dict[str, Any
     :return:
     """
     if is_user_group_admin(user, user_group):
-        for key, value in new_data.items():
-            if key in user_group.to_dict():
-                user_group.__setattr__(key, value)
+        if 'id' in new_data:
+            if user_group.id != int(new_data['id']) and UserGroup.query.filter_by(id=new_data['id']) is not None:
+                raise ValueError(f'User group with id {new_data["id"]} already exists!')
+        user_group.update(new_data)
         db.session.commit()
         return user_group
     raise AuthException(f'User {user.email} is not authorized to modify user group {user_group.id}')

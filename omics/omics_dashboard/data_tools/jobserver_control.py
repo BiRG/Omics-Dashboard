@@ -7,10 +7,9 @@ from typing import Dict, Any, List
 import requests
 from ruamel import yaml as yaml
 
-from data_tools.db import JobserverToken, User, Workflow, db
+from data_tools.db import JobserverToken, User, db
 from data_tools.users import get_jwt
 from data_tools.util import AuthException, COMPUTESERVER, TMPDIR, NotFoundException
-import time
 
 
 class Job:
@@ -86,14 +85,16 @@ class Job:
 
     def get_logs(self):
         log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
+        print(log_response.json())
         try:
             self.logs = {
                 key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()}
                 for key, value in log_response.json()['calls'].items()}
-        except Exception:
-            self.logs = {'logs': log_response.text}
+        except:
+            self.logs = log_response.json()
 
     def to_dict(self):
+        self.get_logs()
         return {
             'id': self.id,
             'owner_id': self.owner_id,
