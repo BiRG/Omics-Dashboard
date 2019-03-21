@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from datetime import datetime
 from typing import List, Dict, Any
 
@@ -97,17 +98,18 @@ def get_workflow(user: User, workflow_id: int) -> Workflow:
     raise AuthException(f'User {user.email} is not permitted to access workflow {workflow_id}')
 
 
-def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any]) -> Workflow:
+def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any], filename: str = None) -> Workflow:
     """
     Update workflow metadata.
     :param user:
     :param workflow:
     :param new_data:
+    :parma filename:
     :return:
     """
     if is_write_permitted(user, workflow):
         if 'id' in new_data:
-            if Workflow.query.filter_by(id=new_data['id']) is not None:
+            if workflow.id != new_data['id'] and Workflow.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Workflow with id {new_data["id"]} already exists!')
         workflow.update(new_data)
         if 'workflow_definition' in new_data:
@@ -117,6 +119,10 @@ def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any]) ->
                 yaml.dump(new_data['workflow_definition'], open(workflow.filename, 'w+'))
             else:
                 open(workflow.filename, 'w+').write(new_data['workflow_definition'])
+        if filename is not None:
+            os.remove(workflow.filename)
+            shutil.copy(filename, workflow.filename)
+            os.remove(filename)
         db.session.commit()
         return workflow
     raise AuthException(f'User {user.email} is not permitted to modify workflow {workflow.id}')

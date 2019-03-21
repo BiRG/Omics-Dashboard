@@ -118,7 +118,7 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
     """
     if current_user is target_user or current_user.admin:
         if 'id' in new_data:
-            if User.query.filter_by(id=new_data['id']) is not None:
+            if target_user.id != new_data['id'] and User.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'User with id {new_data["id"]} already exists!')
         # if new password provided, hash it
         if 'email' in new_data:

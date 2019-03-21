@@ -71,22 +71,28 @@ def create_external_file(user: User, data: Dict[str, Any]) -> ExternalFile:
 
 
 def update_external_file(user: User, external_file: ExternalFile, new_data: Dict[str, Any],
-                         move_file: bool = False) -> ExternalFile:
+                         move_file: bool = False, filename: str = None) -> ExternalFile:
     """
     Update the data in the external file record
     :param user:
     :param external_file:
     :param new_data:
+    :param move_file:
+    :param filename:
     :return:
     """
     if is_write_permitted(user, external_file):
         if 'id' in new_data:
-            if ExternalFile.query.filter_by(id=new_data['id']) is not None:
+            if external_file.id != new_data['id'] and ExternalFile.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'External file with id {new_data["id"]} already exists!')
         if move_file and 'filename' in new_data:
             original_filename = external_file.filename
             shutil.copy(original_filename, new_data['filename'])
             os.remove(original_filename)
+        if filename is not None:
+            os.remove(external_file.filename)
+            shutil.copy(filename, external_file.filename)
+            os.remove(filename)
         external_file.update(new_data)
         external_file.last_editor = user
         db.session.commit()

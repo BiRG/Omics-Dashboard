@@ -35,11 +35,35 @@ def get_external_file(external_file_id=None):
         if request.method == 'GET':
             return jsonify({**external_file.to_dict(),
                             'is_write_permitted': is_write_permitted(current_user, external_file)})
+
+        if request.content_type == 'application/json':
+            new_data = process_input_dict(request.get_json(force=True))
+        else:
+            new_data = process_input_dict(request.form.to_dict())
+
         if request.method == 'POST':
-            new_data = request.get_json(force=True)
             move_file = 'filename' in new_data and 'move_file' in new_data and new_data['move_file']
-            return jsonify(
-                dt.external_files.update_external_file(current_user, external_file, new_data, move_file).to_dict())
+            if 'file' in request.files or 'file' in new_data:
+                filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
+                if 'file' in request.files:
+                    if request.files['file'].filename == '':
+                        raise ValueError('No file uploaded')
+                    request.files['file'].save(filename)
+                else:
+                    with open(filename, 'wb') as file:
+                        external_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
+                        file.write(external_file_data)
+                        del new_data['file']
+                return jsonify(dt.external_files.update_external_file(current_user,
+                                                                      external_file,
+                                                                      new_data,
+                                                                      move_file,
+                                                                      filename).to_dict())
+            return jsonify(dt.external_files.update_external_file(current_user,
+                                                                  external_file,
+                                                                  new_data,
+                                                                  move_file).to_dict())
+
         if request.method == 'DELETE':
             return jsonify(dt.external_files.delete_external_file(current_user, external_file))
     except Exception as e:

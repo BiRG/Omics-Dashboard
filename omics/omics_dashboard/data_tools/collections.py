@@ -76,7 +76,7 @@ def get_collection(user: User, collection_id: int) -> Collection:
     raise AuthException(f'User {user.email} is not authorized to view collection {collection.id}')
 
 
-def update_collection(user: User, collection: Collection, new_data: Dict[str, Any]) -> Collection:
+def update_collection(user: User, collection: Collection, new_data: Dict[str, Any], filename: str = None) -> Collection:
     """
     Update collection attributes
     :param user:
@@ -87,9 +87,13 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
     if is_write_permitted(user, collection):
         # file attributes and database attributes should be separated
         if 'id' in new_data:
-            if Collection.query.filter_by(id=new_data['id']) is not None:
+            if collection.id != new_data['id'] and Collection.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Collection with id {new_data["id"]} already exists!')
         collection.update(new_data)
+        if filename is not None:
+            os.remove(collection.filename)
+            shutil.copy(filename, collection.filename)
+            os.remove(filename)
         if 'file_info' in new_data:
             mdt.update_metadata(collection.filename,
                                 {key: value for key, value in new_data['file_info'].items()})

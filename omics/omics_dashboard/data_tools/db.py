@@ -465,6 +465,7 @@ class Collection(NumericFileRecordMixin, db.Model):
             'creator_id': self.creator_id,
             'owner_id': self.owner_id,
             'last_editor_id': self.owner_id,
+            'parent_id': self.parent_id,
             'group_can_read': self.group_can_read,
             'group_can_write': self.group_can_write,
             'all_can_read': self.all_can_read,

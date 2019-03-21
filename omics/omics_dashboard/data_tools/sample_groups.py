@@ -58,7 +58,7 @@ def update_sample_group(user: User, sample_group: SampleGroup, new_data: Dict[st
 
     if is_write_permitted(user, sample_group):
         if 'id' in new_data:
-            if SampleGroup.query.filter_by(id=new_data['id']) is not None:
+            if sample_group.id != new_data['id'] and SampleGroup.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Sample group with id {new_data["id"]} already exists!')
         sample_group.update(new_data)
         sample_group.last_editor = user

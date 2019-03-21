@@ -37,7 +37,7 @@ def update_analysis(user: User, analysis: Analysis, new_data: Dict[str, Any]) ->
     """
     if is_write_permitted(user, analysis):
         if 'id' in new_data:
-            if Analysis.query.filter_by(id=new_data['id']) is not None:
+            if analysis.id != new_data['id'] and Analysis.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Analysis with id {new_data["id"]} already exists!')
         analysis.update(new_data)
         analysis.last_editor = user
