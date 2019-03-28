@@ -8,7 +8,6 @@ from xkcdpass import xkcd_password as xp
 from data_tools.db import User, UserGroup, UserInvitation, db
 from data_tools.util import AuthException, NotFoundException
 
-
 def get_all_users() -> List[User]:
     """
     Get a list of all users
@@ -125,7 +124,18 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
             email_count = User.query.filter_by(email=new_data['email']).count
             if email_count:
                 raise ValueError('This email is already in use!')
-
+        if 'user_group_ids' in new_data:
+            from data_tools.user_groups import get_user_group
+            new_data['user_group_ids'] = [int(user_group_id) for user_group_id in new_data['user_group_ids']]
+            new_user_groups= [get_user_group(user, user_group_id) for user_group_id in new_data['user_group_ids']]
+            remove_user_groups = [user_group for user_group in user.user_groups if user_group.id not in new_data['user_group_ids']]
+            for user_group in new_user_groups:
+                if not is_write_permitted(current_user, user_group):
+                    raise AuthException(f'User {current_user.email} is not permitted to attach user {target_user.id} to user group {user_group.id}')
+            for user_group in remove_user_groups:
+                if not is_write_permitted(user, user_group):
+                    raise AuthException(f'User {current_user.email} is not permitted to detach user {target_user.id} from user group {user_group.id}')
+            sample.user_groups = new_user_groups
         for key, value in new_data.items():
             if key == 'password':
                 target_user.password = User.hash_password(value)

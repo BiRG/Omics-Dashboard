@@ -7,7 +7,7 @@ import data_tools.file_tools.metadata_tools as mdt
 from data_tools.db import Sample, User, db
 from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
-
+from data_tools.sample_groups import get_sample_group
 
 def get_all_samples() -> List[Sample]:
     """
@@ -83,6 +83,17 @@ def update_sample(user: User, sample: Sample, new_data: Dict[str, Any], filename
         if 'id' in new_data:
             if sample.id != int(new_data['id']) and Sample.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Sample with id {new_data["id"]} already exists!')
+        if 'sample_group_ids' in new_data:
+            new_data['sample_group_ids'] = [int(sample_group_id) for sample_group_id in new_data['sample_group_ids']]
+            new_sample_groups = [get_sample_group(user, sample_group_id) for sample_group_id in new_data['sample_group_ids']]
+            remove_sample_groups = [sample_group for sample_group in sample.sample_groups if sample_group.id not in new_data['sample_group_ids']]
+            for sample_group in new_sample_groups:
+                if not is_write_permitted(user, sample_group):
+                    raise AuthException(f'User {user.email} is not permitted to attach sample {sample.id} to sample group {sample_group.id}')
+            for sample_group in remove_sample_groups:
+                if not is_write_permitted(user, sample_group):
+                    raise AuthException(f'User {user.email} is not permitted to detach sample {sample.id} from sample group {sample_group.id}')
+            sample.sample_groups = new_sample_groups
         sample.update(new_data)
         if 'file_info' in new_data:
             mdt.update_metadata(sample.filename, new_data['file_info'])

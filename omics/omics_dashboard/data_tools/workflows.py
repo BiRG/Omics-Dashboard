@@ -9,7 +9,7 @@ from ruamel import yaml
 from data_tools.db import User, Workflow, db
 from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import AuthException, NotFoundException, DATADIR, MODULEDIR
-
+from data_tools.analyses import get_analysis
 
 class WorkflowModule:
     def __init__(self,
@@ -111,6 +111,16 @@ def update_workflow(user: User, workflow: Workflow, new_data: Dict[str, Any], fi
         if 'id' in new_data:
             if workflow.id != int(new_data['id']) and Workflow.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Workflow with id {new_data["id"]} already exists!')
+        if 'analysis_ids' in new_data:
+            new_analyses = [get_analysis(user, analysis_id) for analysis_id in new_data['analysis_ids']]
+            remove_analyses = [analysis for analysis in workflow.analyses if analysis.id not in new_data['analysis_ids']]
+            for analysis in new_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to attach workflow {workflow.id} to analysis {analysis.id}')
+            for analysis in remove_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to detach workflow {workflow.id} from analysis {analysis.id}')
+            workflow.analyses = new_analyses
         workflow.update(new_data)
         if 'workflow_definition' in new_data:
             if workflow.file_type == 'json':

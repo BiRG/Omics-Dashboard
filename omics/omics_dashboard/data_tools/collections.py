@@ -89,8 +89,20 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
         if 'id' in new_data:
             if collection.id != int(new_data['id']) and Collection.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'Collection with id {new_data["id"]} already exists!')
+        # verify write permissions on analyses to attach to or detach from
+        if 'analysis_ids' in new_data:
+            new_analyses = [get_analysis(user, analysis_id) for analysis_id in new_data['analysis_ids']]
+            remove_analyses = [analysis for analysis in collection.analyses if analysis.id not in new_data['analysis_ids']]
+            for analysis in new_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to attach collection {collection.id} to analysis {analysis.id}')
+            for analysis in remove_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to detach collection {collection.id} from analysis {analysis.id}')
+            collection.analyses = new_analyses
         collection.update(new_data)
         if filename is not None:
+            print(f'filename not none: {filename}')
             os.remove(collection.filename)
             shutil.copy(filename, collection.filename)
             os.remove(filename)
