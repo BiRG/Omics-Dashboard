@@ -142,7 +142,6 @@ def upload_collection():
         if 'file' in request.files:
             if request.files['file'].filename == '':
                 raise ValueError('No file uploaded')
-            print('file in request.files')
             request.files['file'].save(filename)
         else:
             with open(filename, 'wb') as file:
