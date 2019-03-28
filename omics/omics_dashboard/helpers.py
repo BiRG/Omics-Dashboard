@@ -189,6 +189,10 @@ def process_input_dict(input_dict, set_permissions=False):
     :param set_permissions: whether or not to insert missing permissions
     :return:
     """
+    # if we get a list (which is valid JSON), expand the list
+    if isinstance(input_dict, list):
+        return [process_input_dict(entry) for entry in input_dict]
+    
     # We transform 'true' and 'false' strings (mostly from checkboxes) to True and False python boolean values.
     boolean_keys = {
         'all_can_read',

@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from data_tools.db import User, ExternalFile, db
 from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import AuthException, NotFoundException
+from data_tools.analyses import get_analysis
 
 
 def get_all_external_files() -> List[ExternalFile]:
@@ -85,6 +86,16 @@ def update_external_file(user: User, external_file: ExternalFile, new_data: Dict
         if 'id' in new_data:
             if external_file.id != int(new_data['id']) and ExternalFile.query.filter_by(id=new_data['id']) is not None:
                 raise ValueError(f'External file with id {new_data["id"]} already exists!')
+        if 'analysis_ids' in new_data:
+            new_analyses = [get_analysis(user, analysis_id) for analysis_id in new_data['analysis_ids']]
+            remove_analyses = [analysis for analysis in external_file.analyses if analysis.id not in new_data['analysis_ids']]
+            for analysis in new_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to attach external file {external_file.id} to analysis {analysis.id}')
+            for analysis in remove_analyses:
+                if not is_write_permitted(user, analysis):
+                    raise AuthException(f'User {user.email} is not permitted to detach external file {external_file.id} from analysis {analysis.id}')
+            external_file.analyses = new_analyses
         if move_file and 'filename' in new_data:
             original_filename = external_file.filename
             shutil.copy(original_filename, new_data['filename'])

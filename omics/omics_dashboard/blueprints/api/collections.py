@@ -51,6 +51,7 @@ def get_collection(collection_id=None):
 
         if request.method == 'POST':
             if 'file' in request.files or 'file' in new_data:
+                print('file in request')
                 filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
                 if 'file' in request.files:
                     if request.files['file'].filename == '':
@@ -70,7 +71,6 @@ def get_collection(collection_id=None):
             # or list thereof (POST should be used to update entire arrays).
             if not isinstance(new_data, list):
                 new_data = [new_data]
-            print(new_data)
             # improperly formatted patch requests will throw error before anything changed
             for patch_data in new_data:
                 validate_update(collection.filename, patch_data['path'], patch_data['i'],
