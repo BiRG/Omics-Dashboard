@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_login import login_required
 
 import data_tools as dt
 from data_tools.users import is_write_permitted
@@ -8,6 +9,7 @@ analyses_api = Blueprint('analyses_api', __name__, url_prefix='/api/analyses')
 
 
 @analyses_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_analyses():
     try:
         print('list_analyses')
@@ -29,6 +31,7 @@ def list_analyses():
 
 
 @analyses_api.route('/attach/<analysis_id>', methods=['POST', 'DELETE'])
+@login_required
 def attach_collection(analysis_id=None):
     try:
         user = get_current_user()
@@ -50,6 +53,7 @@ def attach_collection(analysis_id=None):
 
 
 @analyses_api.route('/<analysis_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_analysis(analysis_id=None):
     try:
         user = get_current_user()

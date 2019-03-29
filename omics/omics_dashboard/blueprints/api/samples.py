@@ -3,6 +3,7 @@ import os
 import uuid
 
 from flask import jsonify, request, make_response, send_from_directory, redirect, url_for, Blueprint
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
@@ -14,6 +15,7 @@ samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
 
 
 @samples_api.route('/', methods=['GET'])
+@login_required
 def list_samples():
     try:
         return jsonify([sample.to_dict() for sample in dt.samples.get_samples(get_current_user())])
@@ -22,6 +24,7 @@ def list_samples():
 
 
 @samples_api.route('/<sample_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_sample(sample_id=None):
     try:
         user = get_current_user()
@@ -59,6 +62,7 @@ def get_sample(sample_id=None):
 
 
 @samples_api.route('/common_attributes', methods=['POST'])
+@login_required
 def get_common_attributes():
     try:
         user = get_current_user()
@@ -72,6 +76,7 @@ def get_common_attributes():
 
 
 @samples_api.route('/download/<sample_id>', methods=['GET'])
+@login_required
 def download_sample(sample_id=None):
     try:
         user = get_current_user()
@@ -90,6 +95,7 @@ def download_sample(sample_id=None):
 
 
 @samples_api.route('/create', methods=['POST'])
+@login_required
 def parse_sample():
     try:
         user = get_current_user()
@@ -111,6 +117,7 @@ def parse_sample():
 
 
 @samples_api.route('/upload', methods=['POST'])
+@login_required
 def upload_sample():
     try:
         user = get_current_user()

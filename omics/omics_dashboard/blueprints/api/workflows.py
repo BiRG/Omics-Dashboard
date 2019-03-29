@@ -3,6 +3,7 @@ import os
 import uuid
 
 from flask import jsonify, request, Blueprint
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
@@ -14,6 +15,7 @@ workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows'
 
 
 @workflows_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_workflows():
     try:
         user = get_current_user()
@@ -23,6 +25,7 @@ def list_workflows():
 
 
 @workflows_api.route('/workflow_modules')
+@login_required
 def get_workflow_modules():
     try:
         get_current_user()
@@ -34,6 +37,7 @@ def get_workflow_modules():
 
 
 @workflows_api.route('/workflow_modules/<module_id>')
+@login_required
 def get_workflow_module(module_id=None):
     try:
         get_current_user()
@@ -43,6 +47,7 @@ def get_workflow_module(module_id=None):
 
 
 @workflows_api.route('/<workflow_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_workflow(workflow_id=None):
     try:
         user = get_current_user()
@@ -77,6 +82,7 @@ def get_workflow(workflow_id=None):
 
 
 @workflows_api.route('/create')
+@login_required
 def create_workflow():
     try:
         user = get_current_user()

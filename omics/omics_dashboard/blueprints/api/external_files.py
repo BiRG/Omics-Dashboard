@@ -3,6 +3,7 @@ import os
 import uuid
 
 from flask import request, jsonify, Blueprint, send_from_directory
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
@@ -14,6 +15,7 @@ external_files_api = Blueprint('external_files_api', __name__, url_prefix='/api/
 
 
 @external_files_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_external_files():
     try:
         current_user = get_current_user()
@@ -28,6 +30,7 @@ def list_external_files():
 
 
 @external_files_api.route('/<external_file_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_external_file(external_file_id=None):
     try:
         current_user = get_current_user()
@@ -71,6 +74,7 @@ def get_external_file(external_file_id=None):
 
 
 @external_files_api.route('/download/<external_file_id>', methods=['GET'])
+@login_required
 def download_external_file(external_file_id=None):
     try:
         current_user = get_current_user()
@@ -83,6 +87,7 @@ def download_external_file(external_file_id=None):
 
 
 @external_files_api.route('/upload', methods=['POST'])
+@login_required
 def upload_external_file():
     try:
         user = get_current_user()

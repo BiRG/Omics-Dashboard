@@ -1,4 +1,5 @@
 from flask import request, jsonify, Blueprint
+from flask_login import login_required
 
 import data_tools as dt
 from data_tools.users import is_write_permitted
@@ -8,6 +9,7 @@ user_groups_api = Blueprint('user_groups_api', __name__, url_prefix='/api/user_g
 
 
 @user_groups_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_user_groups():
     try:
         user = get_current_user()
@@ -21,6 +23,7 @@ def list_user_groups():
 
 
 @user_groups_api.route('/<user_group_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_user_group(user_group_id=None):
     try:
         user = get_current_user()

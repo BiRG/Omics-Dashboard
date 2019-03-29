@@ -1,16 +1,19 @@
 from flask import request, redirect, url_for, render_template, Blueprint
+from flask_login import login_required
 
-from data_tools.user_groups import get_user_groups, get_user_group, create_user_group, delete_user_group
-from data_tools.users import get_read_permitted_records, get_all_read_permitted_records
 from data_tools.db import User
-from data_tools.template_data.form import UserGroupCreateFormData
 from data_tools.template_data.entry_page import UserGroupPageData
+from data_tools.template_data.form import UserGroupCreateFormData
 from data_tools.template_data.list_table import ListTableData
-from helpers import get_current_user, handle_exception_browser, process_input_dict
+from data_tools.user_groups import get_user_groups, get_user_group, create_user_group, delete_user_group
+from data_tools.users import get_all_read_permitted_records
+from helpers import get_current_user, handle_exception_browser
+
 user_groups = Blueprint('user_groups', __name__, url_prefix='/user_groups')
 
 
 @user_groups.route('/', methods=['GET'])
+@login_required
 def render_user_group_list():
     try:
         current_user = get_current_user()
@@ -21,6 +24,7 @@ def render_user_group_list():
 
 
 @user_groups.route('/<user_group_id>', methods=['GET', 'DELETE'])
+@login_required
 def render_user_group(user_group_id=None):
     try:
         current_user = get_current_user()
@@ -34,6 +38,7 @@ def render_user_group(user_group_id=None):
 
 
 @user_groups.route('/create', methods=['GET', 'POST'])
+@login_required
 def render_create_user_group():
     try:
         current_user = get_current_user()
