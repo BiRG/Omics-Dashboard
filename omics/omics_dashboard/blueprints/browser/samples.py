@@ -1,14 +1,16 @@
 from flask import request, render_template, redirect, url_for, Blueprint
+from flask_login import login_required
 
+from data_tools.samples import get_samples, get_sample, update_sample, delete_sample
 from data_tools.template_data.entry_page import SamplePageData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.samples import get_samples, get_sample, update_sample, delete_sample
 from helpers import get_current_user, handle_exception_browser
 
 samples = Blueprint('samples', __name__, url_prefix='/samples')
 
 
 @samples.route('/', methods=['GET', 'POST'])
+@login_required
 def render_sample_list():
     try:
         current_user = get_current_user()
@@ -19,6 +21,7 @@ def render_sample_list():
 
 
 @samples.route('/<sample_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def render_sample(sample_id=None):
     try:
         current_user = get_current_user()
@@ -32,5 +35,4 @@ def render_sample(sample_id=None):
                                page_data=SamplePageData(current_user, sample))
     except Exception as e:
         return handle_exception_browser(e)
-
 

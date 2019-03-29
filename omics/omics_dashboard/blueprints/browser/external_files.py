@@ -1,6 +1,7 @@
 import os
 
 from flask import render_template, request, redirect, url_for, Blueprint
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
@@ -14,6 +15,7 @@ external_files = Blueprint('external_files', __name__, url_prefix='/external_fil
 
 
 @external_files.route('/', methods=['GET'])
+@login_required
 def render_external_file_list():
     try:
         current_user = get_current_user()
@@ -25,6 +27,7 @@ def render_external_file_list():
 
 
 @external_files.route('/<external_file_id>', methods=['GET'])
+@login_required
 def render_external_file(external_file_id=None):
     try:
         current_user = get_current_user()
@@ -37,6 +40,7 @@ def render_external_file(external_file_id=None):
 
 
 @external_files.route('/create', methods=['GET', 'POST'])
+@login_required
 def render_create_external_file():
     try:
         current_user = get_current_user()

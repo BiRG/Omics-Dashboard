@@ -102,7 +102,6 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
             collection.analyses = new_analyses
         collection.update(new_data)
         if filename is not None:
-            print(f'filename not none: {filename}')
             os.remove(collection.filename)
             shutil.copy(filename, collection.filename)
             os.remove(filename)

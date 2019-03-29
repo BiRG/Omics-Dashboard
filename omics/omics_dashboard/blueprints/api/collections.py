@@ -4,6 +4,7 @@ import os
 import uuid
 
 from flask import request, jsonify, make_response, send_from_directory, Blueprint
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
@@ -16,6 +17,7 @@ collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collec
 
 
 @collections_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_collections():
     try:
         current_user = get_current_user()
@@ -34,6 +36,7 @@ def list_collections():
 
 
 @collections_api.route('/<collection_id>', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+@login_required
 def get_collection(collection_id=None):
     try:
         user = get_current_user()
@@ -91,6 +94,7 @@ def get_collection(collection_id=None):
 
 
 @collections_api.route('/download/<collection_id>', methods=['GET'])
+@login_required
 def download_collection(collection_id=None):
     try:
         user = get_current_user()
@@ -126,6 +130,7 @@ def download_collection(collection_id=None):
 
 
 @collections_api.route('/upload', methods=['POST'])
+@login_required
 def upload_collection():
     try:
         user = get_current_user()
@@ -158,6 +163,7 @@ def upload_collection():
 
 
 @collections_api.route('/copy/<collection_id>', methods=['GET'])
+@login_required
 def copy_collection(collection_id):
     """
     This only takes POST because it does create a record, but it doesn't take any body, so it could also be GET
@@ -170,6 +176,7 @@ def copy_collection(collection_id):
 
 
 @collections_api.route('/merge', methods=['POST'])
+@login_required
 def merge_collections():
     try:
         current_user = get_current_user()

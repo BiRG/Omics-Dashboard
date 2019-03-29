@@ -37,3 +37,4 @@ xkcdpass
 sqlalchemy
 Flask-SQLAlchemy
 python-magic
+Flask-Login
