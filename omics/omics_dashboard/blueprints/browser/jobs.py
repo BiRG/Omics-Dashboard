@@ -1,15 +1,18 @@
 from flask import render_template, Blueprint, request
+from flask_login import login_required
 
-from helpers import get_current_user
+from data_tools.jobserver_control import get_jobs, get_job
 from data_tools.template_data.entry_page import JobPageData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.jobserver_control import get_jobs, get_job
-from helpers import handle_exception_browser
 from data_tools.util import NotFoundException
+from helpers import get_current_user
+from helpers import handle_exception_browser
+
 jobs = Blueprint('jobs', __name__, url_prefix='/jobs')
 
 
 @jobs.route('/', methods=['GET', 'POST'])
+@login_required
 def render_job_list():
     try:
         return render_template('pages/list.html',
@@ -19,6 +22,7 @@ def render_job_list():
 
 
 @jobs.route('/<job_id>', methods=['GET'])
+@login_required
 def render_job(job_id=None):
     try:
         return render_template('pages/job_entry.html',
@@ -28,6 +32,7 @@ def render_job(job_id=None):
 
 
 @jobs.route('/submit', methods=['GET', 'POST'])
+@login_required
 def render_submit_job():
     try:
         if request.args.get('workflow_id') is None:

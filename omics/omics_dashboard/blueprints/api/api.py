@@ -1,14 +1,17 @@
 import json
 import shutil
 
-from flask import request, session, jsonify, Blueprint, url_for
+from flask import request, jsonify, Blueprint, url_for
+from flask_login import login_user, logout_user, login_required
 
 import data_tools as dt
 import helpers
 from data_tools.util import TMPDIR
 from helpers import handle_exception
+from login_manager import authenticate_user
 
 api = Blueprint('api', __name__, url_prefix='/api')
+
 
 
 @api.route('/')
@@ -20,34 +23,34 @@ def send_ok():
 
 @api.route('/login', methods=['POST'])
 def login():
-    credentials = request.get_json(force=True)
     try:
-        dt.users.validate_login(credentials['email'], credentials['password'])
-        session['user'] = dt.users.get_user_by_email(credentials['email']).to_dict()
-        session['logged_in'] = True
-        return jsonify(session['user']), 200
+        user = authenticate_user(request)
+        login_user(user)
+        return jsonify(user.to_dict())
     except Exception as e:
         return jsonify({'message': 'authentication failed', 'exception': str(e)}), 403
 
 
 @api.route('/logout')
+@login_required
 def logout():
-    if session.get('logged_in'):
-        session['logged_in'] = False
-        session['user'] = None
+    logout_user()
     return jsonify({'message': 'logged out'}), 200
 
 
 @api.route('/authenticate', methods=['POST'])
 def jwt_authenticate():
-    credentials = request.get_json(force=True)
-    if dt.users.validate_login(credentials['email'], credentials['password']):
+    try:
+        credentials = request.get_json(force=True)
+        authenticate_user(request)
         token = dt.users.get_jwt_by_email(credentials['email'], credentials['password'])
         return jsonify({'token': str(token)}), 200
-    return jsonify({"message": "authentication failed"}), 403
+    except Exception as e:
+        return jsonify({'message': f'authentication failed: {e}'}), 403
 
 
 @api.route('/invite', methods=['GET'])
+@login_required
 def create_invitation():
     #  We use 'GET' even though we're creating a record
     #  we probably shouldn't ?
@@ -65,6 +68,7 @@ def create_invitation():
 
 
 @api.route('/invitations', methods=['GET'])
+@login_required
 def list_invitations():
     try:
         current_user = helpers.get_current_user()
@@ -74,6 +78,7 @@ def list_invitations():
 
 
 @api.route('/invitations/<invitation_id>', methods=['GET', 'DELETE'])
+@login_required
 def get_invitation(invitation_id=None):
     try:
         current_user = helpers.get_current_user()
@@ -87,6 +92,7 @@ def get_invitation(invitation_id=None):
 
 
 @api.route('/finalize', methods=['POST'])
+@login_required
 def finalize_job():
     try:
         user = helpers.get_current_user()
@@ -103,12 +109,18 @@ def finalize_job():
 
 
 @api.route('/current_user')
+@login_required
 def get_current_user():
     try:
         user = helpers.get_current_user()
         return jsonify(user.to_dict()), 200
     except Exception as e:
         return jsonify({'message': 'Not logged in'}), 401
+
+
+@api.route('/unauthorized')
+def unauthorized():
+    return jsonify({'message': 'Not authenticated.'}), 401
 
 
 @api.route('/register', methods=['POST'])

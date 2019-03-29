@@ -1,15 +1,19 @@
 from flask import render_template, request, redirect, url_for, Blueprint
-from data_tools.db import Collection
-from data_tools.template_data.form import AnalysisCreateFormData
-from data_tools.template_data.entry_page import AnalysisPageData
-from data_tools.template_data.list_table import ListTableData
-from data_tools.analyses import get_analyses, get_analysis
+from flask_login import login_required
+
 import data_tools as dt
+from data_tools.analyses import get_analyses, get_analysis
+from data_tools.db import Collection
+from data_tools.template_data.entry_page import AnalysisPageData
+from data_tools.template_data.form import AnalysisCreateFormData
+from data_tools.template_data.list_table import ListTableData
 from helpers import get_current_user, handle_exception_browser, process_input_dict
+
 analyses = Blueprint('analyses', __name__, url_prefix='/analyses')
 
 
 @analyses.route('/', methods=['GET', 'POST'])
+@login_required
 def render_analysis_list():
     try:
         current_user = get_current_user()
@@ -20,6 +24,7 @@ def render_analysis_list():
 
 
 @analyses.route('/create', methods=['GET', 'POST'])
+@login_required
 def render_create_analysis():
     try:
         current_user = get_current_user()
@@ -41,6 +46,7 @@ def render_create_analysis():
 
 
 @analyses.route('/<analysis_id>', methods=['GET'])
+@login_required
 def render_analysis(analysis_id=None):
     try:
         current_user = get_current_user()

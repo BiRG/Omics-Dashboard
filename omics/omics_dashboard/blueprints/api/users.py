@@ -1,4 +1,5 @@
 from flask import request, jsonify, Blueprint
+from flask_login import login_required, fresh_login_required
 
 import data_tools as dt
 from data_tools.users import is_write_permitted
@@ -8,6 +9,7 @@ users_api = Blueprint('users_api', __name__, url_prefix='/api/users')
 
 
 @users_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_users():
     try:
         user = get_current_user()
@@ -20,6 +22,7 @@ def list_users():
 
 
 @users_api.route('/<user_id>', methods=['GET', 'POST', 'DELETE'])
+@fresh_login_required
 def get_user(user_id=None):
     try:
         current_user = get_current_user()

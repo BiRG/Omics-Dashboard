@@ -1,11 +1,14 @@
 from flask import jsonify, request, Blueprint
+from flask_login import login_required
 
 import data_tools as dt
 from helpers import handle_exception, get_current_user
+
 jobs_api = Blueprint('jobs_api', __name__, url_prefix='/api/jobs')
 
 
 @jobs_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_jobs():
     try:
         return jsonify([job.to_dict() for job in dt.jobserver_control.get_jobs()])
@@ -14,6 +17,7 @@ def list_jobs():
 
 
 @jobs_api.route('/<job_id>', methods=['GET', 'POST'])
+@login_required
 def get_job(job_id=None):
     try:
         user = get_current_user()
@@ -31,6 +35,7 @@ def get_job(job_id=None):
 
 
 @jobs_api.route('/<job_id>/metadata')
+@login_required
 def get_chart_metadata(job_id=None):
     """
     Get a JSON string containing the javascript object used in the Gantt chart
@@ -42,6 +47,7 @@ def get_chart_metadata(job_id=None):
 
 
 @jobs_api.route('/submit', methods=['POST'])
+@login_required
 def submit_job():
     try:
         user = get_current_user()

@@ -1,4 +1,5 @@
 from flask import render_template, request, redirect, url_for, Blueprint
+from flask_login import login_required
 
 import data_tools as dt
 from data_tools.collections import get_collections, get_collection, delete_collection
@@ -12,6 +13,7 @@ collections = Blueprint('collections', __name__, url_prefix='/collections')
 
 
 @collections.route('/', methods=['GET', 'POST'])
+@login_required
 def render_collection_list():
     try:
         current_user = get_current_user()
@@ -22,6 +24,7 @@ def render_collection_list():
 
 
 @collections.route('/<collection_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def render_collection(collection_id=None):
     try:
         current_user = get_current_user()
@@ -40,6 +43,7 @@ def render_collection(collection_id=None):
 
 
 @collections.route('/create', methods=['GET', 'POST'])
+@login_required
 def render_create_collection():
     try:
         current_user = get_current_user()

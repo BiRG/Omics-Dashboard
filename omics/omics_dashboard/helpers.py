@@ -1,9 +1,8 @@
 import datetime
-import os
 import traceback
 
-import jwt
-from flask import url_for, session, request, render_template, redirect, jsonify
+from flask import url_for, request, render_template, redirect, jsonify
+from flask_login import current_user
 
 import data_tools as dt
 from data_tools.util import LoginError, DATADIR
@@ -99,41 +98,8 @@ def get_profile_link(user_id):
     return url_for('users.render_user_profile', user_id=user_id)
 
 
-def get_user_id():
-    if session.get('logged_in'):
-        return session['user']['id']
-    # check for authorization header
-    if 'Authorization' in request.headers:
-        auth_header = request.headers.get('Authorization')
-        # Header should be in format "JWT <>" or "Bearer <>"
-        try:
-            token = auth_header.split(' ')[1]
-            # if this is invalid, jwt.decode will throw. So no need to check password
-            user_data = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
-            user = dt.db.User.query.filter_by(id=user_data['id'])
-            if user is not None:
-                return user.id
-        except Exception:
-            raise LoginError('not authenticated')
-    raise LoginError('Not logged in')
-
-
 def get_current_user():
-    if session.get('logged_in'):
-        return dt.db.User.query.filter_by(id=session['user']['id']).first()
-    if 'Authorization' in request.headers:
-        auth_header = request.headers.get('Authorization')
-        # Header should be in format "JWT <>" or "Bearer <>"
-        try:
-            token = auth_header.split(' ')[1]
-            # if this is invalid, jwt.decode will throw. So no need to check password
-            user_data = jwt.decode(token, os.environ['SECRET'], algorithms=['HS256'])
-            user = dt.db.User.query.filter_by(id=user_data['id']).first()
-            if user is not None:
-                return user
-        except Exception:
-            raise LoginError('not authenticated')
-    raise LoginError('not authenticated')
+    return current_user
 
 
 def handle_exception_browser(e):
@@ -149,7 +115,7 @@ def handle_exception_browser(e):
         error_title = '403 Forbidden'
         return render_template('pages/error.html', fa_type='fa-ban', alert_class='alert-secondary', error_msg=error_msg, error_title=error_title), 403
     if isinstance(e, LoginError):
-        return redirect(url_for('browser.browser_login', redirect=request.url))
+        return redirect(url_for('browser.browser_login', next=request.url))
     error_msg = str(e)
     if error_msg.lower() == 'not logged in':
         return redirect(url_for('browser.browser_login'))
@@ -189,6 +155,10 @@ def process_input_dict(input_dict, set_permissions=False):
     :param set_permissions: whether or not to insert missing permissions
     :return:
     """
+    # if we get a list (which is valid JSON), expand the list
+    if isinstance(input_dict, list):
+        return [process_input_dict(entry) for entry in input_dict]
+    
     # We transform 'true' and 'false' strings (mostly from checkboxes) to True and False python boolean values.
     boolean_keys = {
         'all_can_read',

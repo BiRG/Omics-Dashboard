@@ -1,9 +1,13 @@
-from flask import request, render_template, redirect, url_for, session, Blueprint
+from flask import request, render_template, redirect, url_for, Blueprint
+from flask_login import login_user, logout_user, login_required, fresh_login_required
 
 import data_tools as dt
 from data_tools.template_data.entry_page import DashboardPageData, SettingsPageData
 from data_tools.template_data.form import RegisterFormData, LoginFormData
-from helpers import get_user_id, get_current_user, handle_exception_browser
+from data_tools.util import LoginError
+from helpers import get_current_user, handle_exception_browser
+from login_manager import authenticate_user
+
 browser = Blueprint('browser', __name__)
 
 
@@ -23,23 +27,15 @@ def render_registration():
         if request.method == 'GET':
             return render_template('pages/login.html', page_data=RegisterFormData(), invitation=invitation)
         if request.method == 'POST':
-            print('method=POST')
             data = {key: value for key, value in request.form.to_dict().items() if value}
-            print(f'data: {data}')
             valid_passwords = 'password1' in data and 'password2' in data and data['password1'] == data['password2']
-            print(f'valid_passwords: {valid_passwords}')
             if not valid_passwords:
-                print('invalid passwords')
                 return render_template('pages/login.html', page_data=RegisterFormData(),
                                        invitation=invitation, error='Passwords do not match'), 500
             new_data = {'email': data['email'], 'password': data['password1'], 'name': data['name'], 'admin': False}
-            print(new_data)
-            print('registering user')
             dt.users.register_user(invitation, new_data)
             return redirect(url_for('browser.browser_login'))
     except Exception as e:
-        print('exception!')
-        print(e)
         return render_template('pages/login.html', page_data=RegisterFormData(), error=str(e))
 
 
@@ -47,28 +43,25 @@ def render_registration():
 def browser_login(msg=None, error=None):
     try:
         if request.method == 'POST':
-            redirect_url = request.args.get('redirect') if request.args.get('redirect') is not None \
+            redirect_url = request.args.get('next') if request.args.get('next') is not None \
                 else url_for('browser.render_dashboard')
-            if dt.users.validate_login(request.form['email'], request.form['password']):
-                print(dt.users.get_user_by_email(request.form['email']))
-                session['user'] = dt.users.get_user_by_email(request.form['email']).to_dict()
-                session['logged_in'] = True
-                return redirect(redirect_url)
-            error = 'Invalid email/password'
-    except ValueError as e:
+            user = authenticate_user(request)
+            login_user(user)
+            return redirect(redirect_url)
+    except (ValueError, LoginError) as e:
         return render_template('pages/login.html', page_data=LoginFormData(), error=str(e))
     return render_template('pages/login.html', page_data=LoginFormData(), msg=msg, error=error)
 
 
 @browser.route('/logout', methods=['GET'])
+@login_required
 def browser_logout():
-    if session.get('logged_in'):
-        session['logged_in'] = False
-        session['user'] = None
+    logout_user()
     return redirect(url_for('browser.browser_login'))
 
 
 @browser.route('/dashboard', methods=['GET'])
+@login_required
 def render_dashboard():
     try:
         current_user = get_current_user()
@@ -80,6 +73,7 @@ def render_dashboard():
 
 
 @browser.route('/settings', methods=['GET', 'POST'])
+@fresh_login_required
 def render_settings():
     try:
         current_user = get_current_user()
@@ -98,8 +92,8 @@ def render_settings():
                             return render_template('pages/settings.html', error='Passwords do not match')
                         new_password = data['changePassword1']
                         email = data['changeEmail']
-                        other_user_id = dt.users.get_user_by_email(email)['id']
-                        dt.users.update_user(get_user_id(), other_user_id, {'password': new_password})
+                        other_user = dt.users.get_user_by_email(email)
+                        dt.users.update_user(current_user, other_user, {'password': new_password})
                         msg = f'Changed password for {email}'
                         return render_template('pages/settings.html', page_data=SettingsPageData(current_user), msg=msg)
                 return render_template('pages/settings.html',
@@ -122,18 +116,20 @@ def render_settings():
                 if 'password' in new_data:
                     # invalidate session on password change
                     browser_logout()
-                    return redirect(url_for('browser.browser_login', msg=msg, redirect=url_for('browser.render_settings')))
-                session['user'] = current_user.to_dict()
+                    return redirect(url_for('browser.browser_login', msg=msg, next=url_for('browser.render_settings')))
+                login_user(current_user)
                 return render_template('pages/settings.html', page_data=SettingsPageData(current_user), msg=msg)
     except Exception as e:
         return handle_exception_browser(e)
 
 
 @browser.route('/apidocs')
+@login_required
 def render_api_docs():
-    return render_template('swagger.html')
+    return render_template('pages/swagger.html')
 
 
 @browser.route('/help')
+@login_required
 def render_help():
     return render_template('pages/help.html')

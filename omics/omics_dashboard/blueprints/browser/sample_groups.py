@@ -1,6 +1,7 @@
 import os
 
 from flask import render_template, Blueprint, request, redirect, url_for
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 from data_tools.jobserver_control import start_job
@@ -18,6 +19,7 @@ sample_groups = Blueprint('sample_groups', __name__, url_prefix='/sample_groups'
 
 
 @sample_groups.route('/', methods=['GET', 'POST'])
+@login_required
 def render_sample_group_list():
     try:
         current_user = get_current_user()
@@ -28,6 +30,7 @@ def render_sample_group_list():
 
 
 @sample_groups.route('/<sample_group_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def render_sample_group(sample_group_id=None):
     try:
         current_user = get_current_user()
@@ -52,6 +55,7 @@ def render_sample_group(sample_group_id=None):
 
 
 @sample_groups.route('/create', methods=['GET', 'POST'])
+@login_required
 def render_upload_sample_group():
     try:
         current_user = get_current_user()

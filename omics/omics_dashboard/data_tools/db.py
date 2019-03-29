@@ -12,6 +12,7 @@ import bcrypt
 import magic
 import ruamel.yaml as yaml
 import sqlalchemy as sa
+from flask_login import UserMixin
 from flask_sqlalchemy import Model, SQLAlchemy, event
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -126,7 +127,7 @@ external_file_analysis_membership = db.Table('external_file_analysis_membership'
                                                        primary_key=True))
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'user'
     email = db.Column(db.String, nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
@@ -176,6 +177,12 @@ class User(db.Model):
         if not sanitized:
             dict_rep['password'] = self.password
         return dict_rep
+
+    # Flask-Login things
+
+    @property
+    def is_active(self):
+        return self.active
 
 
 class UserGroup(db.Model):
