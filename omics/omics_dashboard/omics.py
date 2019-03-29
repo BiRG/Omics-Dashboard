@@ -2,7 +2,8 @@ import datetime
 import os
 
 import bcrypt
-from flask import Flask, jsonify, session
+from flask import Flask, jsonify
+from flask_login import current_user, login_required
 
 import data_tools as dt
 import data_tools.sample_creation
@@ -31,8 +32,10 @@ from data_tools.users import get_user_name
 from data_tools.util import DATADIR
 from data_tools.util import UPLOADDIR
 from helpers import log_exception, make_valid_tag, make_tag_from_name
+from login_manager import login_manager
 
 app = Flask(__name__)
+login_manager.init_app(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URI'] if 'DB_URI' in os.environ else f'sqlite:///{DATADIR}/omics.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 with app.app_context():
@@ -68,18 +71,20 @@ app.register_blueprint(users)
 app.register_blueprint(workflows)
 app.register_blueprint(external_files)
 
-
-# CORS(app, supports_credentials=True)
-# app.config['CORS_HEADERS'] = 'Content-Type'
-
 app.permanent_session_lifetime = 86400  # sessions expire in 24h
 app.config['UPLOAD_DIR'] = UPLOADDIR
 app.secret_key = os.environ['SECRET']
 
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
+def protect_dash_views(dash_app):
+    for view_func in dash_app.server.view_functions:
+        if view_func.startswith(dash_app.url_base_pathname):
+            dash_app.server.view_functions[view_func] = login_required(dash_app.server.view_functions[view_func])
+    return dash_app
+
+
+def protect_blueprint(blueprint):
+    return blueprint
 
 
 @app.errorhandler(405)
@@ -101,7 +106,7 @@ def internal_error(e):
 
 
 # Jinja2 template globals
-app.jinja_env.globals.update(USERKEYS=['createdBy', 'owner', 'userId'])
+app.jinja_env.globals.update(USERKEYS=['creator_id', 'owner_id', 'user_id'])
 app.jinja_env.globals.update(PROTECTEDKEYS=['id', 'dateModified', 'maxRowCount', 'maxColCount', 'allPermissions',
                                             'groupPermissions', 'owner', 'createdBy', 'userId', 'parser', 'preproc',
                                             'userGroup'])
@@ -112,6 +117,7 @@ app.jinja_env.globals.update(get_analyses=dt.analyses.get_analyses)
 app.jinja_env.globals.update(get_collections=dt.collections.get_collections)
 app.jinja_env.globals.update(get_user_name=get_user_name)
 app.jinja_env.globals.update(datetime=datetime.datetime)
+app.jinja_env.globals.update(current_user=current_user)
 app.jinja_env.filters['make_valid_tag'] = make_valid_tag
 app.jinja_env.filters['make_tag_from_name'] = make_tag_from_name
 app.jinja_env.globals.update(int=int)

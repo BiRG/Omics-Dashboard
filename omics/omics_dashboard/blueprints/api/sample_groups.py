@@ -1,4 +1,5 @@
 from flask import request, jsonify, Blueprint
+from flask_login import login_required
 
 import data_tools as dt
 from data_tools.users import is_write_permitted
@@ -9,6 +10,7 @@ sample_groups_api = Blueprint('sample_groups_api', __name__, url_prefix='/api/sa
 
 
 @sample_groups_api.route('/', methods=['GET', 'POST'])
+@login_required
 def list_sample_groups():
     try:
         current_user = get_current_user()
@@ -26,6 +28,7 @@ def list_sample_groups():
 
 
 @sample_groups_api.route('/<sample_group_id>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def get_sample_group(sample_group_id=None):
     try:
         user = get_current_user()
@@ -52,6 +55,7 @@ def get_sample_group(sample_group_id=None):
 
 
 @sample_groups_api.route('/attach/<sample_group_id>', methods=['POST', 'DELETE'])
+@login_required
 def attach_sample(sample_group_id=None):
     try:
         user = get_current_user()
