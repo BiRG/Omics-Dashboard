@@ -13,7 +13,6 @@ from login_manager import authenticate_user
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
-
 @api.route('/')
 def send_ok():
     message = f'API works! View {url_for("browser.render_api_docs")} in your browser to see Swagger-UI documentation.'
