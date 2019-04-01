@@ -126,7 +126,6 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
     :return:
     """
     if is_write_permitted(user, collection):
-        print(f'path: {path}, i: {i}, j: {j}, val: {val}')
         ct.update_array(collection.filename, path, i, j, val)
         return collection
     raise AuthException(f'User {user.email} is not permitted to modify collection {collection.id}.')
@@ -232,7 +231,6 @@ def create_collection(user: User,
     data['creator_id'] = user.id
     if 'id' in data:  # cannot create with specified id
         del data['id']
-    print('check permissions on samples:\n')
     for sample in samples:
         if not is_read_permitted(user, sample):
             raise AuthException(f'User {user.id} is not permitted to access sample {sample.id}')
