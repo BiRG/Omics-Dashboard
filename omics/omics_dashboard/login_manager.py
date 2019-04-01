@@ -43,7 +43,7 @@ def request_loader(req):
 
 def authenticate_user(req):
     # This can be either a form with email and password fields or a JSON object
-    if req.content_type == 'application/json':
+    if req.is_json:
         data = req.get_json(force=True)
         email = data['email']
         password = data['password']
