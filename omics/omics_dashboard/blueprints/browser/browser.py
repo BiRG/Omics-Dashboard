@@ -102,8 +102,8 @@ def render_settings():
             else:
                 change_password = 'password1' in data and 'password2' in data
                 valid_passwords = data['password1'] == data['password2'] if change_password else False
-                new_data = {key: value for key, value in data.items() if key in {'email', 'name'}}
-                valid_keys = ['name', 'email', 'password']
+                new_data = {key: value for key, value in data.items() if key in {'email', 'name', 'theme'}}
+                valid_keys = ['name', 'email', 'password', 'theme']
                 if change_password:
                     if not valid_passwords:
                         return render_template('pages/settings.html', page_data=SettingsPageData(current_user),
@@ -118,7 +118,7 @@ def render_settings():
                     browser_logout()
                     return redirect(url_for('browser.browser_login', msg=msg, next=url_for('browser.render_settings')))
                 login_user(current_user)
-                return render_template('pages/settings.html', page_data=SettingsPageData(current_user), msg=msg)
+                return redirect(url_for('browser.render_settings')) # redirect a fresh GET request
     except Exception as e:
         return handle_exception_browser(e)
 

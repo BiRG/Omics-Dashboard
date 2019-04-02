@@ -6,6 +6,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { NgbAccordionModule } from './accordion/accordion.module';
 import { RouterModule, Routes } from '@angular/router';
 import { EditorComponent } from './editor/editor.component';
+import {OmicsService} from './omics.service';
 
 const appRoutes: Routes = [
   {
@@ -25,7 +26,7 @@ const appRoutes: Routes = [
     NgbAccordionModule,
     RouterModule.forRoot(appRoutes, {useHash: true})
   ],
-  providers: [],
+  providers: [OmicsService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

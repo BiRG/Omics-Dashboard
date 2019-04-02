@@ -1,12 +1,12 @@
-import {AfterViewInit, Component, HostListener, OnInit} from '@angular/core';
+import { Component, HostListener, OnInit} from '@angular/core';
 import {CommandLineToolModel, WorkflowFactory} from 'cwlts/models';
 import { Workflow, SVGArrangePlugin, SVGNodeMovePlugin, SVGPortDragPlugin,
   SVGEdgeHoverPlugin, SelectionPlugin, ZoomPlugin, DeletionPlugin} from 'cwl-svg';
 import {OmicsService} from '../omics.service';
-import { ActivatedRoute, NavigationStart } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import {WorkflowModuleData} from '../workflow-module-data';
-import {Subject} from 'rxjs';
 import {environment} from '../../environments/environment';
+
 @Component({
   selector: 'app-editor',
   templateUrl: './editor.component.html',
