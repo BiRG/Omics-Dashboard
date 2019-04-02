@@ -143,6 +143,7 @@ class User(db.Model, UserMixin):
     owner_id = db.synonym('id')
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
+    theme = db.Column(db.String, default='light')  # can be dark or light
 
     admin_keys = {
         'active',
@@ -172,7 +173,8 @@ class User(db.Model, UserMixin):
             'group_ids': [group.id for group in self.user_groups],
             'admin_group_ids': [group.id for group in self.admin_user_groups],
             'created_on': self.created_on.isoformat(),
-            'updated_on': self.updated_on.isoformat()
+            'updated_on': self.updated_on.isoformat(),
+            'theme': self.theme
         }
         if not sanitized:
             dict_rep['password'] = self.password

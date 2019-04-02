@@ -5,6 +5,7 @@ import {WorkflowModuleData} from './workflow-module-data';
 import {WorkflowModel} from 'cwlts/models';
 import {environment} from '../environments/environment';
 import {Observable} from 'rxjs';
+import {User} from './user';
 
 const baseUrl = environment.omicsUrl;
 
@@ -17,6 +18,9 @@ const httpOptions = {
 export class OmicsService {
 
   constructor(private http: HttpClient) { }
+  getUser(): Observable<User> {
+    return this.http.get<User>(`${baseUrl}/api/current_user`, httpOptions);
+  }
   getModules(): Observable<WorkflowModuleData[]> {
     return this.http.get<WorkflowModuleData[]>(`${baseUrl}/api/workflows/workflow_modules`, httpOptions);
   }
