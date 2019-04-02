@@ -155,9 +155,14 @@ class LoginFormData:
 class ProfileUpdateFormData:
     def __init__(self, current_user: User):
         self.label = 'Update Profile'
+        theme_options = [
+            SelectOption('dark', 'Dark', current_user.theme == 'dark'),
+            SelectOption('light', 'Light', current_user.theme == 'light')
+        ]
         self.entries = [
             FormEntry('emailInput', 'email', 'Email address', current_user.email, 'email'),
             FormEntry('nameInput', 'name', 'Name', current_user.name),
+            FormEntry('themeInput', 'theme', 'Theme', input_type='select', select_options=theme_options, select_multiple=False),
             FormEntry('passwordInput1', 'password1', 'New password', 'Password', 'password'),
             FormEntry('passwordInput2', 'password2', 'Repeat new password', 'Password', 'password')
         ]
