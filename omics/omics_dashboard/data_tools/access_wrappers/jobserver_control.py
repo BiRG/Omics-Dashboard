@@ -7,8 +7,8 @@ from typing import Dict, Any, List
 import requests
 from ruamel import yaml as yaml
 
-from data_tools.db import JobserverToken, User, db
-from data_tools.users import get_jwt
+from data_tools.access_wrappers.users import get_jwt
+from data_tools.db_models import JobserverToken, User, db
 from data_tools.util import AuthException, COMPUTESERVER, TMPDIR, NotFoundException
 
 
@@ -185,7 +185,7 @@ def resume_job(user: User, job: Job) -> Dict[str, Any]:
     job.refresh()
     if job.owner == user or user.admin:
         return job.resume()
-    raise AuthException(f'User {user.email} is not authorized to resume job {job_id}')
+    raise AuthException(f'User {user.email} is not authorized to resume job {job.id}')
 
 
 def create_jobserver_token() -> JobserverToken:

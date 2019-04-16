@@ -1,11 +1,11 @@
 from typing import List, Any
 
-from data_tools.collections import get_collections
-from data_tools.db import User, Collection, Sample
-from data_tools.sample_creation import get_parsing_modules, get_preprocessing_modules
-from data_tools.samples import get_samples
-from data_tools.user_groups import get_included_groups
-from data_tools.users import get_users
+from data_tools.access_wrappers.collections import get_collections
+from data_tools.access_wrappers.sample_creation import get_parsing_modules, get_preprocessing_modules
+from data_tools.access_wrappers.samples import get_samples
+from data_tools.access_wrappers.user_groups import get_included_groups
+from data_tools.access_wrappers.users import get_users
+from data_tools.db_models import User, Collection, Sample
 
 
 class SelectOption:

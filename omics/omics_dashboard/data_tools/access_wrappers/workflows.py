@@ -2,14 +2,15 @@ import json
 import os
 import shutil
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 from ruamel import yaml
 
-from data_tools.db import User, Workflow, db
-from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.access_wrappers.analyses import get_analysis
+from data_tools.access_wrappers.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.db_models import User, Workflow, db
 from data_tools.util import AuthException, NotFoundException, DATADIR, MODULEDIR
-from data_tools.analyses import get_analysis
+
 
 class WorkflowModule:
     def __init__(self,
@@ -35,14 +36,14 @@ class WorkflowModule:
         self.group_can_read = True
         self.group_can_write = True
 
-    def get_workflow_module_contents(self, as_text=False):
+    def get_workflow_module_contents(self, as_text=False) -> Union[str, Dict[str, Any]]:
         with open(self.path, 'r') as stream:
-            data = yaml.safe_load(stream)
-            if 'cwlVersion' not in data:
-                raise ValueError('Not a CWL file')
             if as_text:
                 stream.seek(0)
                 return stream.read()
+            data = yaml.safe_load(stream)
+            if 'cwlVersion' not in data:
+                raise ValueError('Not a CWL file')
             return data
 
     def to_dict(self):

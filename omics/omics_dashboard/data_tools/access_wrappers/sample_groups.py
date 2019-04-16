@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
 
-from data_tools.db import User, Sample, SampleGroup, db
-from data_tools.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
+from data_tools.access_wrappers.users import is_read_permitted, is_write_permitted, get_read_permitted_records, \
     get_all_read_permitted_records
+from data_tools.db_models import User, Sample, SampleGroup, db
 from data_tools.util import AuthException, NotFoundException
 
 
@@ -80,7 +80,7 @@ def update_sample_group_attachments(user: User, sample_group: SampleGroup, sampl
         sample_group.last_editor = user
         db.session.commit()
         return sample_group
-    raise AuthException(f'User {user.email} not authorized to modify group {group.id}')
+    raise AuthException(f'User {user.email} not authorized to modify group {sample_group.id}')
 
 
 def attach_sample(user: User, sample: Sample, sample_group: SampleGroup) -> SampleGroup:
@@ -88,7 +88,7 @@ def attach_sample(user: User, sample: Sample, sample_group: SampleGroup) -> Samp
     Make a sample a member of a sample group.
     :param user:
     :param sample:
-    :param group:
+    :param sample_group:
     :return:
     """
     if is_write_permitted(user, sample_group) and is_read_permitted(user, sample):

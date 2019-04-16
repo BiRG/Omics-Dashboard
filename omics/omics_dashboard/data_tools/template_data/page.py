@@ -1,4 +1,4 @@
-from data_tools.db import User
+from data_tools.db_models import User
 
 
 class PageData:

@@ -51,6 +51,10 @@ services:
       - jobserver
       - omics
     container_name: omics_proxy
+  redis:
+    image: redis:alpine
+    env_file: common.env
+    container_name: omics_redis
 volumes:
   data:
   tmp:

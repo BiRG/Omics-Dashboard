@@ -1,7 +1,8 @@
 from typing import List, Dict, Any
 
-from data_tools.db import User, UserGroup, db
-from data_tools.users import is_user_group_admin, get_read_permitted_records, get_all_read_permitted_records
+from data_tools.access_wrappers.users import is_user_group_admin, get_read_permitted_records, \
+    get_all_read_permitted_records
+from data_tools.db_models import User, UserGroup, db
 from data_tools.util import AuthException, NotFoundException
 
 

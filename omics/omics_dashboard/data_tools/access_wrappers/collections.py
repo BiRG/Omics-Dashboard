@@ -1,14 +1,15 @@
 import os
 import re
 import shutil
+import tempfile
 from typing import List, Dict, Any
 
 import data_tools.file_tools.collection_tools as ct
 import data_tools.file_tools.metadata_tools as mdt
-from data_tools.analyses import get_analysis
-from data_tools.db import Collection, User, Sample, db
+from data_tools.access_wrappers.analyses import get_analysis
+from data_tools.access_wrappers.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.db_models import Collection, User, Sample, db
 from data_tools.file_tools.h5_merge import h5_merge
-from data_tools.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
@@ -74,6 +75,23 @@ def get_collection(user: User, collection_id: int) -> Collection:
     if is_read_permitted(user, collection):
         return collection
     raise AuthException(f'User {user.email} is not authorized to view collection {collection.id}')
+
+
+def get_collection_copy(user: User, collection_id: int) -> Collection:
+    """
+    Get a temporary copy of a collection. It's filename will be a temporary file that you should delete
+    :param user:
+    :param collection_id:
+    :return:
+    """
+    collection = get_collection(user, collection_id)
+    tempdir = tempfile.mkdtemp()
+    new_filename = os.path.join(tempdir, os.path.basename(collection.filename))
+    shutil.copy(collection.filename, new_filename)
+    collection.id = None  # if we add to db, will get new id, but we shouldn't do this if we still have tmp filename
+    collection.filename = new_filename
+    collection.is_temp = True
+    return collection
 
 
 def update_collection(user: User, collection: Collection, new_data: Dict[str, Any], filename: str = None) -> Collection:
@@ -198,7 +216,7 @@ def download_collection_dataframe(user: User, collection: Collection, single_col
     :return:
     """
     if is_read_permitted(user, collection):
-        return {data_format: ct.get_dataframe(collection.filename, single_column, data_format, json_orient),
+        return {data_format: ct.get_serialized_dataframe(collection.filename, single_column, data_format, json_orient),
                 'cd': f'attachment; filename={collection.id}.{data_format}'}
     raise AuthException(f'User {user.email} is not permitted to access collection {collection.id}')
 
