@@ -1,9 +1,9 @@
 from flask import render_template, Blueprint
 from flask_login import login_required
 
+from data_tools.access_wrappers.users import get_users, get_user
 from data_tools.template_data.entry_page import UserPageData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.users import get_users, get_user
 from helpers import get_current_user, handle_exception_browser
 
 users = Blueprint('users', __name__, url_prefix='/users')

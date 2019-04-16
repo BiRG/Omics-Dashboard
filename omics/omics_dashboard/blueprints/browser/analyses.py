@@ -2,8 +2,8 @@ from flask import render_template, request, redirect, url_for, Blueprint
 from flask_login import login_required
 
 import data_tools as dt
-from data_tools.analyses import get_analyses, get_analysis
-from data_tools.db import Collection
+from data_tools.access_wrappers.analyses import get_analyses, get_analysis
+from data_tools.db_models import Collection
 from data_tools.template_data.entry_page import AnalysisPageData
 from data_tools.template_data.form import AnalysisCreateFormData
 from data_tools.template_data.list_table import ListTableData

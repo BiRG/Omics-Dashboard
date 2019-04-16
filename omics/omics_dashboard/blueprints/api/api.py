@@ -33,6 +33,7 @@ def login():
 @api.route('/logout')
 @login_required
 def logout():
+    dt.redis.clear_user_hash(get_current_user().id)
     logout_user()
     return jsonify({'message': 'logged out'}), 200
 
@@ -99,7 +100,7 @@ def finalize_job():
         token = body['wf_token']
         path = f'{TMPDIR}/{token}'
         info = json.load(open(f'{path}/wfdata.json', 'r'))
-        if dt.jobserver_control.check_jobserver_token(token) and (user.admin or info['owner'] == user.id): 
+        if dt.jobserver_control.check_jobserver_token(token) and (user.admin or info['owner'] == user.id):
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:

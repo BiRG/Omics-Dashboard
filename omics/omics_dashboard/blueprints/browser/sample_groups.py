@@ -4,11 +4,12 @@ from flask import render_template, Blueprint, request, redirect, url_for
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from data_tools.jobserver_control import start_job
-from data_tools.sample_creation import create_sample_creation_workflow
-from data_tools.sample_groups import get_sample_group, get_sample_groups, update_sample_group, delete_sample_group, \
+from data_tools.access_wrappers.jobserver_control import start_job
+from data_tools.access_wrappers.sample_creation import create_sample_creation_workflow
+from data_tools.access_wrappers.sample_groups import get_sample_group, get_sample_groups, update_sample_group, \
+    delete_sample_group, \
     create_sample_group
-from data_tools.samples import get_sample, delete_sample
+from data_tools.access_wrappers.samples import get_sample, delete_sample
 from data_tools.template_data.entry_page import SampleGroupPageData
 from data_tools.template_data.form import SampleCreateFormData
 from data_tools.template_data.list_table import ListTableData

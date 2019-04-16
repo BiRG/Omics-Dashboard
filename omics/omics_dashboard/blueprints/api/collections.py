@@ -9,7 +9,6 @@ from werkzeug.utils import secure_filename
 
 import data_tools as dt
 from data_tools.file_tools.collection_tools import validate_update
-from data_tools.users import is_write_permitted
 from data_tools.util import DATADIR, UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -30,7 +29,8 @@ def list_collections():
                 del data['sample_ids']
             else:
                 samples = []
-            return jsonify(dt.collections.create_collection(current_user, samples, data).to_dict())
+            return jsonify(
+                dt.collections.create_collection(current_user, samples, data).to_dict())
     except Exception as e:
         return handle_exception(e)
 
@@ -42,7 +42,8 @@ def get_collection(collection_id=None):
         user = get_current_user()
         collection = dt.collections.get_collection(user, collection_id)
         if request.method == 'GET':
-            return jsonify({**collection.to_dict(), 'is_write_permitted': is_write_permitted(user, collection)})
+            return jsonify({**collection.to_dict(),
+                            'is_write_permitted': dt.users.is_write_permitted(user, collection)})
 
         if request.method == 'DELETE':
             return jsonify(dt.collections.delete_collection(user, collection))
@@ -67,7 +68,8 @@ def get_collection(collection_id=None):
                         del new_data['file']
                 if dt.util.validate_file(filename):
                     return jsonify(dt.collections.update_collection(user, collection, new_data, filename).to_dict())
-            return jsonify(dt.collections.update_collection(user, collection, new_data).to_dict())
+            return jsonify(
+                dt.collections.update_collection(user, collection, new_data).to_dict())
 
         if request.method == 'PATCH':
             # We can have requests to change values in arrays here contents of request will be {path, i, j, new_value}

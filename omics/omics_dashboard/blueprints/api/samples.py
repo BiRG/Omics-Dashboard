@@ -7,18 +7,32 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.users import is_write_permitted
 from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
 samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
 
 
-@samples_api.route('/', methods=['GET'])
+@samples_api.route('/', methods=['GET', 'POST'])
 @login_required
 def list_samples():
     try:
-        return jsonify([sample.to_dict() for sample in dt.samples.get_samples(get_current_user())])
+        user = get_current_user()
+        if request.method == 'POST':
+            filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
+            data = request.get_json(force=True)
+            if 'file' in request.files:
+                request.files['file'].save(filename)
+            else:
+                file_contents = data['file']
+                del data['file']
+                decoded_file_contents = base64.b64decode(file_contents)
+                with open(filename, 'wb') as file:
+                    file.write(decoded_file_contents)
+            workflow_data = dt.sample_creation.create_sample_creation_workflow(user, [filename], data)
+            dt.jobserver_control.start_job(workflow_data['workflow_filename'], workflow_data['job'], user)
+            return redirect(url_for('jobs_api.list_jobs'))
+        return jsonify([sample.to_dict() for sample in dt.samples.get_samples(user)])
     except Exception as e:
         return handle_exception(e)
 
@@ -30,7 +44,7 @@ def get_sample(sample_id=None):
         user = get_current_user()
         sample = dt.samples.get_sample(user, sample_id)
         if request.method == 'GET':
-            return jsonify({**sample.to_dict(), 'is_write_permitted': is_write_permitted(user, sample)})
+            return jsonify({**sample.to_dict(), 'is_write_permitted': dt.users.is_write_permitted(user, sample)})
 
         if request.content_type == 'application/json':
             new_data = process_input_dict(request.get_json(force=True))
@@ -50,7 +64,8 @@ def get_sample(sample_id=None):
                         file.write(sample_file_data)
                         del new_data['file']
                 if dt.util.validate_file(filename):
-                    return jsonify(dt.samples.update_sample(user, sample, new_data, filename).to_dict())
+                    return jsonify(
+                        dt.samples.update_sample(user, sample, new_data, filename).to_dict())
             return jsonify(dt.samples.update_sample(user, sample, new_data).to_dict())
 
         if request.method == 'DELETE':
@@ -90,28 +105,6 @@ def download_sample(sample_id=None):
             return response
         directory, filename = os.path.split(sample.filename)
         return send_from_directory(directory, filename, as_attachment=True)
-    except Exception as e:
-        return handle_exception(e)
-
-
-@samples_api.route('/create', methods=['POST'])
-@login_required
-def parse_sample():
-    try:
-        user = get_current_user()
-        filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
-        data = request.get_json(force=True)
-        if 'file' in request.files:
-            request.files['file'].save(filename)
-        else:
-            file_contents = data['file']
-            del data['file']
-            decoded_file_contents = base64.b64decode(file_contents)
-            with open(filename, 'wb') as file:
-                file.write(decoded_file_contents)
-        workflow_data = dt.sample_creation.create_sample_creation_workflow(user, [filename], data)
-        dt.jobserver_control.start_job(workflow_data['workflow_filename'], workflow_data['job'], user)
-        return redirect(url_for('jobs.list_jobs'))
     except Exception as e:
         return handle_exception(e)
 

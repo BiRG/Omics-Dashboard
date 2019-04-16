@@ -1,7 +1,7 @@
 from flask import request, render_template, redirect, url_for, Blueprint
 from flask_login import login_required
 
-from data_tools.samples import get_samples, get_sample, update_sample, delete_sample
+from data_tools.access_wrappers.samples import get_samples, get_sample, update_sample, delete_sample
 from data_tools.template_data.entry_page import SamplePageData
 from data_tools.template_data.list_table import ListTableData
 from helpers import get_current_user, handle_exception_browser

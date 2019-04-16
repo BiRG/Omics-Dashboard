@@ -7,7 +7,6 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.users import is_write_permitted
 from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -37,7 +36,7 @@ def get_external_file(external_file_id=None):
         external_file = dt.external_files.get_external_file(current_user, external_file_id)
         if request.method == 'GET':
             return jsonify({**external_file.to_dict(),
-                            'is_write_permitted': is_write_permitted(current_user, external_file)})
+                            'is_write_permitted': dt.users.is_write_permitted(current_user, external_file)})
 
         if request.content_type == 'application/json':
             new_data = process_input_dict(request.get_json(force=True))
