@@ -26,7 +26,6 @@ def get_redis():
 
 def set_value(key, value):
     """
-    Everything get's msgpacked...
     :param key:
     :param value:
     :return:
@@ -39,13 +38,22 @@ def set_value(key, value):
 
 def get_value(key):
     """
-    Value will be JSON deserialized version of whatever...
     :param key:
     :return:
     """
     r = get_redis()
     hash_name = f'user{current_user.id}'
     return r.hget(hash_name, key)
+
+
+def delete_value(key):
+    """
+    :param key:
+    :return:
+    """
+    r = get_redis()
+    hash_name = f'user{current_user.id}'
+    return r.hdel(hash_name, key)
 
 
 def clear_user_hash(user_id):

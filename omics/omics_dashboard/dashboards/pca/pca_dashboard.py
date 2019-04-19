@@ -1,12 +1,13 @@
 import itertools
-import re
+import traceback
 
 import dash
 import dash_bootstrap_components as dbc
+import dash_html_components as html
 from dash.dependencies import Output, Input, State
 
 from dashboards.dashboard import Dashboard
-from dashboards.pca.layouts import get_layout
+from dashboards.pca.layouts import get_layout, component_list
 from .pca_data import get_plot_data, set_plot_data, PCAData
 
 
@@ -17,73 +18,57 @@ class PCADashboard(Dashboard):
     id = 'pca'
 
     @staticmethod
+    def _on_label_key_select(label_keys, op='=='):
+        if not label_keys or None in label_keys:
+            raise ValueError('Callback triggered without action!')
+        label_keys = sorted(label_keys)
+        pca_data = PCAData()
+        unique_values = [pca_data.unique_vals[val] for val in label_keys]
+        option_pairs = list(itertools.product(*unique_values))
+        queries = [' & '.join([f'{key}{op}"{value}"' for key, value in zip(label_keys, option_pair)])
+                   for option_pair in option_pairs]
+        query_labels = [','.join([f'{key}={value}' for key, value in zip(label_keys, option_pair)])
+                        for option_pair in option_pairs]
+        return [[{'label': query_label, 'value': query} for query_label, query in zip(query_labels, queries)]]
+
+    @staticmethod
     def _register_callbacks(app):
         @app.callback(
-            [Output('scale-by-value', 'options'),
-             Output('scale-by-value', 'value')],
+            [Output('scale-by-value', 'options')],
             [Input('scale-by', 'value')]
         )
-        def update_scale_by_options(value):
-            if None in value:
-                raise ValueError('Callback triggered without action!')
-            value = sorted(value)
-            print(value)
-            pca_data = PCAData()
-            unique_values = [pca_data.unique_vals[val] for val in value]
-            option_pairs = list(itertools.product(*unique_values))
-            option_labels = [', '.join([str(val) for val in option_pair]) for option_pair in option_pairs]
-            option_values = [','.join([f'<{val}>' for val in option_pair]) for option_pair in option_pairs]
-            return (
-                [{'label': option_label, 'value': option_value}
-                 for option_label, option_value in zip(option_labels, option_values)],
-                option_values[0]
-            )
+        def update_scale_by_options(label_keys):
+            return PCADashboard._on_label_key_select(label_keys)
 
         @app.callback(
-            [Output('filter-by-value', 'options'),
-             Output('filter-by-value', 'value')],
+            [Output('filter-by-value', 'options')],
             [Input('filter-by', 'value')]
         )
-        def update_filter_by_options(value):
-            if None in value:
-                raise ValueError('Callback triggered without action!')
-            value = sorted(value)
-            print(value)
-            pca_data = PCAData()
-            unique_values = [pca_data.unique_vals[val] for val in value]
-            option_pairs = list(itertools.product(*unique_values))
-            option_labels = [', '.join([str(val) for val in option_pair]) for option_pair in option_pairs]
-            option_values = [','.join([f'<{val}>' for val in option_pair]) for option_pair in option_pairs]
-            return (
-                [{'label': option_label, 'value': option_value}
-                 for option_label, option_value in zip(option_labels, option_values)],
-                option_values[0]
-            )
+        def update_filter_by_options(label_keys):
+            return PCADashboard._on_label_key_select(label_keys)
 
         @app.callback(
-            [Output('ignore-by-value', 'options'),
-             Output('ignore-by-value', 'value')],
+            [Output('ignore-by-value', 'options')],
             [Input('ignore-by', 'value')]
         )
-        def update_ignore_by_options(value):
-            if None in value:
-                raise ValueError('Callback triggered without action!')
-            value = sorted(value)
-            print(value)
+        def update_ignore_by_options(label_keys):
+            return PCADashboard._on_label_key_select(label_keys, op='!=')
 
-            pca_data = PCAData()
-            unique_values = [pca_data.unique_vals[val] for val in value]
-            option_pairs = list(itertools.product(*unique_values))
-            option_labels = [', '.join([str(val) for val in option_pair]) for option_pair in option_pairs]
-            option_values = [','.join([f'<{val}>' for val in option_pair]) for option_pair in option_pairs]
-            return [{'label': option_label, 'value': option_value}
-                    for option_label, option_value in zip(option_labels, option_values)], option_values[0]
+        @app.callback(
+            [Output('pair-with-value', 'options')],
+            [Input('pair-with', 'value')]
+        )
+        def update_pair_with_options(label_keys):
+            if not label_keys or None in label_keys:
+                raise ValueError('Callback triggered without action!')
+            return PCADashboard._on_label_key_select(label_keys)
 
         @app.callback(
             [Output('scale-by', 'options'),
              Output('filter-by', 'options'),
              Output('ignore-by', 'options'),
-             Output('merge-by', 'options'),
+             Output('pair-on', 'options'),
+             Output('pair-with', 'options'),
              Output('color-by-select', 'options'),
              Output('loaded-collections', 'children'),
              Output('collections-label', 'children')],
@@ -97,6 +82,7 @@ class PCADashboard(Dashboard):
             pca_data.get_collections(value)
             label_data = pca_data.get_label_data()
             return (
+                label_data,
                 label_data,
                 label_data,
                 label_data,
@@ -116,59 +102,46 @@ class PCADashboard(Dashboard):
              Output('loading-select', 'options'),
              Output('loading-select', 'value'),
              Output('variance-select', 'options'),
-             Output('variance-select', 'value')],
+             Output('variance-select', 'value'),
+             Output('name-input', 'value')],
             [Input('pca-button', 'n_clicks')],
-            [State('scale-by', 'value'),
-             State('scale-by-value', 'value'),
-             State('filter-by', 'value'),
+            [State('scale-by-value', 'value'),
              State('filter-by-value', 'value'),
-             State('ignore-by', 'value'),
              State('ignore-by-value', 'value'),
-             State('merge-by', 'value'),
-             State('merge-by-method', 'value')]
+             State('pair-on', 'value'),
+             State('pair-with-value', 'value')]
         )
         def perform_pca(n_clicks,
-                        scale_by, scale_by_values,
-                        filter_by, filter_by_values,
-                        ignore_by, ignore_by_values,
-                        merge_by, merge_by_method):
+                        scale_by_queries,
+                        filter_by_queries,
+                        ignore_by_queries,
+                        pair_on, pair_with_queries):
             if not n_clicks:
                 raise ValueError('Callback triggered without click.')
-            params = {}
+            scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
+            filter_by = ' | '.join(filter_by_queries) if filter_by_queries and len(filter_by_queries) else None
+            ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
+            pair_on = pair_on if pair_on and len(pair_on) else None
+            pair_with = ' | '.join(pair_with_queries) if pair_with_queries and len(
+                pair_with_queries) and pair_on else None
             pca_data = PCAData()
-
-            def process_value(value):
-                pattern = re.compile('<([\w\s]+)+>')
-                return [group for group in pattern.findall(value)]
-
-            if scale_by is not None and len(scale_by) and scale_by_values is not None and len(scale_by_values):
-                params['scale_by'] = []
-                split_values = [process_value(value) for value in scale_by_values]  # list of lists
-                for split_value in split_values:
-                    params['scale_by'] += [pair for pair in zip(scale_by, split_value)]
-
-            if filter_by is not None and len(filter_by) and filter_by_values is not None and len(filter_by_values):
-                params['filter_by'] = []
-                split_values = [process_value(value) for value in filter_by_values]  # list of lists
-                for split_value in split_values:
-                    params['filter_by'] += [pair for pair in zip(filter_by, split_value)]
-
-            if ignore_by is not None and len(ignore_by) and ignore_by_values is not None and len(ignore_by_values):
-                params['ignore_by'] = []
-                split_values = [process_value(value) for value in ignore_by_values]  # list of lists
-                for split_value in split_values:
-                    params['ignore_by'] += [pair for pair in zip(ignore_by, split_value)]
-
-            if merge_by is not None and len(merge_by):
-                params['merge_by'] = {'labels': merge_by, 'method': merge_by_method}
-
-            message = pca_data.perform_pca(params)
-            pc_options = pca_data.get_pc_options()
-            all_pc_options = [option['value'] for option in pc_options]
-            ten_pc_options = [option['value'] for option in pc_options[:10]]
+            try:
+                message, name, message_color = pca_data.perform_pca(filter_by, ignore_by, scale_by, pair_on, pair_with)
+                pc_options = pca_data.get_pc_options()
+                all_pc_options = [option['value'] for option in pc_options]
+                ten_pc_options = [option['value'] for option in pc_options[:10]]
+            except Exception as e:
+                message = [html.P([html.Strong('Error: '), f'{e}']),
+                           html.Strong('Traceback:'),
+                           html.P(html.Pre(traceback.format_exc(), className='text-white'))]
+                message_color = 'danger'
+                name = ''
+                pc_options = []
+                all_pc_options = []
+                ten_pc_options = []
 
             return (
-                message,
+                dbc.Alert(message, color=message_color, dismissable=True),
                 False,
                 pc_options,
                 0,
@@ -177,7 +150,8 @@ class PCADashboard(Dashboard):
                 pc_options,
                 ten_pc_options,
                 pc_options,
-                all_pc_options
+                all_pc_options,
+                name
             )
 
         @app.callback(
@@ -204,7 +178,7 @@ class PCADashboard(Dashboard):
             set_plot_data(plot_data)
 
             return [[
-                dbc.ListGroupItem(f'{plot["ordinate"] + 1} vs {plot["abscissa"] + 1} by {plot["color_by"]}')
+                dbc.ListGroupItem(f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1} by {plot["color_by"]}')
                 for plot in plot_data['score_plots']
             ]]
 
@@ -218,18 +192,13 @@ class PCADashboard(Dashboard):
                 raise ValueError('')
 
             plot_data = get_plot_data()
-            print(plot_data)
             plot_data['loading_plots'].append(
                 {
                     'indices': loading_value
                 }
             )
             set_plot_data(plot_data)
-
-            return [[
-                dbc.ListGroupItem(','.join([f'PC{loading + 1}' for loading in plot['indices']]))
-                for plot in plot_data['loading_plots']
-            ]]
+            return [[dbc.ListGroupItem(component_list(plot['indices'])) for plot in plot_data['loading_plots']]]
 
         @app.callback(
             [Output('variance-plot-list', 'children')],
@@ -248,15 +217,36 @@ class PCADashboard(Dashboard):
             )
             set_plot_data(plot_data)
             return [[
-                dbc.ListGroupItem(','.join([f'PC{component + 1}' for component in plot['indices']])
-                                  + ' (autoscaled)' if plot['scale_y'] else '')
+                dbc.ListGroupItem(component_list(plot['indices'])
+                                  + (' (scaled y-axis)' if plot['scale_y'] else ''))
                 for plot in plot_data['variance_plots']
+            ]]
+
+        @app.callback(
+            [Output('cumulative-variance-plot-list', 'children')],
+            [Input('cumulative-variance-plot-add-button', 'n_clicks')],
+            [State('cumulative-variance-input', 'value')]
+        )
+        def add_cumulative_variance_plot(n_clicks, threshold):
+            if not n_clicks:
+                raise ValueError('')
+            plot_data = get_plot_data()
+            plot_data['cumulative_variance_plots'].append({'threshold': float(threshold)})
+            set_plot_data(plot_data)
+            return [[
+                dbc.ListGroupItem(
+                    [
+                        f"{cumulative_variance_plot['threshold']}"
+                        for cumulative_variance_plot in plot_data['cumulative_variance_plots']
+                    ]
+                )
             ]]
 
         @app.callback(
             [Output('score-card-body', 'children'),
              Output('loading-card-body', 'children'),
-             Output('variance-card-body', 'children')],
+             Output('variance-card-body', 'children'),
+             Output('cumulative-variance-card-body', 'children')],
             [Input('plot-button', 'n_clicks')]
         )
         def update_figure(n_clicks):
@@ -264,7 +254,10 @@ class PCADashboard(Dashboard):
                 raise ValueError('Callback triggered without click.')
             plot_data = get_plot_data()
             pca_data = PCAData()
-            return pca_data.get_plots(plot_data['score_plots'], plot_data['loading_plots'], plot_data['variance_plots'])
+            return pca_data.get_plots(plot_data['score_plots'],
+                                      plot_data['loading_plots'],
+                                      plot_data['variance_plots'],
+                                      plot_data['cumulative_variance_plots'])
 
         @app.callback(
             [Output('score-plot-list-wrapper', 'children')],
@@ -294,13 +287,25 @@ class PCADashboard(Dashboard):
             [Output('variance-plot-list-wrapper', 'children')],
             [Input('variance-plot-clear-button', 'n_clicks')]
         )
-        def clear_loading_plots(n_clicks):
+        def clear_variance_plots(n_clicks):
             if not n_clicks:
                 raise ValueError('no clicks!')
             plot_data = get_plot_data()
             plot_data['variance_plots'] = []
             set_plot_data(plot_data)
             return [dbc.ListGroup([], id='variance-plot-list')]
+
+        @app.callback(
+            [Output('cumulative-variance-plot-list-wrapper', 'children')],
+            [Input('cumulative-variance-plot-clear-button', 'n_clicks')]
+        )
+        def clear_variance_plots(n_clicks):
+            if not n_clicks:
+                raise ValueError('no clicks!')
+            plot_data = get_plot_data()
+            plot_data['cumulative_variance_plots'] = []
+            set_plot_data(plot_data)
+            return [dbc.ListGroup([], id='cumulative-variance-plot-list')]
 
     @staticmethod
     def _register_layout(app):

@@ -526,8 +526,7 @@ class NumericFileRecordMixin(FileRecordMixin):
             return ct.get_dataframe(self.filename, row_index_key, keys, include_labels, numeric_columns,
                                     include_only_labels)
         else:
-            raise RuntimeError('File has not been downloaded! Use Session.download_file to download the file for this '
-                               'record')
+            raise RuntimeError('No local file')
 
     def get_dataset_csv(self, path: str) -> str:
         """
