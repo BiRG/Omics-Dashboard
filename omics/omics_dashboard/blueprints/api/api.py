@@ -1,7 +1,9 @@
 import json
+import json
+import os
 import shutil
 
-from flask import request, jsonify, Blueprint, url_for
+from flask import request, jsonify, Blueprint, url_for, send_from_directory
 from flask_login import login_user, logout_user, login_required
 
 import data_tools as dt
@@ -142,3 +144,14 @@ def register_user():
             return jsonify(new_user.to_dict())
     except Exception as e:
         return handle_exception(e)
+
+
+@api.route('/download_tmp')
+def download_temporary_file():
+    path = request.args.get('path')
+    if path is None:
+        return handle_exception(ValueError('No path specified!'))
+    if not os.path.isfile(path):
+        print(path)
+        return handle_exception(ValueError('File does not exist!'))
+    return send_from_directory(os.path.dirname(path), os.path.basename(path), as_attachment=True)

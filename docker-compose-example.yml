@@ -46,7 +46,8 @@ services:
       - ${HOSTPORT}:80
     volumes:
       - data:/data
-      - ${EXTERNALDIR}:/data/external  
+      - ${EXTERNALDIR}:/data/external
+      - tmp:/tmp
     depends_on:
       - jobserver
       - omics

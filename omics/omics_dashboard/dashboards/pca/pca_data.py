@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 import time as tm
@@ -12,11 +13,22 @@ import msgpack
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import plotly.io as pio
+from flask import url_for
 from flask_login import current_user
 from sklearn.decomposition import PCA
 
 import data_tools.redis as rds
-from data_tools.access_wrappers.collections import get_collection_copy
+from data_tools.access_wrappers.collections import get_collection_copy, upload_collection
+
+
+def component_list(val):
+    def _list_to_range(i):
+        for a, b in itertools.groupby(enumerate(i), lambda x: x[1] - x[0]):
+            b = list(b)
+            yield b[0][1], b[-1][1]
+
+    return ','.join([f'PC{r[0]+1}–PC{r[1]+1}' if r[0] != r[1] else f'PC{r[0]+1}' for r in _list_to_range(val)])
 
 
 def get_plot_data() -> Dict[str, List[Dict[str, Any]]]:
@@ -53,6 +65,8 @@ class PCAData:
         self._scores = None
         self._explained_variance_ratio = None
         self._x = None
+        self._x_min = None
+        self._x_max = None
         self._loaded_collection_ids = []
         self._dataframe_filename = None
         self._results_filename = None
@@ -67,11 +81,34 @@ class PCAData:
             except Exception:
                 self._loadings = self._scores = self._explained_variance_ratio = self._x = None
 
+    @property
+    def labels(self):
+        self.load_labels()
+        return [val for val in self._label_df.columns] if self._label_df is not None else []
+
+    @property
+    def unique_vals(self):
+        self.load_labels()
+        return {label: self._label_df[label].unique() for label in self._label_df.columns}
+
+    @property
+    def results_exist(self):
+        try:
+            self.load_results()
+            return True
+        except:
+            return False
+
     def load_file_info(self):
         data_frame_filename = rds.get_value('pca_dataframe_filename')
         self._dataframe_filename = data_frame_filename.decode('utf-8') if data_frame_filename is not None else None
         results_filename = rds.get_value('pca_results_filename')
         self._results_filename = results_filename.decode('utf-8') if results_filename is not None else None
+        if not self._dataframe_filename or not os.path.isfile(self._dataframe_filename):
+            rds.delete_value('pca_dataframe_filename')
+            rds.delete_value('pca_results_filename')
+            self._dataframe_filename = None
+            self._results_filename = None
         try:
             self._loaded_collection_ids = msgpack.loads(rds.get_value('pca_loaded_collection_ids'))
         except TypeError:
@@ -103,6 +140,8 @@ class PCAData:
     def load_results(self):
         with h5py.File(self._results_filename, 'r') as file:
             self._x = np.array(file['x'])
+            self._x_min = np.array(file['x_min']) if 'x_min' in file else None
+            self._x_max = np.array(file['x_max']) if 'x_max' in file else None
             self._loadings = np.array(file['loadings'])
             self._scores = np.array(file['scores'])
             self._explained_variance_ratio = np.array(file['explained_variance_ratio'])
@@ -114,6 +153,10 @@ class PCAData:
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
             file['x'] = self._x
+            if self._x_min is not None:
+                file['x_min'] = self._x_min
+            if self._x_max is not None:
+                file['x_max'] = self._x_max
 
     def load_data(self):
         self.load_results()
@@ -129,23 +172,265 @@ class PCAData:
             for key, value in attrs.items():
                 file.attrs[key] = value
 
-    @property
-    def labels(self):
-        self.load_labels()
-        return [val for val in self._label_df.columns] if self._label_df is not None else []
+    def post_results(self, name, analysis_ids):
+        self.load_data()
+        description = name
+        with h5py.File(self._results_filename, 'r') as file:
+            if 'description' in file.attrs:
+                description = file.attrs['description'] or name
+        metadata = {
+            'name': name,
+            'description': description,
+            'analysis_ids': analysis_ids,
+            'kind': 'results',
+            'parent_collection_id': self._loaded_collection_ids[0]
+        }
+        collection = upload_collection(current_user, self._results_filename, metadata, False)
+        return ['Posted results as ',
+                html.A(f'Collection {collection.id}.',
+                       href=url_for('collections.render_collection', collection_id=collection.id))]
 
-    @property
-    def unique_vals(self):
+    def _davies_bouldin(self, category_label, label_values, for_display=False) -> pd.DataFrame:
+        # this is calculated as part of plotting scores.
         self.load_labels()
-        return {label: self._label_df[label].unique() for label in self._label_df.columns}
+        self.load_results()
+        scores_df = pd.DataFrame(data=self._scores,
+                                 index=self._processed_label_df.index,
+                                 columns=[f'PC {i+1}' for i in range(0, len(self._scores))])
+        label_df = pd.DataFrame(data=label_values, columns=[category_label], index=self._processed_label_df.index)
 
-    @property
-    def results_exist(self):
-        try:
-            self.load_results()
-            return True
-        except:
-            return False
+        scores_df.reset_index()
+        label_df.reset_index()
+        categories = pd.unique(label_df[category_label].dropna())
+
+        def _calculate_intercluster_distance():
+            distances = {}
+            for cat1 in categories:
+                distances[cat1] = {}
+                for cat2 in categories:
+                    centroid1 = scores_df[label_df[category_label] == cat1].mean()
+                    centroid2 = scores_df[label_df[category_label] == cat2].mean()
+                    distances[cat1][cat2] = np.linalg.norm(centroid1 - centroid2)
+            return distances
+
+        def _calculate_intracluster_distance():
+            distances = {}
+            for category in categories:
+                centroid = scores_df[label_df[category_label] == category].mean()
+                point_distances = scores_df[label_df[category_label] == category].apply(
+                    lambda row: np.linalg.norm(row - centroid), axis=1)
+                distances[category] = pow(sum(point_distances), 0.5) / len(point_distances)
+            return distances
+
+        def _calculate_r(within, between):
+            r_val = {}
+            for cat1 in within.keys():
+                r_val[cat1] = {}
+                for cat2 in within.keys():
+                    r_val[cat1][cat2] = (within[cat1] + within[cat2]) / between[cat1][cat2] \
+                        if between[cat1][cat2] else None
+            return r_val
+
+        between_distances = _calculate_intercluster_distance()
+        within_distances = _calculate_intracluster_distance()
+        r = _calculate_r(within_distances, between_distances)
+        d = {cat1: max([r[cat1][cat2] for cat2 in categories if cat1 != cat2]) for cat1 in categories}
+        db_ind = {cat: d[cat] / len(categories) for cat in categories}
+        results = pd.DataFrame(index=[f'{category_label}={cat}' for cat in categories])
+        results.rename_axis(category_label)
+        results['S'] = [within_distances[cat] for cat in categories]
+        for cat1 in categories:
+            results[f'M_{cat1}'] = [between_distances[cat1][cat2] for cat2 in categories]
+        for cat1 in categories:
+            results[f'R_{cat1}'] = [r[cat1][cat2] for cat2 in categories]
+        results['DB'] = [db_ind[cat] for cat in categories]
+
+        if for_display:
+            results = results.applymap('{:.5f}'.format)
+        results[category_label] = categories
+        columns = [category_label, 'DB'] + [column for column in results.columns if
+                                            column not in {category_label, 'DB'}]
+        return results[columns]
+
+    def _get_db_index_dataframe(self, color_by_labels):
+        color_by_labels = color_by_labels or []
+        color_label = ','.join(color_by_labels) if color_by_labels else 'All'
+        label_df = self._processed_label_df.reset_index()
+        color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)),
+                                                       axis=1) if color_by_labels else pd.Series(
+            ['All' for _ in range(0, len(label_df))])
+
+        return self._davies_bouldin(color_label, color_labels, True)
+
+    def _get_scores_dataframe(self):
+        return pd.DataFrame(data=self._scores,
+                            index=self._processed_label_df.index,
+                            columns=[f'PC{i+1}' for i in range(0, len(self._scores))])
+
+    def _get_variance_dataframe(self):
+        return pd.DataFrame(data=self._explained_variance_ratio,
+                            index=[f'PC{i+1}' for i in range(0, len(self._explained_variance_ratio))],
+                            columns=['explained_variance_ratio'])
+
+    def _get_loading_dataframe(self):
+        return pd.DataFrame(data=self._loadings,
+                            index=[f'PC{i+1}' for i in range(0, len(self._loadings))],
+                            columns=self._x)
+
+    def download_results(self,
+                         include_scores=True,
+                         include_loadings=True,
+                         include_variance=True,
+                         include_db_index=True,
+                         file_formats=None,
+                         score_plot_data=None):
+        file_formats = file_formats or ['hdf5']
+        if include_db_index and not score_plot_data:
+            raise ValueError('No score plot data provided')
+        self.load_data()
+        create_archive = ([
+                              include_scores,
+                              include_loadings,
+                              include_variance,
+                              include_db_index].count(True) > 1 and 'csv' in file_formats) or len(file_formats) > 1 or (
+                                     include_db_index and len(score_plot_data) > 1)
+
+        # make temporary directory
+        # make directories for different file formats if relevant
+        # save results
+
+        def _save_scores(name, file_format):
+            if file_format == 'csv':
+                scores_df = pd.DataFrame(data=self._scores,
+                                         columns=[f'PC{i+1}' for i in range(0, len(self._scores))],
+                                         index=self._numeric_df.index)
+                scores_df.to_csv(name)
+            else:
+                with h5py.File(name, 'a') as file:
+                    if 'pca_scores' in file:
+                        del file['pca_scores']
+                    print(self._scores.shape)
+                    file['pca_scores'] = self._scores
+                    print(file['pca_scores'])
+
+        def _save_loadings(name, file_format):
+            if file_format == 'csv':
+                loadings_df = pd.DataFrame(data=self._loadings,
+                                           columns=self._x,
+                                           index=[f'PC{i+1}' for i in range(0, len(self._loadings))])
+                loadings_df.to_csv(name)
+            else:
+                with h5py.File(name, 'a') as file:
+                    if 'pca_loadings' in file:
+                        del file['pca_loadings']
+                    if 'x' in file:
+                        del file['x']
+                    if 'x_min' in file:
+                        del file['x_min']
+                    if 'x_max' in file:
+                        del file['x_max']
+
+                    file['pca_loadings'] = self._loadings
+                    file['x'] = self._x
+                    if self._x_max:
+                        file['x_max'] = self._x_max
+                    if self._x_min:
+                        file['x_min'] = self._x_min
+
+        def _save_variance(name, file_format):
+            if file_format == 'csv':
+                variance_df = pd.DataFrame(data=self._explained_variance_ratio,
+                                           columns='explained_variance_ratio',
+                                           index=[f'PC{i+1}' for i in range(0, len(self._explained_variance_ratio))])
+                variance_df.to_csv(name)
+            else:
+                with h5py.File(name, 'a') as file:
+                    if 'explained_variance_ratio' in file:
+                        del file['explained_variance_ratio']
+                    file['explained_variance_ratio'] = self._explained_variance_ratio
+
+        def _save_davies_bouldin(path, file_format, score_plots):
+            # calculate davis_bouldin for all active plots that use it.
+            db_dfs = {}
+            for plot in score_plots:
+                if plot['include_db_index']:
+                    color_by_labels = plot['color_by'] or []
+                    color_label = ','.join(color_by_labels) if color_by_labels else 'All'
+                    label_df = self._processed_label_df.reset_index()
+                    color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)),
+                                                                   axis=1) if color_by_labels else pd.Series(
+                        ['All' for _ in range(0, len(label_df))])
+                    db_dfs[','.join(plot['color_by'])] = self._davies_bouldin(color_label, color_labels)
+            if file_format == 'csv':
+                for name, db_df in db_dfs.items():
+                    db_df.to_csv(f'{path}_{name}_db_index.csv')
+                return [f'{path}_{name}_db_index.csv' for name in db_dfs.keys()]
+            else:
+                with h5py.File(path, 'a') as file:
+                    for name, db_df in db_dfs.items():
+                        if name in file:
+                            del file[name]
+                        for column in db_df.columns:
+                            arr_name = f'{name}_{column}'
+                            if arr_name in file:
+                                del file[arr_name]
+                            arr = db_df[column].to_numpy()
+                            if len(arr.shape) == 1:
+                                arr = np.reshape(arr, (arr.shape[0], 1))
+                            if arr.dtype.type in {np.object_, np.string_}:
+                                arr = arr.astype(h5py.special_dtype(vlen=bytes))
+                            file[arr_name] = arr
+                    return path
+
+        if len(self._loaded_collection_ids) > 1:
+            filename = 'pca_collections_' + '_'.join([str(collection_id)
+                                                      for collection_id in self._loaded_collection_ids])
+        else:
+            filename = f'pca_collection_{self._loaded_collection_ids[0]}'
+        root_dir = os.path.dirname(self._results_filename)
+        results_dir = os.path.join(root_dir, filename)
+        if os.path.isdir(results_dir):
+            shutil.rmtree(results_dir)
+        elif os.path.isfile(results_dir):
+            os.remove(results_dir)
+        os.mkdir(results_dir)
+        if 'hdf5' in file_formats:
+            os.mkdir(f'{results_dir}/hdf5')
+            h5_filename = f'{results_dir}/hdf5/{filename}.h5'
+            if include_scores:
+                _save_scores(h5_filename, 'hdf5')
+            if include_loadings:
+                _save_loadings(h5_filename, 'hdf5')
+            if include_variance:
+                _save_variance(h5_filename, 'hdf5')
+            if include_db_index:
+                _save_davies_bouldin(h5_filename, 'hdf5', score_plot_data)
+            if not create_archive:
+                return h5_filename
+        if 'csv' in file_formats:
+            os.mkdir(f'{results_dir}/csv')
+            csv_prefix = f'{results_dir}/csv'
+            if include_scores:
+                csv_filename = f'{csv_prefix}/{filename}_scores.csv'
+                _save_scores(csv_filename, 'csv')
+                if not create_archive:
+                    return csv_filename
+            if include_loadings:
+                csv_filename = f'{csv_prefix}/{filename}_loadings.csv'
+                _save_loadings(csv_filename, 'csv')
+                if not create_archive:
+                    return csv_filename
+            if include_variance:
+                csv_filename = f'{csv_prefix}/{filename}_variance.csv'
+                _save_variance(csv_filename, '')
+                if not create_archive:
+                    return csv_filename
+            if include_db_index:
+                get_plot_data()
+                csv_filenames = _save_davies_bouldin(f'{csv_prefix}/{filename}', 'csv', score_plot_data)
+                if not create_archive:
+                    return csv_filenames[0]
+        return shutil.make_archive(results_dir, 'zip', root_dir, filename)
 
     def get_collections(self, collection_ids: List[int]):
         data_dir = os.path.dirname(self._dataframe_filename) if self._dataframe_filename is not None else None
@@ -201,10 +486,7 @@ class PCAData:
             std_devs = numeric_df.std().apply(lambda x: x if x else 1.0)
 
         if filter_by:
-            print(filter_by)
             label_df = label_df.query(filter_by)
-            print(label_df.index)
-            print(numeric_df.index)
             numeric_df = numeric_df.loc[label_df.index]
 
         if ignore_by:
@@ -285,63 +567,7 @@ class PCAData:
         ]
         return html.P(message_children), metadata['name'], message_color
 
-    def _davies_bouldin(self, category_label, label_values) -> pd.DataFrame:
-        # this is calculated as part of plotting scores.
-        self.load_labels()
-        self.load_results()
-        scores_df = pd.DataFrame(data=self._scores,
-                                 index=self._processed_label_df.index,
-                                 columns=[f'PC {i+1}' for i in range(0, len(self._scores))])
-        label_df = pd.DataFrame(data=label_values, columns=[category_label], index=self._processed_label_df.index)
-
-        scores_df.reset_index()
-        label_df.reset_index()
-        categories = pd.unique(label_df[category_label].dropna())
-
-        def _calculate_intercluster_distance():
-            distances = {}
-            for cat1 in categories:
-                distances[cat1] = {}
-                for cat2 in categories:
-                    centroid1 = scores_df[label_df[category_label] == cat1].mean()
-                    centroid2 = scores_df[label_df[category_label] == cat2].mean()
-                    distances[cat1][cat2] = np.linalg.norm(centroid1 - centroid2)
-            return distances
-
-        def _calculate_intracluster_distance():
-            distances = {}
-            for category in categories:
-                centroid = scores_df[label_df[category_label] == category].mean()
-                point_distances = scores_df[label_df[category_label] == category].apply(
-                    lambda row: np.linalg.norm(row - centroid), axis=1)
-                distances[category] = pow(sum(point_distances), 0.5) / len(point_distances)
-            return distances
-
-        def _calculate_r(within, between):
-            r_val = {}
-            for cat1 in within.keys():
-                r_val[cat1] = {}
-                for cat2 in within.keys():
-                    r_val[cat1][cat2] = (within[cat1] + within[cat2]) / between[cat1][cat2] \
-                        if between[cat1][cat2] else None
-            return r_val
-
-        between_distances = _calculate_intercluster_distance()
-        within_distances = _calculate_intracluster_distance()
-        r = _calculate_r(within_distances, between_distances)
-        d = {cat1: max([r[cat1][cat2] for cat2 in categories if cat1 != cat2]) for cat1 in categories}
-        db_ind = {cat: d[cat] / len(categories) for cat in categories}
-
-        results = pd.DataFrame(index=[f'{category_label}={cat}' for cat in categories])
-        results['S'] = [within_distances[cat] for cat in categories]
-        for cat1 in categories:
-            results[f'M_{cat1}'] = [between_distances[cat1][cat2] for cat2 in categories]
-        for cat1 in categories:
-            results[f'R_{cat1}'] = [r[cat1][cat2] for cat2 in categories]
-        results['DB'] = [db_ind[cat] for cat in categories]
-        return results
-
-    def _get_score_plot(self, ordinate, abscissa, color_by_labels) -> (
+    def _get_score_plot(self, ordinate, abscissa, color_by_labels, include_db_index=False) -> (
     dcc.Graph, Union[dash_table.DataTable, html.Div]):
         color_by_labels = color_by_labels or []
         color_label = ','.join(color_by_labels) if color_by_labels else 'All'
@@ -351,12 +577,8 @@ class PCAData:
             ['All' for _ in range(0, len(label_df))])
         color_names = list(color_labels.unique())
         color_indices = [label_df.index[color_labels == color_name] for color_name in color_names]
-        if len(color_names) > 1:
-            db_df = self._davies_bouldin(color_label, color_labels)
-            db_df = db_df.applymap('{:.5f}'.format)
-            db_df[color_label] = db_df.index
-            columns = [color_label, 'DB'] + [column for column in db_df.columns if column not in {color_label, 'DB'}]
-            db_df = db_df[columns]
+        if len(color_names) > 1 and include_db_index:
+            db_df = self._davies_bouldin(color_label, color_labels, True)
             table = dash_table.DataTable(columns=[{'name': val, 'id': val} for val in db_df.columns],
                                          data=db_df.to_dict('rows'))
         else:
@@ -494,18 +716,23 @@ class PCAData:
                   score_plot_data,
                   loading_plot_data,
                   variance_plot_data,
-                  cumulative_variance_plot_data) -> (List[Union[dcc.Graph, dash_table.DataTable]],
+                  cumulative_variance_plot_data,
+                  as_figure=False,
+                  include_db_index_tables=True) -> (List[Union[dcc.Graph, dash_table.DataTable]],
                                                      List[dcc.Graph],
                                                      List[dcc.Graph],
                                                      List[dcc.Graph]):
         self.load_labels()
         self.load_results()
-        score_plots = [self._get_score_plot(plot['ordinate'], plot['abscissa'], plot['color_by'])
+        score_plots = [self._get_score_plot(plot['ordinate'],
+                                            plot['abscissa'],
+                                            plot['color_by'],
+                                            include_db_index_tables and plot['include_db_index'])
                        for plot in score_plot_data]
         return (
             [
                 item for pair in score_plots for item in pair
-            ],
+            ] if include_db_index_tables else [pair[0] for pair in score_plots],
             [
                 self._get_loading_plot(plot['indices']) for plot in loading_plot_data
             ],
@@ -516,6 +743,53 @@ class PCAData:
                 self._get_cumulative_variance_plot(plot['threshold']) for plot in cumulative_variance_plot_data
             ]
         )
+
+    def download_plots(self,
+                       score_plot_data,
+                       loading_plot_data,
+                       variance_plot_data,
+                       cumulative_variance_plot_data,
+                       file_formats=None) -> str:
+        file_formats = file_formats or []
+        if len(self._loaded_collection_ids) > 1:
+            base_filename = 'pca_collections_' + '_'.join([str(collection_id)
+                                                           for collection_id in self._loaded_collection_ids])
+        else:
+            base_filename = f'pca_collection_{self._loaded_collection_ids[0]}'
+        root_dir = os.path.dirname(self._results_filename)
+        plot_dir = os.path.join(root_dir, f"{base_filename}_plots")
+        if os.path.isdir(plot_dir):
+            shutil.rmtree(plot_dir)
+        elif os.path.isfile(plot_dir):
+            os.remove(plot_dir)
+        os.mkdir(plot_dir)
+        for file_format in file_formats:
+            format_dir = os.path.join(plot_dir, file_format)
+            os.mkdir(format_dir)
+            for plot_info in score_plot_data:
+                plot = self._get_score_plot(plot_info['ordinate'], plot_info['abscissa'], plot_info['color_by'], False)[
+                    0]
+                filename = f'{base_filename}_scores_{plot_info["ordinate"]}_vs_{plot_info["abscissa"]}'
+                if plot_info['color_by']:
+                    filename += '_by_' + ','.join(plot_info['color_by'])
+                filename = os.path.join(format_dir, f'{filename}.{file_format}')
+                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+            for plot_info in loading_plot_data:
+                plot = self._get_loading_plot(plot_info['indices'])
+                components = component_list(plot_info['indices']).replace('–', '-')
+                filename = f"{format_dir}/{base_filename}_loadings_{components}.{file_format}"
+                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+            for plot_info in variance_plot_data:
+                plot = self._get_variance_plot(plot_info['scale_y'], plot_info['indices'])
+                components = component_list(plot_info['indices']).replace('–', '-')
+                filename = f"{format_dir}/{base_filename}_variance_{components}.{file_format}"
+                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+            for plot_info in cumulative_variance_plot_data:
+                plot = self._get_cumulative_variance_plot(plot_info['threshold'])
+                filename = f'{format_dir}/{base_filename}_cumulative_variance_{plot_info["threshold"]}.{file_format}'
+                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+        print('about to make file')
+        return shutil.make_archive(plot_dir, 'zip', root_dir, f"{base_filename}_plots")
 
     def get_collection_badges(self) -> List[html.Span]:
         return [

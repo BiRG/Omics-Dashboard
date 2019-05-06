@@ -46,3 +46,4 @@ dash-bootstrap-components
 plotly
 msgpack
 tables
+psutil

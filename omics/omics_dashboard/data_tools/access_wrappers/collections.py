@@ -149,7 +149,7 @@ def update_collection_array(user: User, collection: Collection, path: str, i: in
     raise AuthException(f'User {user.email} is not permitted to modify collection {collection.id}.')
 
 
-def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Collection:
+def upload_collection(user: User, filename: str, new_data: Dict[str, Any], remove_file=True) -> Collection:
     """
     From an uploaded HDF5 file, create a new collection. Metadata will be set from new_data
     :param user:
@@ -166,7 +166,8 @@ def upload_collection(user: User, filename: str, new_data: Dict[str, Any]) -> Co
         db.session.commit()
         new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
         shutil.copy(filename, new_collection.filename)
-        os.remove(filename)
+        if remove_file:
+            os.remove(filename)
         new_data['creator_id'] = user.id if 'creator_id' not in new_data else new_data['creator_id']
         new_data['owner_id'] = user.id if 'owner_id' not in new_data else new_data['owner_id']
         update_collection(user, new_collection, new_data)  # apply metadata

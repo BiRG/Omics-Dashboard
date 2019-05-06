@@ -1,5 +1,3 @@
-import itertools
-
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
@@ -8,16 +6,7 @@ from flask_login import current_user
 from dashboards.navbar import get_navbar
 from data_tools.access_wrappers.analyses import get_analyses
 from data_tools.access_wrappers.collections import get_collections
-from .pca_data import get_plot_data, PCAData
-
-
-def component_list(val):
-    def _list_to_range(i):
-        for a, b in itertools.groupby(enumerate(i), lambda x: x[1] - x[0]):
-            b = list(b)
-            yield b[0][1], b[-1][1]
-
-    return ','.join([f'PC{r[0]+1}–PC{r[1]+1}' if r[0] != r[1] else f'PC{r[0]+1}' for r in _list_to_range(val)])
+from .pca_data import get_plot_data, PCAData, component_list
 
 
 def get_save_results_form():
@@ -45,8 +34,7 @@ def get_save_results_form():
                                                      {'label': 'Scores', 'value': 'scores'},
                                                      {'label': 'Loadings', 'value': 'loadings'},
                                                      {'label': 'Variance Explained', 'value': 'explained_variance'},
-                                                     {'label': 'Davies-Bouldin Indices', 'value': 'db_indices'},
-                                                     {'label': 'Processed Data', 'value': 'processed_data'}
+                                                     {'label': 'Davies-Bouldin Indices', 'value': 'db_indices'}
                                                  ])
                                 ]
                             )
@@ -71,13 +59,28 @@ def get_save_results_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Download', html_for='download-button-group'),
+                                    dbc.Label('Assemble results', html_for='download-button-group'),
                                     dbc.FormGroup(
                                         [
-                                            dbc.Button([html.I(className='fas fa-download'), ' Download'],
+                                            dbc.Button([html.I(className='fas fa-cogs'), ' Prepare'],
                                                        id='download-button',
-                                                       className='btn btn-success')
+                                                       className='btn btn-info')
                                         ], id='download-button-group'
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Download', html_for='download-link-group'),
+                                    dbc.FormGroup(
+                                        [
+                                            html.A([html.I(className='fas fa-download'), ' Download'],
+                                                   id='download-link', className='btn btn-secondary disabled')
+                                        ], id='download-link-group'
                                     )
                                 ]
                             )
@@ -85,6 +88,60 @@ def get_save_results_form():
                     )
                 ], className='form-row'
             ),
+            html.Small('', id='download-message', className='form-text'),  # will inject link when results posted
+            html.H5('Save Plots'),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('File Format', html_for='plot-file-format-select'),
+                                    dcc.Dropdown(id='plot-file-format-select',
+                                                 multi=True,
+                                                 options=[
+                                                     {'label': 'PNG', 'value': 'png'},
+                                                     {'label': 'JPEG', 'value': 'jpg'},
+                                                     {'label': 'SVG', 'value': 'svg'}
+                                                 ])
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Assemble plots', html_for='plot-download-button-group'),
+                                    dbc.FormGroup(
+                                        [
+                                            dbc.Button([html.I(className='fas fa-cogs'), ' Prepare'],
+                                                       id='plot-download-button',
+                                                       className='btn btn-info')
+                                        ], id='plot-download-button-group'
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Download', html_for='plot-download-link-group'),
+                                    dbc.FormGroup(
+                                        [
+                                            html.A([html.I(className='fas fa-download'), ' Download'],
+                                                   id='plot-download-link', className='btn btn-secondary disabled')
+                                        ], id='plot-download-link-group'
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ], className='form-row'
+            ),
+            html.Small('', id='plot-download-message', className='form-text'),  # will inject link when results posted
             html.H5('Post Results'),
             dbc.Row(
                 [
@@ -103,7 +160,7 @@ def get_save_results_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('Analysis', html_for='analysis-select'),
-                                    dcc.Dropdown('id=analysis-select', options=analysis_options)
+                                    dcc.Dropdown(id='analysis-select', options=analysis_options)
                                 ]
                             )
                         ]
@@ -126,7 +183,7 @@ def get_save_results_form():
                     )
                 ], className='form-row'
             ),
-            html.Small('', id='post-message', className='form-text text-muted')  # will inject link when results posted
+            html.Small('', id='post-message', className='form-text')  # will inject link when results posted
         ]
     )
 
@@ -175,6 +232,16 @@ def get_plot_options_form():
                             )
                         ]
                     ),
+                ], className='form-row'
+            ),
+            dbc.Row(
+                [
+                    html.Div(
+                        [
+                            dbc.Checkbox(id='db-index'),
+                            dbc.Label(' Include DB index table?', className='form-check-label', html_for='db-index')
+                        ], className='form-check form-check-inline'
+                    )
                 ], className='form-row'
             ),
             dbc.Row(
@@ -274,7 +341,7 @@ def get_plot_options_form():
                     html.Div(
                         [
                             dbc.Checkbox(id='variance-autoscale'),
-                            dbc.Label('Scale y axis?', className='form-check-label', html_for='variance-autoscale')
+                            dbc.Label(' Scale y axis?', className='form-check-label', html_for='variance-autoscale')
                         ], className='form-check form-check-inline'
                     )
                 ], className='form-row'

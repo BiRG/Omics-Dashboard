@@ -5,10 +5,11 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from flask import url_for
 
 from dashboards.dashboard import Dashboard
-from dashboards.pca.layouts import get_layout, component_list
-from .pca_data import get_plot_data, set_plot_data, PCAData
+from .layouts import get_layout
+from .pca_data import get_plot_data, set_plot_data, PCAData, component_list
 
 
 class PCADashboard(Dashboard):
@@ -161,9 +162,10 @@ class PCADashboard(Dashboard):
                 State('abscissa-select', 'value'),
                 State('ordinate-select', 'value'),
                 State('color-by-select', 'value'),
+                State('db-index', 'checked')
             ]
         )
-        def add_score_plot(n_clicks, abscissa_value, ordinate_value, color_by_value):
+        def add_score_plot(n_clicks, abscissa_value, ordinate_value, color_by_value, include_db_index):
             if not n_clicks:
                 raise ValueError('')
 
@@ -172,13 +174,15 @@ class PCADashboard(Dashboard):
                 {
                     'ordinate': ordinate_value,
                     'abscissa': abscissa_value,
-                    'color_by': color_by_value
+                    'color_by': color_by_value,
+                    'include_db_index': include_db_index
                 }
             )
             set_plot_data(plot_data)
 
             return [[
-                dbc.ListGroupItem(f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1} by {plot["color_by"]}')
+                dbc.ListGroupItem(f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1} by {plot["color_by"]}' + (
+                    ' with DB Index' if plot['include_db_index'] else ''))
                 for plot in plot_data['score_plots']
             ]]
 
@@ -306,6 +310,75 @@ class PCADashboard(Dashboard):
             plot_data['cumulative_variance_plots'] = []
             set_plot_data(plot_data)
             return [dbc.ListGroup([], id='cumulative-variance-plot-list')]
+
+        @app.callback(
+            [Output('download-link', 'href'),
+             Output('download-link', 'className'),
+             Output('download-message', 'children')],
+            [Input('download-button', 'n_clicks')],
+            [State('results-select', 'value'),
+             State('file-format-select', 'value')]
+        )
+        def prepare_results_file(n_clicks, results_values, file_format_values):
+            score_plot_data = get_plot_data()['score_plots']
+            pca_data = PCAData()
+            if not n_clicks:
+                raise ValueError('no clicks')
+            if not pca_data.results_exist:
+                return '#', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
+            try:
+                path = pca_data.download_results('scores' in results_values,
+                                                 'loadings' in results_values,
+                                                 'explained_variance' in results_values,
+                                                 'db_indices' in results_values,
+                                                 file_format_values,
+                                                 score_plot_data)
+                message = dbc.Alert(f'Prepared results file as {path}', color='success', dismissable=True)
+                className = 'btn btn-success'
+            except Exception as e:
+                path = '#'
+                message = dbc.Alert(f'{e}', color='danger', dismissable=True)
+                className = 'btn btn-secondary disabled'
+            return url_for('api.download_temporary_file', path=path), className, message
+
+        @app.callback(
+            [Output('plot-download-link', 'href'),
+             Output('plot-download-link', 'className'),
+             Output('plot-download-message', 'children')],
+            [Input('plot-download-button', 'n_clicks')],
+            [State('plot-file-format-select', 'value')]
+        )
+        def prepare_plots_file(n_clicks, file_format_values):
+            plot_data = get_plot_data()
+            pca_data = PCAData()
+            if not n_clicks:
+                raise ValueError('no clicks')
+            if not pca_data.results_exist:
+                return '#', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
+            try:
+                path = pca_data.download_plots(plot_data['score_plots'],
+                                               plot_data['loading_plots'],
+                                               plot_data['variance_plots'],
+                                               plot_data['cumulative_variance_plots'],
+                                               file_format_values)
+                message = dbc.Alert(f'Prepared plots file as {path}.', color='success', dismissable=True)
+                className = 'btn btn-success'
+            except Exception as e:
+                path = '#'
+                message = dbc.Alert(f'{e}', color='danger', dismissable=True)
+                className = 'btn btn-secondary disabled'
+            return url_for('api.download_temporary_file', path=path), className, message
+
+        @app.callback(
+            [Output('post-message', 'children')],
+            [Input('post-button', 'n_clicks')],
+            [State('name-input', 'value'), State('analysis-select', 'value')]
+        )
+        def post_results(n_clicks, name, analysis_ids):
+            if not n_clicks:
+                raise ValueError('no clicks')
+            pca_data = PCAData()
+            return pca_data.post_results(name, analysis_ids)
 
     @staticmethod
     def _register_layout(app):
