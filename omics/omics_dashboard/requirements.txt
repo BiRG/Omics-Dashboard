@@ -38,3 +38,12 @@ sqlalchemy
 Flask-SQLAlchemy
 python-magic
 Flask-Login
+redis
+scikit-learn
+dash
+dash-daq
+dash-bootstrap-components
+plotly
+msgpack
+tables
+psutil

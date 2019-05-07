@@ -2,8 +2,10 @@ from flask import request, render_template, redirect, url_for, Blueprint
 from flask_login import login_user, logout_user, login_required, fresh_login_required
 
 import data_tools as dt
+from dashboards import dashboard_list
 from data_tools.template_data.entry_page import DashboardPageData, SettingsPageData
 from data_tools.template_data.form import RegisterFormData, LoginFormData
+from data_tools.template_data.list_table import DashboardListTableData
 from data_tools.util import LoginError
 from helpers import get_current_user, handle_exception_browser
 from login_manager import authenticate_user
@@ -13,7 +15,7 @@ browser = Blueprint('browser', __name__)
 
 @browser.route('/')
 def render_root():
-    return redirect(url_for('browser.render_dashboard'))
+    return redirect(url_for('browser.render_home'))
 
 
 @browser.route('/register', methods=['GET', 'POST'])
@@ -44,7 +46,7 @@ def browser_login(msg=None, error=None):
     try:
         if request.method == 'POST':
             redirect_url = request.args.get('next') if request.args.get('next') is not None \
-                else url_for('browser.render_dashboard')
+                else url_for('browser.render_home')
             user = authenticate_user(request)
             login_user(user)
             return redirect(redirect_url)
@@ -56,19 +58,19 @@ def browser_login(msg=None, error=None):
 @browser.route('/logout', methods=['GET'])
 @login_required
 def browser_logout():
+    dt.redis.clear_user_hash(get_current_user().id)
     logout_user()
     return redirect(url_for('browser.browser_login'))
 
 
-@browser.route('/dashboard', methods=['GET'])
+@browser.route('/home', methods=['GET'])
 @login_required
-def render_dashboard():
+def render_home():
     try:
         current_user = get_current_user()
         page_data = DashboardPageData(current_user)
-        return render_template('pages/dashboard.html', page_data=page_data)
+        return render_template('pages/home.html', page_data=page_data)
     except Exception as e:
-        print('Dashboard exception')
         return handle_exception_browser(e)
 
 
@@ -133,3 +135,9 @@ def render_api_docs():
 @login_required
 def render_help():
     return render_template('pages/help.html')
+
+
+@browser.route('/dashboards')
+@login_required
+def render_dashboard_list():
+    return render_template('pages/list.html', page_data=DashboardListTableData(get_current_user(), dashboard_list))

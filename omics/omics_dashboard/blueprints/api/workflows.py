@@ -7,7 +7,6 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.users import is_write_permitted
 from data_tools.util import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
@@ -19,6 +18,8 @@ workflows_api = Blueprint('workflows_api', __name__, url_prefix='/api/workflows'
 def list_workflows():
     try:
         user = get_current_user()
+        if request.method == 'POST':
+            return jsonify(dt.workflows.create_workflow(user, request.get_json()).to_dict())
         return jsonify([workflow.to_dict() for workflow in dt.workflows.get_workflows(user)])
     except Exception as e:
         return handle_exception(e)
@@ -53,7 +54,7 @@ def get_workflow(workflow_id=None):
         user = get_current_user()
         workflow = dt.workflows.get_workflow(user, workflow_id)
         if request.method == 'GET':
-            return jsonify({**workflow.to_dict(), 'is_write_permitted': is_write_permitted(user, workflow)})
+            return jsonify({**workflow.to_dict(), 'is_write_permitted': dt.users.is_write_permitted(user, workflow)})
 
         if request.content_type == 'application/json':
             new_data = process_input_dict(request.get_json(force=True))
@@ -72,20 +73,11 @@ def get_workflow(workflow_id=None):
                         workflow_file_data = base64.b64decode(bytes(new_data['file'], 'utf-8'))
                         file.write(workflow_file_data)
                         del new_data['file']
-                return jsonify(dt.workflows.update_workflow(user, workflow, new_data, filename).to_dict())
+                return jsonify(
+                    dt.workflows.update_workflow(user, workflow, new_data, filename).to_dict())
             return jsonify(dt.workflows.update_workflow(user, workflow, new_data).to_dict())
 
         if request.method == 'DELETE':
             return jsonify(dt.workflows.delete_workflow(user, workflow))
-    except Exception as e:
-        return handle_exception(e)
-
-
-@workflows_api.route('/create')
-@login_required
-def create_workflow():
-    try:
-        user = get_current_user()
-        return jsonify(dt.workflows.create_workflow(user, request.get_json()).to_dict())
     except Exception as e:
         return handle_exception(e)

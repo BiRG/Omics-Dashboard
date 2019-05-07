@@ -1,9 +1,10 @@
-from typing import Any, Union, List
+from typing import Any, Union, List, Type
 
-from data_tools.db import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
+from dashboards import Dashboard
+from data_tools.access_wrappers.users import is_write_permitted
+from data_tools.access_wrappers.workflows import WorkflowModule
+from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
 from data_tools.template_data.page import PageData
-from data_tools.users import is_write_permitted
-from data_tools.workflows import WorkflowModule
 from helpers import get_item_link
 
 
@@ -89,6 +90,15 @@ class ListTableData(PageData):
             self.headings = [special_val_heading] + self.headings
             if 'ID' in self.rows[0].values.keys():
                 self.headings = ['ID'] + self.headings
+
+
+class DashboardListTableData(PageData):
+    def __init__(self, current_user: User, dashboards: List[Type[Dashboard]]):
+        super(DashboardListTableData, self).__init__(current_user)
+        self.rows = [ListTableRow(dashboard) for dashboard in dashboards]
+        self.headings = [key for key in self.rows[0].values.keys()]
+        self.title = 'Dashboards'
+        self.special_val_heading = ''
 
 
 class FileListTableData(PageData):

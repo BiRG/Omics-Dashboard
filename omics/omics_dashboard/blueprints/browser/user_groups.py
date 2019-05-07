@@ -1,12 +1,12 @@
 from flask import request, redirect, url_for, render_template, Blueprint
 from flask_login import login_required
 
-from data_tools.db import User
+from data_tools.access_wrappers.user_groups import get_user_groups, get_user_group, create_user_group, delete_user_group
+from data_tools.access_wrappers.users import get_all_read_permitted_records
+from data_tools.db_models import User
 from data_tools.template_data.entry_page import UserGroupPageData
 from data_tools.template_data.form import UserGroupCreateFormData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.user_groups import get_user_groups, get_user_group, create_user_group, delete_user_group
-from data_tools.users import get_all_read_permitted_records
 from helpers import get_current_user, handle_exception_browser
 
 user_groups = Blueprint('user_groups', __name__, url_prefix='/user_groups')

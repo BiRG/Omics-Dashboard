@@ -2,19 +2,19 @@ from typing import Union
 
 from flask import url_for
 
-from data_tools.collections import get_collections
-from data_tools.db import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
+from data_tools.access_wrappers.collections import get_collections
+from data_tools.access_wrappers.jobserver_control import Job
+from data_tools.access_wrappers.samples import get_samples
+from data_tools.access_wrappers.users import is_write_permitted, get_read_permitted_records
+from data_tools.access_wrappers.workflows import WorkflowModule
+from data_tools.db_models import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
     ExternalFile
-from data_tools.jobserver_control import Job
-from data_tools.samples import get_samples
 from data_tools.template_data.attribute_table import AttributeTableData, FileAttributeTableData, \
     WorkflowModuleAttributeTableData, DatasetSummaryTableData
 from data_tools.template_data.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
 from data_tools.template_data.label_column_table import LabelColumnTableData
 from data_tools.template_data.list_table import ListTableData, FileListTableData
 from data_tools.template_data.page import PageData
-from data_tools.users import is_write_permitted, get_read_permitted_records
-from data_tools.workflows import WorkflowModule
 from helpers import get_update_url, get_list_url, get_download_url
 
 

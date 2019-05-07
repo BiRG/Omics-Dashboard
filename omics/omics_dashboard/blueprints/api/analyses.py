@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 import data_tools as dt
-from data_tools.users import is_write_permitted
 from helpers import get_current_user, handle_exception
 
 analyses_api = Blueprint('analyses_api', __name__, url_prefix='/api/analyses')
@@ -20,7 +19,8 @@ def list_analyses():
             new_data = request.get_json(force=True)
             print(new_data)
             if 'collection_ids' in new_data:
-                collections = [dt.collections.get_collection(user, collection_id) for collection_id in new_data['collection_ids']]
+                collections = [dt.collections.get_collection(user, collection_id)
+                               for collection_id in new_data['collection_ids']]
             else:
                 collections = None
             analysis = dt.analyses.create_analysis(user, new_data, collections)
@@ -45,7 +45,7 @@ def attach_collection(analysis_id=None):
                     dt.analyses.attach_collection(user, analysis, collection)
                 if request.method == 'DELETE':
                     dt.analyses.detach_collection(user, analysis, collection)
-            return jsonify({**analysis.to_dict(), 'is_write_permitted': is_write_permitted(user, analysis)})
+            return jsonify({**analysis.to_dict(), 'is_write_permitted': dt.users.is_write_permitted(user, analysis)})
         else:
             raise ValueError('No collection id(s) specified')
     except Exception as e:

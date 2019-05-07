@@ -58,6 +58,7 @@ def make_2d(arr, dim_ind):
     return arr
 
 
+# noinspection PyUnresolvedReferences
 def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert', reserved_paths: List[str] = None,
              sort_by: str = 'base_sample_id', align_at: str = None, merge_attributes: bool = False) -> None:
     """
@@ -140,6 +141,7 @@ def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert'
                                 if isinstance(file.attrs[attr_key], str) else file.attrs[attr_key] for file in files]])
             if len(values):
                 if isinstance(files[0].attrs[attr_key], str):
+                    # noinspection PyUnresolvedReferences
                     outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape,
                                            dtype=h5py.special_dtype(vlen=bytes))
                 else:

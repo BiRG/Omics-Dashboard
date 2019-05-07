@@ -1,7 +1,8 @@
 import json
+import os
 import shutil
 
-from flask import request, jsonify, Blueprint, url_for
+from flask import request, jsonify, Blueprint, url_for, send_from_directory
 from flask_login import login_user, logout_user, login_required
 
 import data_tools as dt
@@ -33,6 +34,7 @@ def login():
 @api.route('/logout')
 @login_required
 def logout():
+    dt.redis.clear_user_hash(get_current_user().id)
     logout_user()
     return jsonify({'message': 'logged out'}), 200
 
@@ -99,7 +101,7 @@ def finalize_job():
         token = body['wf_token']
         path = f'{TMPDIR}/{token}'
         info = json.load(open(f'{path}/wfdata.json', 'r'))
-        if dt.jobserver_control.check_jobserver_token(token) and (user.admin or info['owner'] == user.id): 
+        if dt.jobserver_control.check_jobserver_token(token) and (user.admin or info['owner'] == user.id):
             shutil.rmtree(f'{TMPDIR}/{token}', ignore_errors=True)
         return jsonify({'message': f'Removed {path}'})
     except Exception as e:
@@ -141,3 +143,15 @@ def register_user():
             return jsonify(new_user.to_dict())
     except Exception as e:
         return handle_exception(e)
+
+
+@api.route('/download_tmp')
+@login_required
+def download_temporary_file():
+    path = request.args.get('path')
+    if path is None:
+        return handle_exception(ValueError('No path specified!'))
+    if not os.path.isfile(path):
+        print(path)
+        return handle_exception(ValueError('File does not exist!'))
+    return send_from_directory(os.path.dirname(path), os.path.basename(path), as_attachment=True)

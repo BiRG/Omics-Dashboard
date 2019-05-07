@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import traceback
 
 from flask import url_for, request, render_template, redirect, jsonify
@@ -15,19 +16,19 @@ def get_user_display_data(user_id):
 
 
 def get_item_link(record):
-    if isinstance(record, dt.db.Collection):
+    if isinstance(record, dt.db_models.Collection):
         return url_for('collections.render_collection', collection_id=record.id)
-    elif isinstance(record, dt.db.Sample):
+    elif isinstance(record, dt.db_models.Sample):
         return url_for('samples.render_sample', sample_id=record.id)
-    elif isinstance(record, dt.db.SampleGroup):
+    elif isinstance(record, dt.db_models.SampleGroup):
         return url_for('sample_groups.render_sample_group', sample_group_id=record.id)
-    elif isinstance(record, dt.db.User):
+    elif isinstance(record, dt.db_models.User):
         return url_for('users.render_user_profile', user_id=record.id)
-    elif isinstance(record, dt.db.UserGroup):
+    elif isinstance(record, dt.db_models.UserGroup):
         return url_for('user_groups.render_user_group', user_group_id=record.id)
-    elif isinstance(record, dt.db.Analysis):
+    elif isinstance(record, dt.db_models.Analysis):
         return url_for('analyses.render_analysis', analysis_id=record.id)
-    elif isinstance(record, dt.db.Workflow):
+    elif isinstance(record, dt.db_models.Workflow):
         return url_for('workflows.render_workflow', workflow_id=record.id)
     elif isinstance(record, dt.jobserver_control.Job):
         if record.id is None:
@@ -35,61 +36,63 @@ def get_item_link(record):
         return url_for('jobs.render_job', job_id=record.id)
     elif isinstance(record, dt.workflows.WorkflowModule):
         return url_for('workflows.render_workflow_module_list', path=record.path)
-    elif isinstance(record, dt.db.ExternalFile):
+    elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files.render_external_file', external_file_id=record.id)
+    elif inspect.isclass(record) and hasattr(record, 'prefix'):
+        return url_for('browser.render_root') + record.prefix[1:]
     return '#'
 
 
 def get_update_url(record):
-    if isinstance(record, dt.db.Collection):
+    if isinstance(record, dt.db_models.Collection):
         return url_for('collections_api.get_collection', collection_id=record.id)
-    elif isinstance(record, dt.db.Sample):
+    elif isinstance(record, dt.db_models.Sample):
         return url_for('samples_api.get_sample', sample_id=record.id)
-    elif isinstance(record, dt.db.SampleGroup):
+    elif isinstance(record, dt.db_models.SampleGroup):
         return url_for('sample_groups_api.get_sample_group', sample_group_id=record.id)
-    elif isinstance(record, dt.db.Analysis):
+    elif isinstance(record, dt.db_models.Analysis):
         return url_for('analyses_api.get_analysis', analysis_id=record.id)
-    elif isinstance(record, dt.db.Workflow):
+    elif isinstance(record, dt.db_models.Workflow):
         return url_for('workflows_api.get_workflow', workflow_id=record.id)
-    elif isinstance(record, dt.db.UserGroup):
+    elif isinstance(record, dt.db_models.UserGroup):
         return url_for('user_groups_api.get_user_group', user_group_id=record.id)
-    elif isinstance(record, dt.db.User):
+    elif isinstance(record, dt.db_models.User):
         return url_for('users_api.get_user', user_id=record.id)
-    elif isinstance(record, dt.db.ExternalFile):
+    elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files_api.get_external_file', external_file_id=record.id)
     return '#'
 
 
 def get_list_url(record):
-    if isinstance(record, dt.db.Collection):
+    if isinstance(record, dt.db_models.Collection):
         return url_for('collections.render_collection_list')
-    elif isinstance(record, dt.db.Sample):
+    elif isinstance(record, dt.db_models.Sample):
         return url_for('samples.render_sample_list')
-    elif isinstance(record, dt.db.SampleGroup):
+    elif isinstance(record, dt.db_models.SampleGroup):
         return url_for('sample_groups.render_sample_group_list')
-    elif isinstance(record, dt.db.User):
+    elif isinstance(record, dt.db_models.User):
         return url_for('users.render_user_list')
-    elif isinstance(record, dt.db.UserGroup):
+    elif isinstance(record, dt.db_models.UserGroup):
         return url_for('user_groups.render_user_group_list')
-    elif isinstance(record, dt.db.Analysis):
+    elif isinstance(record, dt.db_models.Analysis):
         return url_for('analyses.render_analysis_list')
-    elif isinstance(record, dt.db.Workflow):
+    elif isinstance(record, dt.db_models.Workflow):
         return url_for('workflows.render_workflow_list')
     elif isinstance(record, dt.jobserver_control.Job):
         return url_for('jobs.render_job_list', job_id=record.id)
     elif isinstance(record, dt.workflows.WorkflowModule):
         return url_for('workflows.render_workflow_module_list')
-    elif isinstance(record, dt.db.ExternalFile):
+    elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files.render_external_file_list')
     return '#'
 
 
 def get_download_url(record):
-    if isinstance(record, dt.db.Collection):
+    if isinstance(record, dt.db_models.Collection):
         return url_for('collections_api.download_collection', collection_id=record.id)
-    elif isinstance(record, dt.db.Sample):
+    elif isinstance(record, dt.db_models.Sample):
         return url_for('samples_api.download_sample', sample_id=record.id)
-    elif isinstance(record, dt.db.ExternalFile):
+    elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files_api.download_external_file', external_file_id=record.id)
     return '#'
 

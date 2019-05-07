@@ -1,7 +1,7 @@
 from flask import render_template, Blueprint, request
 from flask_login import login_required
 
-from data_tools.jobserver_control import get_jobs, get_job
+from data_tools.access_wrappers.jobserver_control import get_jobs, get_job
 from data_tools.template_data.entry_page import JobPageData
 from data_tools.template_data.list_table import ListTableData
 from data_tools.util import NotFoundException

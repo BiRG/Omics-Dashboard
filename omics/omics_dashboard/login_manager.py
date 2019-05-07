@@ -1,9 +1,9 @@
 import os
 
 import jwt
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
 
-from data_tools.db import User
+from data_tools.db_models import User
 from data_tools.util import LoginError
 
 login_manager = LoginManager()
@@ -54,3 +54,9 @@ def authenticate_user(req):
     if user.check_password(password):
         return user
     raise LoginError('Incorrect email/password.')
+
+
+def protect_views(dash_app):
+    for view_func in dash_app.server.view_functions:
+        if view_func.startswith(dash_app.url_base_pathname):
+            dash_app.server.view_functions[view_func] = login_required(dash_app.server.view_functions[view_func])
