@@ -75,13 +75,13 @@ def get_workflow_template(name: str, description: str, workflow_id: int) -> Dict
     }
 
 
-def get_workflows(user: User) -> List[Workflow]:
+def get_workflows(user: User, filter_by: Dict[str, Any] = None) -> List[Workflow]:
     """
     Get a list of available saved workflows.
     :param user:
     :return:
     """
-    return get_all_read_permitted_records(user, Workflow)
+    return get_all_read_permitted_records(user, Workflow, filter_by)
 
 
 def get_workflow(user: User, workflow_id: int) -> Workflow:

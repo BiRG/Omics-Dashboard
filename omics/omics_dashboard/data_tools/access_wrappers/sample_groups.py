@@ -6,13 +6,14 @@ from data_tools.db_models import User, Sample, SampleGroup, db
 from data_tools.util import AuthException, NotFoundException
 
 
-def get_sample_groups(user: User) -> List[SampleGroup]:
+def get_sample_groups(user: User, filter_by: Dict[str, Any]) -> List[SampleGroup]:
     """
     Get all sample groups visible to a user.
     :param user:
+    :param filter_by:
     :return:
     """
-    return get_all_read_permitted_records(user, SampleGroup)
+    return get_all_read_permitted_records(user, SampleGroup, filter_by)
 
 
 def get_sample_group(user: User, group_id: int) -> SampleGroup:

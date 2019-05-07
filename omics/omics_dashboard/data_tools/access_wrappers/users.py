@@ -303,7 +303,7 @@ def is_write_permitted(user: User, record: Any) -> bool:
 def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     """
     Get all the records in the list records which the user is allowed to read
-    Use get_all_read_permitted_records instead if you want to filter all records in existance,
+    Use get_all_read_permitted_records instead if you want to filter all records in existence,
     This is best for smaller collections of records
     TODO: Do this at the query level instead of on all()
     :param user:
@@ -313,18 +313,24 @@ def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     return [record for record in records if is_read_permitted(user, record)]
 
 
-def get_all_read_permitted_records(user: User, model: db.Model):
+def get_all_read_permitted_records(user: User, model: db.Model, filter_by: Dict[str, Any] = None):
     """
     Get all of the records of the model model which the user is allowed to read.
     This should be used in place of get_read_permitted_records when you need to filter
     all records of a particular kind because it uses a db query that only loads the returned records
     :param user:
     :param model:
+    :param filter_by: A dictionary to filter on.
     :return:
     """
     if user.admin:
+        if filter_by:
+            return model.query.filter_by(**filter_by).all()
         return model.query.all()
     else:
+        if filter_by:
+            return model.query.filter_by(**filter_by).filter(
+                model.all_can_read or (model.group_can_read and user.in_(model.user_group.members))).all()
         return model.query.filter(model.all_can_read or (model.group_can_read and user.in_(model.user_group.members))).all()
 
 

@@ -6,20 +6,22 @@ from data_tools.db_models import User, UserGroup, db
 from data_tools.util import AuthException, NotFoundException
 
 
-def get_all_user_groups() -> List[UserGroup]:
+def get_all_user_groups(filter_by: Dict[str, Any] = None) -> List[UserGroup]:
     """
     Get a list of all user groups.
     :return:
     """
+    if filter_by:
+        return UserGroup.query.filter_by(**filter_by).all()
     return UserGroup.query.all()
 
 
-def get_user_groups(user: User) -> List[UserGroup]:
+def get_user_groups(user: User, filter_by: Dict[str, Any] = None) -> List[UserGroup]:
     """
     Get a list of all user groups readable by user.
     :return:
     """
-    return get_all_read_permitted_records(user, UserGroup)
+    return get_all_read_permitted_records(user, UserGroup, filter_by)
 
 
 def get_user_group(user: User, user_group_id: int) -> UserGroup:

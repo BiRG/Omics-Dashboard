@@ -2,7 +2,7 @@ import itertools
 import os
 import shutil
 import time as tm
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Tuple
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -16,6 +16,7 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from flask import url_for
 from flask_login import current_user
+from plotly.colors import DEFAULT_PLOTLY_COLORS
 from sklearn.decomposition import PCA
 
 import data_tools.redis as rds
@@ -140,8 +141,13 @@ class PCAData:
     def load_results(self):
         with h5py.File(self._results_filename, 'r') as file:
             self._x = np.array(file['x'])
+            self._x.reshape((1, max(self._x.shape)))
             self._x_min = np.array(file['x_min']) if 'x_min' in file else None
             self._x_max = np.array(file['x_max']) if 'x_max' in file else None
+            if self._x_min is not None:
+                self._x_min.reshape((1, max(self._x_min.shape)))
+            if self._x_max:
+                self._x_max.reshape((1, max(self._x_max.shape)))
             self._loadings = np.array(file['loadings'])
             self._scores = np.array(file['scores'])
             self._explained_variance_ratio = np.array(file['explained_variance_ratio'])
@@ -152,6 +158,7 @@ class PCAData:
             file['loadings'] = self._loadings
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
+            print(self._x)
             file['x'] = self._x
             if self._x_min is not None:
                 file['x_min'] = self._x_min
@@ -183,12 +190,14 @@ class PCAData:
             'description': description,
             'analysis_ids': analysis_ids,
             'kind': 'results',
-            'parent_collection_id': self._loaded_collection_ids[0]
+            'parent_id': self._loaded_collection_ids[0]
         }
         collection = upload_collection(current_user, self._results_filename, metadata, False)
-        return ['Posted results as ',
-                html.A(f'Collection {collection.id}.',
-                       href=url_for('collections.render_collection', collection_id=collection.id))]
+        return [dbc.Alert(['Posted results as ', html.A(f'Collection {collection.id}.',
+                                                        href=url_for('collections.render_collection',
+                                                                     collection_id=collection.id))],
+                          dismissable=True,
+                          color='success')]
 
     def _davies_bouldin(self, category_label, label_values, for_display=False) -> pd.DataFrame:
         # this is calculated as part of plotting scores.
@@ -451,7 +460,6 @@ class PCAData:
             y = collection.get_dataset('Y')
             collection.set_dataset('x', x[:, inds])
             collection.set_dataset('Y', y[:, inds])
-            del x
             del y
             data_dir = os.path.dirname(collection.filename)
             self._results_filename = os.path.join(data_dir, 'results.h5')
@@ -459,8 +467,10 @@ class PCAData:
             self._loaded_collection_ids = collection_ids
             self._label_df = collection.get_dataframe(include_only_labels=True)
             self._numeric_df = collection.get_dataframe(numeric_columns=True, include_labels=False)
-            self._numeric_df.to_csv('/tmp/spam.csv')
-            self._processed_label_df = pd.DataFrame()
+            good_inds = np.where(self._numeric_df.isnull().sum() == 0)[0]
+            self._numeric_df = self._numeric_df[self._numeric_df.columns[good_inds]]
+            self._x = x[:, good_inds]
+            self._processed_label_df = self._label_df
             os.remove(collection.filename)
             self.set_file_info()
             self.save_dataframes()
@@ -475,7 +485,7 @@ class PCAData:
         self.load_dataframes()
         label_df = self._label_df
         numeric_df = self._numeric_df
-        self._x = np.array([float(i) for i in numeric_df.columns])
+        self._x = np.array([[float(i) for i in numeric_df.columns]])
         data_load_end = tm.time()
 
         if scale_by:
@@ -567,49 +577,168 @@ class PCAData:
         ]
         return html.P(message_children), metadata['name'], message_color
 
-    def _get_score_plot(self, ordinate, abscissa, color_by_labels, include_db_index=False) -> (
-    dcc.Graph, Union[dash_table.DataTable, html.Div]):
+    def _get_score_plot(self,
+                        ordinate,
+                        abscissa,
+                        color_by_labels,
+                        include_db_index,
+                        label_by_labels,
+                        encircle_by,
+                        plot_centroid,
+                        plot_medoid,
+                        graph_only=False) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
         color_by_labels = color_by_labels or []
         color_label = ','.join(color_by_labels) if color_by_labels else 'All'
         label_df = self._processed_label_df.reset_index()
-        color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)),
-                                                       axis=1) if color_by_labels else pd.Series(
-            ['All' for _ in range(0, len(label_df))])
+        color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)), axis=1) if color_by_labels \
+            else pd.Series(['All' for _ in range(0, len(label_df))])
         color_names = list(color_labels.unique())
         color_indices = [label_df.index[color_labels == color_name] for color_name in color_names]
+
+        label_labels = label_df[label_by_labels].apply(lambda x: ','.join(x.apply(str)), axis=1) if label_by_labels \
+            else None
+
         if len(color_names) > 1 and include_db_index:
             db_df = self._davies_bouldin(color_label, color_labels, True)
             table = dash_table.DataTable(columns=[{'name': val, 'id': val} for val in db_df.columns],
                                          data=db_df.to_dict('rows'))
         else:
             table = html.Div()
-        return dcc.Graph(figure={
-            'data': [
-                        go.Scatter(  # dummy series to use as stand-in for legend title
-                            x=[0],
-                            y=[0],
-                            name=color_label,
-                            mode='markers',
-                            marker={
-                                'opacity': 0
-                            }
-                        )
-                    ] + [
-                        go.Scatter(
-                            x=self._scores[inds, abscissa],
-                            y=self._scores[inds, ordinate],
-                            text=['<br>'.join([f'{label}: {label_df[label][ind]}' for label in
-                                               label_df.columns]) for ind in inds],
-                            name=name,
-                            mode='markers',
-                            marker={
-                                'size': 15,
-                                'opacity': 0.5,
-                                'line': {'width': 0.5, 'color': 'white'}
-                            }
-                        ) for inds, name in zip(color_indices, color_names)
-                    ],
+
+        graph_data = [
+            go.Scatter(  # dummy series to use as stand-in for legend title
+                x=[0],
+                y=[0],
+                name=color_label,
+                mode='markers',
+                marker={
+                    'opacity': 0
+                }
+            )
+        ]
+        shapes = []
+        annotations = []
+
+        if len(color_indices) > len(DEFAULT_PLOTLY_COLORS):  # repeat default color list
+            colors = []
+            while len(colors) < len(color_indices):
+                colors += DEFAULT_PLOTLY_COLORS
+        else:
+            colors = DEFAULT_PLOTLY_COLORS
+        colors = colors[:len(color_indices)]
+
+        for inds, name, color in zip(color_indices, color_names, colors):
+            graph_data.append(
+                go.Scatter(
+                    x=self._scores[inds, abscissa],
+                    y=self._scores[inds, ordinate],
+                    text=['<br>'.join([f'{label}: {label_df[label][ind]}' for label in
+                                       label_df.columns]) for ind in inds],
+                    name=name,
+                    mode='markers',
+                    marker={
+                        'size': 15,
+                        'opacity': 0.5,
+                        'line': {'width': 0.5, 'color': 'white'},
+                        'color': color
+                    }
+                )
+            )
+            if plot_centroid:
+                graph_data.append(
+                    go.Scatter(
+                        x=[np.mean(self._scores[inds, abscissa])],
+                        y=[np.mean(self._scores[inds, ordinate])],
+                        text=f'{name} centroid',
+                        name=f'{name} centroid',
+                        mode='markers',
+                        marker={
+                            'size': 20,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'x'
+                        }
+                    )
+                )
+            if plot_medoid:
+                graph_data.append(
+                    go.Scatter(
+                        x=[np.median(self._scores[inds, abscissa])],
+                        y=[np.median(self._scores[inds, ordinate])],
+                        text=f'{name} medoid',
+                        name=f'{name} medoid',
+                        mode='markers',
+                        marker={
+                            'size': 20,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'cross'
+                        }
+                    )
+                )
+            if label_labels is not None:
+                annotations = annotations + [
+                    {
+                        'x': self._scores[ind, abscissa],
+                        'y': self._scores[ind, ordinate],
+                        'xref': 'x',
+                        'yref': 'y',
+                        'text': label_labels[ind],
+                        'showarrow': False
+                    } for ind in inds
+                ]
+            for metric in encircle_by:
+                if metric in {'1std', '2std', '3std'}:
+                    x_std = np.std(self._scores[inds, abscissa])
+                    y_std = np.std(self._scores[inds, ordinate])
+                    x_mean = np.mean(self._scores[inds, abscissa])
+                    y_mean = np.mean(self._scores[inds, ordinate])
+                    x0 = x_mean - x_std * float(metric[0])
+                    x1 = x_mean + x_std * float(metric[0])
+                    y0 = y_mean - y_std * float(metric[0])
+                    y1 = y_mean + y_std * float(metric[0])
+                elif metric == 'range':
+                    x0 = np.min(self._scores[inds, abscissa])
+                    x1 = np.max(self._scores[inds, abscissa])
+                    y0 = np.min(self._scores[inds, ordinate])
+                    y1 = np.max(self._scores[inds, ordinate])
+                elif metric == '95percentile':
+                    x_ptile = np.percentile(self._scores[inds, abscissa], 95)
+                    y_ptile = np.percentile(self._scores[inds, ordinate], 95)
+                    x_median = np.median(self._scores[inds, abscissa])
+                    y_median = np.median(self._scores[inds, ordinate])
+                    x0 = x_median - x_ptile
+                    x1 = x_median + x_ptile
+                    y0 = y_median - y_ptile
+                    y1 = y_median + y_ptile
+                else:
+                    x0 = 0
+                    x1 = 0
+                    y0 = 0
+                    y1 = 0
+
+                shapes.append(
+                    {
+                        'type': 'circle',
+                        'xref': 'x',
+                        'yref': 'y',
+                        'x0': x0,
+                        'y0': y0,
+                        'x1': x1,
+                        'y1': y1,
+                        'opacity': 0.25,
+                        'fillcolor': color,
+                        'line': {'color': color}
+                    }
+                )
+
+        graph = dcc.Graph(figure={
+            'data': graph_data,
             'layout': go.Layout(
+                shapes=shapes,
+                annotations=annotations,
                 height=700,
                 xaxis={
                     'title': f'PC{abscissa + 1}'
@@ -618,13 +747,16 @@ class PCAData:
                     'title': f'PC{ordinate + 1}'
                 }
             )
-        }), table
+        })
+        if graph_only:
+            return graph
+        return graph, table
 
     def _get_loading_plot(self, loadings) -> dcc.Graph:
         return dcc.Graph(figure={
             'data': [
                 go.Scatter(
-                    x=self._x,
+                    x=self._x[0, :],
                     y=self._loadings[ind, :],
                     text=f'PC {ind+1}<br>{100*self._explained_variance_ratio[ind]:.3f} % variance',
                     name=f'PC {ind+1}',
@@ -717,7 +849,6 @@ class PCAData:
                   loading_plot_data,
                   variance_plot_data,
                   cumulative_variance_plot_data,
-                  as_figure=False,
                   include_db_index_tables=True) -> (List[Union[dcc.Graph, dash_table.DataTable]],
                                                      List[dcc.Graph],
                                                      List[dcc.Graph],
@@ -727,7 +858,11 @@ class PCAData:
         score_plots = [self._get_score_plot(plot['ordinate'],
                                             plot['abscissa'],
                                             plot['color_by'],
-                                            include_db_index_tables and plot['include_db_index'])
+                                            include_db_index_tables and plot['include_db_index'],
+                                            plot['label_by'],
+                                            plot['encircle_by'],
+                                            plot['include_centroid'],
+                                            plot['include_medoid'])
                        for plot in score_plot_data]
         return (
             [
@@ -767,8 +902,15 @@ class PCAData:
             format_dir = os.path.join(plot_dir, file_format)
             os.mkdir(format_dir)
             for plot_info in score_plot_data:
-                plot = self._get_score_plot(plot_info['ordinate'], plot_info['abscissa'], plot_info['color_by'], False)[
-                    0]
+                plot = self._get_score_plot(plot_info['ordinate'],
+                                            plot_info['abscissa'],
+                                            plot_info['color_by'],
+                                            False,
+                                            plot_info['label_by'],
+                                            plot_info['encircle_by'],
+                                            plot_info['include_centroid'],
+                                            plot_info['include_medoid'],
+                                            True)
                 filename = f'{base_filename}_scores_{plot_info["ordinate"]}_vs_{plot_info["abscissa"]}'
                 if plot_info['color_by']:
                     filename += '_by_' + ','.join(plot_info['color_by'])

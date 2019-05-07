@@ -8,21 +8,24 @@ from data_tools.db_models import User, ExternalFile, db
 from data_tools.util import AuthException, NotFoundException
 
 
-def get_all_external_files() -> List[ExternalFile]:
+def get_all_external_files(filter_by: Dict[str, Any] = None) -> List[ExternalFile]:
     """
     Get information about all external files in the system (note: no user access control)
     :return: ExternalFile records
     """
+    if filter_by:
+        return ExternalFile.query.filter_by(**filter_by).all()
     return ExternalFile.query.all()
 
 
-def get_external_files(user: User) -> List[ExternalFile]:
+def get_external_files(user: User, filter_by: Dict[str, Any] = None) -> List[ExternalFile]:
     """
     Get all the external files a user is permitted to read
     :param user: A user (usually the currently authenticated user)
+    :param filter_by:
     :return: All the external files the user is permitted to read
     """
-    return get_all_read_permitted_records(user, ExternalFile)
+    return get_all_read_permitted_records(user, ExternalFile, filter_by)
 
 
 def get_external_file(user: User, external_file_id: int) -> ExternalFile:

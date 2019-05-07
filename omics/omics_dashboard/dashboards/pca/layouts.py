@@ -88,7 +88,8 @@ def get_save_results_form():
                     )
                 ], className='form-row'
             ),
-            html.Small('', id='download-message', className='form-text'),  # will inject link when results posted
+            dcc.Loading(html.Small('', id='download-message', className='form-text')),
+            # will inject link when results posted
             html.H5('Save Plots'),
             dbc.Row(
                 [
@@ -96,13 +97,17 @@ def get_save_results_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('File Format', html_for='plot-file-format-select'),
+                                    dbc.Label(['File Format',
+                                               html.Abbr('\uFE56',
+                                                         title='For publication-quality images, save as SVG and use an '
+                                                               'image editor to export a TIFF file at the requested DPI')],
+                                              html_for='plot-file-format-select'),
                                     dcc.Dropdown(id='plot-file-format-select',
                                                  multi=True,
                                                  options=[
                                                      {'label': 'PNG', 'value': 'png'},
                                                      {'label': 'JPEG', 'value': 'jpg'},
-                                                     {'label': 'SVG', 'value': 'svg'}
+                                                     {'label': 'SVG', 'value': 'svg'},
                                                  ])
                                 ]
                             )
@@ -141,7 +146,8 @@ def get_save_results_form():
                     )
                 ], className='form-row'
             ),
-            html.Small('', id='plot-download-message', className='form-text'),  # will inject link when results posted
+            dcc.Loading(html.Small('', id='plot-download-message', className='form-text')),
+            # will inject link when results posted
             html.H5('Post Results'),
             dbc.Row(
                 [
@@ -183,7 +189,8 @@ def get_save_results_form():
                     )
                 ], className='form-row'
             ),
-            html.Small('', id='post-message', className='form-text')  # will inject link when results posted
+            dcc.Loading(html.Small('', id='post-message', className='form-text'))
+            # will inject link when results posted
         ]
     )
 
@@ -232,6 +239,38 @@ def get_plot_options_form():
                             )
                         ]
                     ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Point label(s)', html_for='label-by-select'),
+                                    dcc.Dropdown(id='label-by-select', options=label_options, multi=True)
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label(['Encircle metric',
+                                               html.Abbr('\uFE56',
+                                                         title='This will draw an oval shape to represent a category\'s'
+                                                               ' spread. These can be stacked as concentric rings.')],
+                                              html_for='encircle-by-select'),
+                                    dcc.Dropdown(id='encircle-by-select',
+                                                 options=[
+                                                     {'label': '2\u03C3', 'value': '2std'},
+                                                     {'label': '\u03C3', 'value': '1std'},
+                                                     {'label': '3\u03C3', 'value': '3std'},
+                                                     {'label': 'Range', 'value': 'range'},
+                                                     {'label': '95th percentile', 'value': '95percentile'},
+                                                 ],
+                                                 multi=True)
+                                ]
+                            )
+                        ]
+                    )
                 ], className='form-row'
             ),
             dbc.Row(
@@ -239,9 +278,42 @@ def get_plot_options_form():
                     html.Div(
                         [
                             dbc.Checkbox(id='db-index'),
-                            dbc.Label(' Include DB index table?', className='form-check-label', html_for='db-index')
+                            dbc.Label([' Include DB index table?',
+                                       html.Abbr('\uFE56',
+                                                 title='Davies-Bouldin indices are calculated from the "Color by" label')],
+                                      className='form-check-label', html_for='db-index')
                         ], className='form-check form-check-inline'
                     )
+                ], className='form-row'
+            ),
+            dbc.Row(
+                [
+                    html.Div(
+                        [
+                            dbc.Checkbox(id='centroid'),
+                            dbc.Label([' Mark centroids?',
+                                       html.Abbr('\uFE56',
+                                                 title='Centroids are calculated from the "Color by" label.')],
+                                      className='form-check-label', html_for='centroid')
+                        ], className='form-check form-check-inline'
+                    )
+                ], className='form-row'
+            ),
+            dbc.Row(
+                [
+                    html.Div(
+                        [
+                            dbc.Checkbox(id='medoid'),
+                            dbc.Label([' Mark medoids?',
+                                       html.Abbr('\uFE56',
+                                                 title='Medoids are calculated from the "Color by" label.')],
+                                      className='form-check-label', html_for='medoid')
+                        ], className='form-check form-check-inline'
+                    )
+                ], className='form-row'
+            ),
+            dbc.Row(
+                [
                 ], className='form-row'
             ),
             dbc.Row(
@@ -444,7 +516,7 @@ def get_pca_options_form():
     try:
         collection_options = [
             {'label': f'{collection.id}: {collection.name}', 'value': collection.id}
-            for collection in get_collections(current_user)
+            for collection in get_collections(current_user, {'kind': 'data'})
         ]
     except:
         collection_options = []
@@ -502,7 +574,13 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Scale by label(s)', html_for='scale-by'),
+                                    dbc.Label(['Scale by label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='The mean of the records satisfying conditions on these '
+                                                               'fields will be subtracted from each record, then each'
+                                                               ' record will be scaled by the standard deviation of the'
+                                                               ' records satisfying the conditions.')],
+                                              html_for='scale-by'),
                                     dcc.Dropdown(id='scale-by', options=label_options, multi=True),
                                 ]
                             )
@@ -512,7 +590,10 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Scale by conditions', html_for='scale-by-value'),
+                                    dbc.Label(['Scale by conditions',
+                                               html.Abbr('\uFE56',
+                                                         title='The conditions for the records to use for scaling.')],
+                                              html_for='scale-by-value'),
                                     dcc.Dropdown(id='scale-by-value', options=[], multi=True),
                                 ]
                             )
@@ -526,7 +607,11 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Filter by label(s)', html_for='filter-by'),
+                                    dbc.Label(['Filter by label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='Only consider records satisfying conditions on these'
+                                                               ' fields.')],
+                                              html_for='filter-by'),
                                     dcc.Dropdown(id='filter-by', options=label_options, multi=True)
                                 ]
                             )
@@ -536,7 +621,11 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Filter by conditions', html_for='filter-by-value'),
+                                    dbc.Label(['Filter by conditions',
+                                               html.Abbr('\uFE56',
+                                                         title='The conditions which must be satisfied for the records'
+                                                               'to be considered.')],
+                                              html_for='filter-by-value'),
                                     dcc.Dropdown(id='filter-by-value', options=[], multi=True)
                                 ]
                             )
@@ -550,7 +639,10 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Ignore by label(s)', html_for='ignore-by'),
+                                    dbc.Label(['Ignore by label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='Exclude records satisfying conditions on these fields')],
+                                              html_for='ignore-by'),
                                     dcc.Dropdown(id='ignore-by', options=label_options, multi=True)
                                 ]
                             )
@@ -560,7 +652,10 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Ignore by conditions', html_for='ignore-by-value'),
+                                    dbc.Label(['Ignore by conditions',
+                                               html.Abbr('\uFE56',
+                                                         title='Conditions which apply to records to be excluded.')],
+                                              html_for='ignore-by-value'),
                                     dcc.Dropdown(id='ignore-by-value', options=[], multi=True)
                                 ]
                             )
@@ -574,7 +669,15 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Pair on label(s)', html_for='pair-on'),
+                                    dbc.Label(['Pair on label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='The paired analysis works on the difference between '
+                                                               'records in one class and other records, where the '
+                                                               'records are "paired" by some identity condition. The '
+                                                               '"pair on" label is used to pair all the records with '
+                                                               'equal values for that field.')],
+
+                                              html_for='pair-on'),
                                     dcc.Dropdown(id='pair-on', options=label_options, multi=True)
                                 ]
                             )
@@ -584,7 +687,11 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Pair with label(s)', html_for='pair-with'),
+                                    dbc.Label(['Pair with label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='The "pair with" condition applies to the records to be '
+                                                               'subtracted from the others')],
+                                              html_for='pair-with'),
                                     dcc.Dropdown(id='pair-with', options=label_options, multi=True)
                                 ]
                             )
@@ -594,7 +701,11 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Pair with conditions', html_for='pair-with-value'),
+                                    dbc.Label(['Pair with conditions',
+                                               html.Abbr('\uFE56',
+                                                         title='The condition which must apply for the records which '
+                                                               'will be subtracted.')],
+                                              html_for='pair-with-value'),
                                     dcc.Dropdown(id='pair-with-value', options=[], multi=True)
                                 ]
                             )

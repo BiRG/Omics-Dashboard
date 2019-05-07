@@ -71,6 +71,7 @@ class PCADashboard(Dashboard):
              Output('pair-on', 'options'),
              Output('pair-with', 'options'),
              Output('color-by-select', 'options'),
+             Output('label-by-select', 'options'),
              Output('loaded-collections', 'children'),
              Output('collections-label', 'children')],
             [Input('get-collection', 'n_clicks')],
@@ -83,6 +84,7 @@ class PCADashboard(Dashboard):
             pca_data.get_collections(value)
             label_data = pca_data.get_label_data()
             return (
+                label_data,
                 label_data,
                 label_data,
                 label_data,
@@ -162,10 +164,22 @@ class PCADashboard(Dashboard):
                 State('abscissa-select', 'value'),
                 State('ordinate-select', 'value'),
                 State('color-by-select', 'value'),
-                State('db-index', 'checked')
+                State('label-by-select', 'value'),
+                State('db-index', 'checked'),
+                State('centroid', 'checked'),
+                State('medoid', 'checked'),
+                State('encircle-by-select', 'value')
             ]
         )
-        def add_score_plot(n_clicks, abscissa_value, ordinate_value, color_by_value, include_db_index):
+        def add_score_plot(n_clicks,
+                           abscissa_value,
+                           ordinate_value,
+                           color_by_value,
+                           label_by_value,
+                           include_db_index,
+                           include_centroid,
+                           include_medoid,
+                           encircle_by_value):
             if not n_clicks:
                 raise ValueError('')
 
@@ -175,6 +189,10 @@ class PCADashboard(Dashboard):
                     'ordinate': ordinate_value,
                     'abscissa': abscissa_value,
                     'color_by': color_by_value,
+                    'label_by': label_by_value,
+                    'include_centroid': include_centroid,
+                    'include_medoid': include_medoid,
+                    'encircle_by': encircle_by_value,
                     'include_db_index': include_db_index
                 }
             )
@@ -334,12 +352,12 @@ class PCADashboard(Dashboard):
                                                  file_format_values,
                                                  score_plot_data)
                 message = dbc.Alert(f'Prepared results file as {path}', color='success', dismissable=True)
-                className = 'btn btn-success'
+                class_name = 'btn btn-success'
             except Exception as e:
                 path = '#'
                 message = dbc.Alert(f'{e}', color='danger', dismissable=True)
-                className = 'btn btn-secondary disabled'
-            return url_for('api.download_temporary_file', path=path), className, message
+                class_name = 'btn btn-secondary disabled'
+            return url_for('api.download_temporary_file', path=path), class_name, message
 
         @app.callback(
             [Output('plot-download-link', 'href'),
@@ -362,12 +380,12 @@ class PCADashboard(Dashboard):
                                                plot_data['cumulative_variance_plots'],
                                                file_format_values)
                 message = dbc.Alert(f'Prepared plots file as {path}.', color='success', dismissable=True)
-                className = 'btn btn-success'
+                class_name = 'btn btn-success'
             except Exception as e:
                 path = '#'
                 message = dbc.Alert(f'{e}', color='danger', dismissable=True)
-                className = 'btn btn-secondary disabled'
-            return url_for('api.download_temporary_file', path=path), className, message
+                class_name = 'btn btn-secondary disabled'
+            return url_for('api.download_temporary_file', path=path), class_name, message
 
         @app.callback(
             [Output('post-message', 'children')],
@@ -378,7 +396,14 @@ class PCADashboard(Dashboard):
             if not n_clicks:
                 raise ValueError('no clicks')
             pca_data = PCAData()
-            return pca_data.post_results(name, analysis_ids)
+            try:
+                iter(analysis_ids)
+            except TypeError:
+                analysis_ids = [analysis_ids]
+            try:
+                return pca_data.post_results(name, analysis_ids)
+            except Exception as e:
+                return dbc.Alert(f'{e}', dismissable=True, color='danger')
 
     @staticmethod
     def _register_layout(app):

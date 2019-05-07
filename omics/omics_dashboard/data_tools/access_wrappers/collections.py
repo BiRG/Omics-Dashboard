@@ -13,21 +13,24 @@ from data_tools.file_tools.h5_merge import h5_merge
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
-def get_all_collections() -> List[Collection]:
+def get_all_collections(filter_by: Dict[str, Any] = None) -> List[Collection]:
     """
     Get the attributes and dataset information of all collections in the system.
     :return:
     """
+    if filter_by:
+        return Collection.query.filter_by(**filter_by).all()
     return Collection.query.all()
 
 
-def get_collections(user: User) -> List[Collection]:
+def get_collections(user: User, filter_by: Dict[str, Any] = None) -> List[Collection]:
     """
     Get the attributes and dataset information of all collections a user is allowed to read.
     :param user:
+    :param filter_by:
     :return:
     """
-    return get_all_read_permitted_records(user, Collection)
+    return get_all_read_permitted_records(user, Collection, filter_by)
 
 
 def get_collection_file_info(collection: Collection):

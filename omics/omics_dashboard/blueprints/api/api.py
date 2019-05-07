@@ -1,5 +1,4 @@
 import json
-import json
 import os
 import shutil
 
@@ -147,6 +146,7 @@ def register_user():
 
 
 @api.route('/download_tmp')
+@login_required
 def download_temporary_file():
     path = request.args.get('path')
     if path is None:

@@ -5,13 +5,14 @@ from data_tools.db_models import Analysis, Collection, User, db
 from data_tools.util import AuthException
 
 
-def get_analyses(user: User) -> List[Analysis]:
+def get_analyses(user: User, filter_by: Dict[str, Any] = None) -> List[Analysis]:
     """
     Get all the analyses the user is allowed to view
     :param user:
+    :param filter_by:
     :return:
     """
-    return get_all_read_permitted_records(user, Analysis)
+    return get_all_read_permitted_records(user, Analysis, filter_by)
 
 
 def get_analysis(user: User, analysis_id: int) -> Analysis:

@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_login import current_user, login_required
 
 from blueprints.api.analyses import analyses_api
@@ -65,6 +65,12 @@ app.secret_key = os.environ['SECRET']
 
 def protect_blueprint(blueprint):
     return blueprint
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',
+                               mimetype='image/vnd.microsoft.icon')
 
 
 @app.errorhandler(405)

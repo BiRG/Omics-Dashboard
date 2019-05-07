@@ -10,21 +10,23 @@ from data_tools.db_models import Sample, User, db
 from data_tools.util import DATADIR, AuthException, NotFoundException, validate_file
 
 
-def get_all_samples() -> List[Sample]:
+def get_all_samples(filter_by: Dict[str, Any] = None) -> List[Sample]:
     """
     Get the attributes and dataset paths of all samples
     :return:
     """
+    if filter_by:
+        return Sample.query.filter_by(**filter_by).all()
     return Sample.query.all()
 
 
-def get_samples(user: User) -> List[Sample]:
+def get_samples(user: User, filter_by: Dict[str, Any] = None) -> List[Sample]:
     """
     Get the attributes and dataset paths of all the samples to which the user with user_id has read access
     :param user:
     :return:
     """
-    return get_all_read_permitted_records(user, Sample)
+    return get_all_read_permitted_records(user, Sample, filter_by)
 
 
 def get_sample_metadata(user: User, sample: Sample) -> Dict[str, Any]:
