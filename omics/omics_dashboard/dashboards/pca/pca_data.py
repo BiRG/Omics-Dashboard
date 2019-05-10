@@ -300,16 +300,9 @@ class PCAData:
         if include_db_index and not score_plot_data:
             raise ValueError('No score plot data provided')
         self.load_data()
-        create_archive = ([
-                              include_scores,
-                              include_loadings,
-                              include_variance,
-                              include_db_index].count(True) > 1 and 'csv' in file_formats) or len(file_formats) > 1 or (
-                                     include_db_index and len(score_plot_data) > 1)
-
-        # make temporary directory
-        # make directories for different file formats if relevant
-        # save results
+        multiple_results = [include_scores, include_loadings, include_variance, include_db_index].count(True) > 1 \
+                           or include_db_index and len(score_plot_data) > 1
+        create_archive = len(file_formats) > 1 or (multiple_results and 'csv' in file_formats)
 
         def _save_scores(name, file_format):
             if file_format == 'csv':
