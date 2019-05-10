@@ -1,7 +1,8 @@
-import h5py
 import os
 from io import StringIO
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
+
+import h5py
 import numpy as np
 
 
@@ -141,9 +142,15 @@ def approximate_dims(filename: str) -> (int, int):
             return 0, 0
 
 
-def get_datasets(file: h5py.File) -> List[h5py.Dataset]:
-    """Get all the datasets in this file"""
-    return [file[key] for key in file.keys() if isinstance(file[key], h5py.Dataset)]
+def get_datasets(group: Union[h5py.File, h5py.Group]) -> List[h5py.Dataset]:
+    """Get all the datasets in this file (recursively)"""
+    datasets = []
+    for key in group.keys():
+        if isinstance(group[key], h5py.Dataset):
+            datasets.append(group[key])
+        elif isinstance(group[key], h5py.Group):
+            datasets = datasets + get_datasets(group[key])
+    return datasets
 
 
 def add_column(filename: str, name: str, data_type: str = 'string'):
