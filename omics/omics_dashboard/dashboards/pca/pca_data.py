@@ -153,8 +153,10 @@ class PCAData:
             self._explained_variance_ratio = np.array(file['explained_variance_ratio'])
         self.load_labels()
 
-    def save_results(self):
-        with h5py.File(self._results_filename, 'w') as file:  # always create new because dimensions might change
+    def save_results(self, filename=None, file_format='hdf5'):
+        if not filename:
+            filename = self._results_filename
+        with h5py.File(filename, 'w') as file:  # always create new because dimensions might change
             file['loadings'] = self._loadings
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
@@ -181,8 +183,9 @@ class PCAData:
 
     def post_results(self, name, analysis_ids):
         self.load_data()
+        filename = self.download_results(file_formats=['hdf5'], score_plot_data=get_plot_data()['score_plots'])
         description = name
-        with h5py.File(self._results_filename, 'r') as file:
+        with h5py.File(filename, 'r') as file:
             if 'description' in file.attrs:
                 description = file.attrs['description'] or name
         metadata = {
@@ -192,7 +195,7 @@ class PCAData:
             'kind': 'results',
             'parent_id': self._loaded_collection_ids[0]
         }
-        collection = upload_collection(current_user, self._results_filename, metadata, False)
+        collection = upload_collection(current_user, filename, metadata, False)
         return [dbc.Alert(['Posted results as ', html.A(f'Collection {collection.id}.',
                                                         href=url_for('collections.render_collection',
                                                                      collection_id=collection.id))],
@@ -354,9 +357,9 @@ class PCAData:
                 variance_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
-                    if 'explained_variance_ratio' in file:
-                        del file['explained_variance_ratio']
-                    file['explained_variance_ratio'] = self._explained_variance_ratio
+                    if 'pca_explained_variance_ratio' in file:
+                        del file['pca_explained_variance_ratio']
+                    file['pca_explained_variance_ratio'] = self._explained_variance_ratio
 
         def _save_davies_bouldin(path, file_format, score_plots):
             # calculate davis_bouldin for all active plots that use it.
@@ -377,18 +380,22 @@ class PCAData:
             else:
                 with h5py.File(path, 'a') as file:
                     for name, db_df in db_dfs.items():
-                        if name in file:
-                            del file[name]
+                        group_name = f'db_index_{name}'
+                        if group_name in file:
+                            del file[group_name]
+                        group = file.create_group(group_name)
+                        if name in group:
+                            del group[name]
                         for column in db_df.columns:
-                            arr_name = f'{name}_{column}'
-                            if arr_name in file:
-                                del file[arr_name]
+                            arr_name = column
+                            if arr_name in group:
+                                del group[arr_name]
                             arr = db_df[column].to_numpy()
                             if len(arr.shape) == 1:
                                 arr = np.reshape(arr, (arr.shape[0], 1))
                             if arr.dtype.type in {np.object_, np.string_}:
                                 arr = arr.astype(h5py.special_dtype(vlen=bytes))
-                            file[arr_name] = arr
+                            group[arr_name] = arr
                     return path
 
         if len(self._loaded_collection_ids) > 1:
