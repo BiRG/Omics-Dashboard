@@ -171,19 +171,24 @@ class PCAData:
         self.load_results()
         self.load_dataframes()
 
-    def set_file_metadata(self, attrs):
+    def set_file_metadata(self, attrs, filename=None):
         """
         Use to set things like description, name, parameters
         :param attrs:
+        :param filename:
         :return:
         """
-        with h5py.File(self._results_filename, 'r+') as file:
+        filename = filename or self._results_filename
+        with h5py.File(filename, 'r+') as file:
             for key, value in attrs.items():
                 file.attrs[key] = value
 
     def post_results(self, name, analysis_ids):
         self.load_data()
-        filename = self.download_results(file_formats=['hdf5'], score_plot_data=get_plot_data()['score_plots'])
+        score_plot_data = get_plot_data()['score_plots']
+        include_db_index = any([plot['include_db_index'] for plot in score_plot_data])
+        filename = self.download_results(file_formats=['hdf5'], score_plot_data=get_plot_data()['score_plots'],
+                                         include_db_index=include_db_index)
         description = name
         with h5py.File(filename, 'r') as file:
             if 'description' in file.attrs:
@@ -406,6 +411,9 @@ class PCAData:
         if 'hdf5' in file_formats:
             os.mkdir(f'{results_dir}/hdf5')
             h5_filename = f'{results_dir}/hdf5/{filename}.h5'
+            with h5py.File(h5_filename, 'a') as current_file, h5py.File(self._results_filename) as results_file:
+                for key, value in results_file.attrs.items():
+                    current_file.attrs[key] = value
             if include_scores:
                 _save_scores(h5_filename, 'hdf5')
             if include_loadings:
