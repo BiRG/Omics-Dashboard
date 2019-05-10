@@ -588,6 +588,8 @@ class PCAData:
                         plot_medoid,
                         graph_only=False) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
         color_by_labels = color_by_labels or []
+        encircle_by = encircle_by or []
+        label_by_labels = label_by_labels or []
         color_label = ','.join(color_by_labels) if color_by_labels else 'All'
         label_df = self._processed_label_df.reset_index()
         color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)), axis=1) if color_by_labels \
@@ -911,7 +913,7 @@ class PCAData:
                                             plot_info['include_centroid'],
                                             plot_info['include_medoid'],
                                             True)
-                filename = f'{base_filename}_scores_{plot_info["ordinate"]}_vs_{plot_info["abscissa"]}'
+                filename = f'{base_filename}_scores_{plot_info["ordinate"]+1}_vs_{plot_info["abscissa"]+1}'
                 if plot_info['color_by']:
                     filename += '_by_' + ','.join(plot_info['color_by'])
                 filename = os.path.join(format_dir, f'{filename}.{file_format}')
