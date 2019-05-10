@@ -403,7 +403,7 @@ class PCADashboard(Dashboard):
             try:
                 return pca_data.post_results(name, analysis_ids)
             except Exception as e:
-                return dbc.Alert(f'{e}', dismissable=True, color='danger')
+                return [dbc.Alert(f'{e}', dismissable=True, color='danger')]
 
     @staticmethod
     def _register_layout(app):

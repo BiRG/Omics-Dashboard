@@ -54,7 +54,7 @@ def get_dataset_paths(filename: str) -> List[str]:
 def get_csv(filename: str, path: str) -> str:
     """Get a string containing comma-separated values for a dataset"""
     with h5py.File(filename, 'r') as infile:
-        dataset = infile[str(path)].value
+        dataset = infile[str(path)]
     s = StringIO()
     if dataset is not None:
         for row in dataset:
