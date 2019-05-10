@@ -193,7 +193,7 @@ class PCADashboard(Dashboard):
                     'include_centroid': include_centroid,
                     'include_medoid': include_medoid,
                     'encircle_by': encircle_by_value,
-                    'include_db_index': include_db_index
+                    'include_db_index': include_db_index and color_by_value
                 }
             )
             set_plot_data(plot_data)
@@ -343,7 +343,7 @@ class PCADashboard(Dashboard):
             if not n_clicks:
                 raise ValueError('no clicks')
             if not pca_data.results_exist:
-                return '#', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
+                return '#', 'secondary', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
             try:
                 path = pca_data.download_results('scores' in results_values,
                                                  'loadings' in results_values,
