@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-from flask import request, jsonify, Blueprint, url_for, send_from_directory
+from flask import request, jsonify, Blueprint, url_for, send_from_directory, make_response
 from flask_login import login_user, logout_user, login_required
 
 import data_tools as dt
@@ -154,4 +154,9 @@ def download_temporary_file():
     if not os.path.isfile(path):
         print(path)
         return handle_exception(ValueError('File does not exist!'))
-    return send_from_directory(os.path.dirname(path), os.path.basename(path), as_attachment=True)
+    # make sure browser does not serve up cached version.
+    response = make_response(send_from_directory(os.path.dirname(path), os.path.basename(path), as_attachment=True))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, public, max-age=0"
+    response.headers["Expires"] = 0
+    response.headers["Pragma"] = "no-cache"
+    return response
