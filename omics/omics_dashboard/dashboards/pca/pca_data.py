@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 import plotly.io as pio
+import scipy.stats as stats
 from flask import url_for
 from flask_login import current_user
 from plotly.colors import DEFAULT_PLOTLY_COLORS
@@ -160,7 +161,6 @@ class PCAData:
             file['loadings'] = self._loadings
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
-            print(self._x)
             file['x'] = self._x
             if self._x_min is not None:
                 file['x_min'] = self._x_min
@@ -319,9 +319,7 @@ class PCAData:
                 with h5py.File(name, 'a') as file:
                     if 'pca_scores' in file:
                         del file['pca_scores']
-                    print(self._scores.shape)
                     file['pca_scores'] = self._scores
-                    print(file['pca_scores'])
 
         def _save_loadings(name, file_format):
             if file_format == 'csv':
@@ -484,7 +482,7 @@ class PCAData:
             self.save_dataframes()
 
     def perform_pca(self,
-                    filter_by: str = None,
+                    model_by: str = None,
                     ignore_by: str = None,
                     scale_by: str = None,
                     pair_on: List[str] = None,
@@ -498,38 +496,52 @@ class PCAData:
 
         if scale_by:
             means = numeric_df.loc[label_df.query(scale_by).index].mean()
-            std_devs = numeric_df.loc[label_df.query(scale_by).index].std().apply(lambda x: x if x else 1.0)
+            std_devs = numeric_df.loc[label_df.query(scale_by).index].std()
         else:
             means = numeric_df.mean()
-            std_devs = numeric_df.std().apply(lambda x: x if x else 1.0)
+            std_devs = numeric_df.std()
 
-        if filter_by:
-            label_df = label_df.query(filter_by)
-            numeric_df = numeric_df.loc[label_df.index]
+        numeric_df = numeric_df.sub(means, axis=1).divide(std_devs,
+                                                          axis=1)  # do scaling before everything else
 
         if ignore_by:
             label_df = label_df.query(ignore_by)
             numeric_df = numeric_df.loc[label_df.index]
 
-        numeric_df = numeric_df.sub(means, axis=1).divide(std_devs,
-                                                          axis=1)  # do scaling before pairing, after everything else
-
         warnings = []
         message_color = 'success'
         if pair_on and pair_with:
+            good_queries = []
             for vals, idx, in label_df.groupby(pair_on).groups.items():
                 # find the pair conditions in the sub dataframe
+                if not isinstance(vals, list):
+                    vals = [vals]
                 try:
                     target_rows = label_df.loc[idx].query(pair_with)
                     numeric_df.loc[idx].sub(target_rows.mean(), axis=1)
                 except KeyError:
                     target_rows = []
                 if not len(target_rows):
-                    warnings.append(f'No records matching {pair_with} for {pair_on}=={vals}! Data not subtracted!')
+                    warnings.append(f'No records matching {pair_with} for {pair_on}=={vals}! '
+                                    f'{pair_on}=={vals} excluded from analysis.')
+                    good_queries.append(
+                        '&'.join([f'{pair_on_i}!={vals_i}' for pair_on_i, vals_i in zip(pair_on, vals)]))
                     message_color = 'warning'
+            if len(good_queries):
+                label_df = label_df.query('&'.join(good_queries))
+                numeric_df = numeric_df.loc[label_df.index]
 
+        if model_by:
+            model_numeric_df = numeric_df.loc[label_df.index]
+        else:
+            model_numeric_df = numeric_df
+
+        good_inds = np.where(model_numeric_df.isnull().sum() == 0)[0]
+        good_columns = model_numeric_df.columns[good_inds]
+        model_numeric_df = model_numeric_df[good_columns]
+        numeric_df = numeric_df[good_columns]
         metadata = {
-            'filter_by': filter_by or '',
+            'model_by': model_by or '',
             'ignore_by': ignore_by or '',
             'scale_by': scale_by or '',
             'pair_on': ','.join(pair_on) if pair_on else '',
@@ -543,8 +555,8 @@ class PCAData:
         description = name
         if scale_by:
             description += f' scaled by {scale_by}'
-        if filter_by:
-            description += f' including {filter_by}'
+        if model_by:
+            description += f' including {model_by}'
         if ignore_by:
             description += f' ignoring {ignore_by}'
         if pair_on and pair_with:
@@ -556,7 +568,9 @@ class PCAData:
         numeric_df = numeric_df.dropna(axis=1)
         start_time = tm.time()
         pca = PCA()
-        self._scores = pca.fit_transform(numeric_df)
+        model_numeric_df.to_csv('/tmp/model_numeric_df.csv')
+        pca.fit(model_numeric_df)
+        self._scores = pca.transform(numeric_df)
         end_time = tm.time()
         self._loadings = pca.components_
         self._explained_variance_ratio = pca.explained_variance_ratio_
@@ -700,7 +714,7 @@ class PCAData:
                     } for ind in inds
                 ]
             for metric in encircle_by:
-                if metric in {'1std', '2std', '3std'}:
+                if metric[1:] == 'std':
                     x_std = np.std(self._scores[inds, abscissa])
                     y_std = np.std(self._scores[inds, ordinate])
                     x_mean = np.mean(self._scores[inds, abscissa])
@@ -709,6 +723,15 @@ class PCAData:
                     x1 = x_mean + x_std * float(metric[0])
                     y0 = y_mean - y_std * float(metric[0])
                     y1 = y_mean + y_std * float(metric[0])
+                if metric[1:] == 'sem':
+                    x_sem = stats.sem(self._scores[inds, abscissa])
+                    y_sem = stats.sem(self._scores[inds, ordinate])
+                    x_mean = np.mean(self._scores[inds, abscissa])
+                    y_mean = np.mean(self._scores[inds, ordinate])
+                    x0 = x_mean - x_sem * float(metric[0])
+                    x1 = x_mean + x_sem * float(metric[0])
+                    y0 = y_mean - y_sem * float(metric[0])
+                    y1 = y_mean + y_sem * float(metric[0])
                 elif metric == 'range':
                     x0 = np.min(self._scores[inds, abscissa])
                     x1 = np.max(self._scores[inds, abscissa])
@@ -723,6 +746,17 @@ class PCAData:
                     x1 = x_median + x_ptile
                     y0 = y_median - y_ptile
                     y1 = y_median + y_ptile
+                elif metric[2:] == 'conf':
+                    conf = float(metric[:2]) / 100.0
+                    n = len(self._scores[inds, abscissa])
+                    x_mean = np.mean(self._scores[inds, abscissa])
+                    y_mean = np.mean(self._scores[inds, ordinate])
+                    x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                    y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                    x0 = x_mean - x_h
+                    x1 = x_mean + x_h
+                    y0 = y_mean - y_h
+                    y1 = y_mean + y_h
                 else:
                     x0 = 0
                     x1 = 0
@@ -940,7 +974,6 @@ class PCAData:
                 plot = self._get_cumulative_variance_plot(plot_info['threshold'])
                 filename = f'{format_dir}/{base_filename}_cumulative_variance_{plot_info["threshold"]}.{file_format}'
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
-        print('about to make file')
         return shutil.make_archive(plot_dir, 'zip', root_dir, f"{base_filename}_plots")
 
     def get_collection_badges(self) -> List[html.Span]:
