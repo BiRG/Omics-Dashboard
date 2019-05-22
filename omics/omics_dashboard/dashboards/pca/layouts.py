@@ -260,10 +260,12 @@ def get_plot_options_form():
                                               html_for='encircle-by-select'),
                                     dcc.Dropdown(id='encircle-by-select',
                                                  options=[
+                                                     {'label': '2 SEM', 'value': '2sem'},
+                                                     {'label': 'SEM', 'value': '1sem'},
                                                      {'label': '2\u03C3', 'value': '2std'},
                                                      {'label': '\u03C3', 'value': '1std'},
-                                                     {'label': '3\u03C3', 'value': '3std'},
                                                      {'label': 'Range', 'value': 'range'},
+                                                     {'label': '95% Confidence', 'value': '95conf'},
                                                      {'label': '95th percentile', 'value': '95percentile'},
                                                  ],
                                                  multi=True)
@@ -592,7 +594,8 @@ def get_pca_options_form():
                                 [
                                     dbc.Label(['Scale by conditions',
                                                html.Abbr('\uFE56',
-                                                         title='The conditions for the records to use for scaling.')],
+                                                         title='The conditions for the records to use for scaling. If '
+                                                               'left blank, then all records in the model will be used.')],
                                               html_for='scale-by-value'),
                                     dcc.Dropdown(id='scale-by-value', options=[], multi=True),
                                 ]
@@ -607,12 +610,12 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label(['Filter by label(s)',
+                                    dbc.Label(['Model by label(s)',
                                                html.Abbr('\uFE56',
                                                          title='Only consider records satisfying conditions on these'
                                                                ' fields.')],
-                                              html_for='filter-by'),
-                                    dcc.Dropdown(id='filter-by', options=label_options, multi=True)
+                                              html_for='model-by'),
+                                    dcc.Dropdown(id='model-by', options=label_options, multi=True)
                                 ]
                             )
                         ]
@@ -621,12 +624,12 @@ def get_pca_options_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label(['Filter by conditions',
+                                    dbc.Label(['Model by conditions',
                                                html.Abbr('\uFE56',
                                                          title='The conditions which must be satisfied for the records'
                                                                'to be considered.')],
-                                              html_for='filter-by-value'),
-                                    dcc.Dropdown(id='filter-by-value', options=[], multi=True)
+                                              html_for='model-by-value'),
+                                    dcc.Dropdown(id='model-by-value', options=[], multi=True)
                                 ]
                             )
                         ]
