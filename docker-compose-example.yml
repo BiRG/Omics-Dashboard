@@ -8,6 +8,7 @@ services:
       context: omics
       args:
         OMICSSERVER: ${OMICSSERVER}
+        WWW_UID: ${WWW_UID}
     env_file: common.env
     volumes:
       - data:/data
@@ -17,7 +18,11 @@ services:
       - tmp:/tmp  
     container_name: omics_omics
   jobserver:
-    build: jobserver
+    build:
+      context: jobserver
+      args: 
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        WWW_UID: ${WWW_UID}
     env_file: common.env
     privileged: true
     volumes:
@@ -41,6 +46,7 @@ services:
       context: proxy
       args:
         omics_url: ${OMICSSERVER}
+        WWW_UID: ${WWW_UID}
     env_file: common.env
     ports:
       - ${HOSTPORT}:80
