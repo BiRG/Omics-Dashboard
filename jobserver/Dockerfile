@@ -1,5 +1,6 @@
 FROM python:3.7-slim
 ARG MYSQL_PASSWORD
+ARG WWW_UID
 RUN mkdir -p /usr/share/man/man1
 RUN apt -y update && apt -y install wget openjdk-8-jre-headless 
 RUN apt -y update && apt -y install build-essential gcc gfortran
@@ -22,5 +23,7 @@ RUN sed -ri "s|(password = )\"(.*)\"|\1\""$MYSQL_PASSWORD"\"|g" /cromwell.conf
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENV PATH="/modules/sbin:/modules/bin:${PATH}"
+RUN groupmod -g $WWW_UID www-data
+RUN usermod -u $WWW_UID www-data
 USER www-data
 ENTRYPOINT /entrypoint.sh
