@@ -22,4 +22,5 @@ RUN sed -ri "s|(password = )\"(.*)\"|\1\""$MYSQL_PASSWORD"\"|g" /cromwell.conf
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENV PATH="/modules/sbin:/modules/bin:${PATH}"
+USER www-data
 ENTRYPOINT /entrypoint.sh

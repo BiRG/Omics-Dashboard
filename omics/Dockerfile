@@ -30,4 +30,5 @@ COPY --from=0 /app/dist/workflow-editor /omics_dashboard/static/workflow_editor/
 RUN rm -rf /var/lib/apt/lists/*
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+USER www-data
 ENTRYPOINT ["/entrypoint.sh"]
