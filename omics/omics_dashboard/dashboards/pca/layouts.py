@@ -256,7 +256,9 @@ def get_plot_options_form():
                                     dbc.Label(['Encircle metric',
                                                html.Abbr('\uFE56',
                                                          title='This will draw an oval shape to represent a category\'s'
-                                                               ' spread. These can be stacked as concentric rings.')],
+                                                               ' spread. These can be stacked as concentric rings.\n'
+                                                               'SEM: standard error of the mean\n'
+                                                               '\u03C3: standard deviation\n')],
                                               html_for='encircle-by-select'),
                                     dcc.Dropdown(id='encircle-by-select',
                                                  options=[
