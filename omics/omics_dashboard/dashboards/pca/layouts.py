@@ -200,9 +200,11 @@ def get_plot_options_form():
         pca_data = PCAData(load_data=True)
         label_options = [{'label': label, 'value': label} for label in pca_data.labels]
         results_exist = pca_data.results_exist
+        pc_options = pca_data.get_pc_options()
     except:
         label_options = []
         results_exist = False
+        pc_options = []
     plot_data = get_plot_data()
     return dbc.Form(
         [
@@ -214,7 +216,7 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('x-axis', html_for='abscissa-select'),
-                                    dcc.Dropdown(id='abscissa-select', options=[], multi=False)
+                                    dcc.Dropdown(id='abscissa-select', options=pc_options, multi=False, value=0)
                                 ]
                             )
                         ]
@@ -224,7 +226,7 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('y-axis', html_for='ordinate-select'),
-                                    dcc.Dropdown(id='ordinate-select', options=[], multi=False)
+                                    dcc.Dropdown(id='ordinate-select', options=pc_options, multi=False, value=1)
                                 ]
                             )
                         ]
