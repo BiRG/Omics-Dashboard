@@ -7,7 +7,7 @@ import dash_html_components as html
 from dash.dependencies import Output, Input, State
 from flask import url_for
 
-from dashboards.dashboard import Dashboard
+from dashboards.dashboard import Dashboard, StyledDash
 from .layouts import get_layout
 from .pca_data import get_plot_data, set_plot_data, PCAData, component_list
 
@@ -418,12 +418,11 @@ class PCADashboard(Dashboard):
     @staticmethod
     def create_dash_app(server):
         # no users are logged in when this is created so we can't set light/dark theme preference
-        app = dash.Dash(__name__,
-                        server=server,
-                        routes_pathname_prefix=PCADashboard.prefix,
-                        requests_pathname_prefix='/omics' + PCADashboard.prefix,
-                        external_stylesheets=[dbc.themes.FLATLY,
-                                              'https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
+        app = StyledDash(__name__,
+                         server=server,
+                         routes_pathname_prefix=PCADashboard.prefix,
+                         requests_pathname_prefix='/omics' + PCADashboard.prefix,
+                         external_stylesheets=['https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
         # noinspection PyTypeChecker
         PCADashboard._register_dash_app(app)
         return app
