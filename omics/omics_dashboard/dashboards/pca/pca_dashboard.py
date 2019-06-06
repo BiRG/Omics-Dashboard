@@ -1,13 +1,12 @@
 import itertools
 import traceback
 
-import dash
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
 from flask import url_for
 
-from dashboards.dashboard import Dashboard
+from dashboards.dashboard import Dashboard, StyledDash
 from .layouts import get_layout
 from .pca_data import get_plot_data, set_plot_data, PCAData, component_list
 
@@ -26,10 +25,10 @@ class PCADashboard(Dashboard):
         pca_data = PCAData()
         unique_values = [pca_data.unique_vals[val] for val in label_keys]
         option_pairs = list(itertools.product(*unique_values))
-        queries = [' & '.join([f'{key}{op}"{value}"' for key, value in zip(label_keys, option_pair)])
-                   for option_pair in option_pairs]
-        query_labels = [','.join([f'{key}={value}' for key, value in zip(label_keys, option_pair)])
-                        for option_pair in option_pairs]
+        queries = ['index'] + [' & '.join([f'{key}{op}"{value}"' for key, value in zip(label_keys, option_pair)])
+                               for option_pair in option_pairs]
+        query_labels = ['All Records'] + [','.join([f'{key}={value}' for key, value in zip(label_keys, option_pair)])
+                                          for option_pair in option_pairs]
         return [[{'label': query_label, 'value': query} for query_label, query in zip(query_labels, queries)]]
 
     @staticmethod
@@ -355,7 +354,10 @@ class PCADashboard(Dashboard):
                 class_name = 'btn btn-success'
             except Exception as e:
                 path = '#'
-                message = dbc.Alert(f'{e}', color='danger', dismissable=True)
+                message = dbc.Alert([html.P([html.Strong('Error: '), f'{e}']),
+                                     html.Strong('Traceback:'),
+                                     html.P(html.Pre(traceback.format_exc(), className='text-white'))],
+                                    color='danger', dismissable=True)
                 class_name = 'btn btn-secondary disabled'
             return url_for('api.download_temporary_file', path=path), class_name, message
 
@@ -383,7 +385,10 @@ class PCADashboard(Dashboard):
                 class_name = 'btn btn-success'
             except Exception as e:
                 path = '#'
-                message = dbc.Alert(f'{e}', color='danger', dismissable=True)
+                message = dbc.Alert([html.P([html.Strong('Error: '), f'{e}']),
+                                     html.Strong('Traceback:'),
+                                     html.P(html.Pre(traceback.format_exc(), className='text-white'))],
+                                    color='danger', dismissable=True)
                 class_name = 'btn btn-secondary disabled'
             return url_for('api.download_temporary_file', path=path), class_name, message
 
@@ -403,7 +408,10 @@ class PCADashboard(Dashboard):
             try:
                 return pca_data.post_results(name, analysis_ids)
             except Exception as e:
-                return [dbc.Alert(f'{e}', dismissable=True, color='danger')]
+                return [dbc.Alert([html.P([html.Strong('Error: '), f'{e}']),
+                                   html.Strong('Traceback:'),
+                                   html.P(html.Pre(traceback.format_exc(), className='text-white'))],
+                                  color='danger', dismissable=True)]
 
     @staticmethod
     def _register_layout(app):
@@ -418,12 +426,11 @@ class PCADashboard(Dashboard):
     @staticmethod
     def create_dash_app(server):
         # no users are logged in when this is created so we can't set light/dark theme preference
-        app = dash.Dash(__name__,
-                        server=server,
-                        routes_pathname_prefix=PCADashboard.prefix,
-                        requests_pathname_prefix='/omics' + PCADashboard.prefix,
-                        external_stylesheets=[dbc.themes.FLATLY,
-                                              'https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
+        app = StyledDash(__name__,
+                         server=server,
+                         routes_pathname_prefix=PCADashboard.prefix,
+                         requests_pathname_prefix='/omics' + PCADashboard.prefix,
+                         external_stylesheets=['https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
         # noinspection PyTypeChecker
         PCADashboard._register_dash_app(app)
         return app

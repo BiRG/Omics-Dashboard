@@ -31,6 +31,8 @@ COPY --from=0 /app/dist/workflow-editor /omics_dashboard/static/workflow_editor/
 RUN rm -rf /var/lib/apt/lists/*
 ADD entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+RUN groupadd -f -g $WWW_UID www-data
+RUN id -u www-data || useradd -u $WWW_UID -g $WWW_UID www-data
 RUN groupmod -g $WWW_UID www-data
 RUN usermod -u $WWW_UID www-data
 USER www-data

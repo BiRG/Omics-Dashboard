@@ -72,6 +72,7 @@ class PCAData:
         self._loaded_collection_ids = []
         self._dataframe_filename = None
         self._results_filename = None
+        self._good_x_inds = None
         self.load_file_info()
         if load_data:
             try:
@@ -125,11 +126,28 @@ class PCAData:
         self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
         self._processed_label_df = pd.read_hdf(self._dataframe_filename, 'processed_label_df')
         self._numeric_df = pd.read_hdf(self._dataframe_filename, 'numeric_df')
+        with h5py.File(self._dataframe_filename) as file:
+            self._x = np.array(file['x']) if 'x' in file else None
+            self._x_min = np.array(file['x_min']) if 'x_min' in file else None
+            self._x_max = np.array(file['x_max']) if 'x_max' in file else None
 
     def save_dataframes(self):
         self._label_df.to_hdf(self._dataframe_filename, 'label_df', mode='a')
         self._processed_label_df.to_hdf(self._dataframe_filename, 'processed_label_df', mode='a')
         self._numeric_df.to_hdf(self._dataframe_filename, 'numeric_df', mode='a')
+        with h5py.File(self._dataframe_filename, 'r+') as file:
+            if self._x is not None:
+                if 'x' in file:
+                    del file['x']
+                file['x'] = self._x
+            if self._x_min is not None:
+                if 'x_min' in file:
+                    del file['x_min']
+                file['x_min'] = self._x_min
+            if self._x_max is not None:
+                if 'x_max' in file:
+                    del file['x_max']
+                file['x_max'] = self._x_max
 
     def load_labels(self):
         self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
@@ -146,9 +164,9 @@ class PCAData:
             self._x_min = np.array(file['x_min']) if 'x_min' in file else None
             self._x_max = np.array(file['x_max']) if 'x_max' in file else None
             if self._x_min is not None:
-                self._x_min.reshape((1, max(self._x_min.shape)))
-            if self._x_max:
-                self._x_max.reshape((1, max(self._x_max.shape)))
+                self._x_min.reshape((1, -1))
+            if self._x_max is not None:
+                self._x_max.reshape((1, -1))
             self._loadings = np.array(file['loadings'])
             self._scores = np.array(file['scores'])
             self._explained_variance_ratio = np.array(file['explained_variance_ratio'])
@@ -324,7 +342,7 @@ class PCAData:
         def _save_loadings(name, file_format):
             if file_format == 'csv':
                 loadings_df = pd.DataFrame(data=self._loadings,
-                                           columns=self._x,
+                                           columns=np.ravel(self._x),
                                            index=[f'PC{i+1}' for i in range(0, len(self._loadings))])
                 loadings_df.to_csv(name)
             else:
@@ -340,15 +358,15 @@ class PCAData:
 
                     file['pca_loadings'] = self._loadings
                     file['x'] = self._x
-                    if self._x_max:
+                    if self._x_max is not None:
                         file['x_max'] = self._x_max
-                    if self._x_min:
+                    if self._x_min is not None:
                         file['x_min'] = self._x_min
 
         def _save_variance(name, file_format):
             if file_format == 'csv':
                 variance_df = pd.DataFrame(data=self._explained_variance_ratio,
-                                           columns='explained_variance_ratio',
+                                           columns=['explained_variance_ratio'],
                                            index=[f'PC{i+1}' for i in range(0, len(self._explained_variance_ratio))])
                 variance_df.to_csv(name)
             else:
@@ -437,7 +455,7 @@ class PCAData:
                     return csv_filename
             if include_variance:
                 csv_filename = f'{csv_prefix}/{filename}_variance.csv'
-                _save_variance(csv_filename, '')
+                _save_variance(csv_filename, 'csv')
                 if not create_archive:
                     return csv_filename
             if include_db_index:
@@ -466,6 +484,18 @@ class PCAData:
             y = collection.get_dataset('Y')
             collection.set_dataset('x', x[:, inds])
             collection.set_dataset('Y', y[:, inds])
+            try:
+                x_min = collection.get_dataset('x_min')[:, inds]
+                collection.set_dataset('x_min', x_min)
+                self._x_min = x_min
+            except:
+                self._x_min = None
+            try:
+                x_max = collection.get_dataset('x_max')[:, inds]
+                collection.set_dataset('x_max', x_max)
+                self._x_max = x_max
+            except:
+                self._x_max = None
             del y
             data_dir = os.path.dirname(collection.filename)
             self._results_filename = os.path.join(data_dir, 'results.h5')
@@ -473,9 +503,11 @@ class PCAData:
             self._loaded_collection_ids = collection_ids
             self._label_df = collection.get_dataframe(include_only_labels=True)
             self._numeric_df = collection.get_dataframe(numeric_columns=True, include_labels=False)
-            good_inds = np.where(self._numeric_df.isnull().sum() == 0)[0]
-            self._numeric_df = self._numeric_df[self._numeric_df.columns[good_inds]]
-            self._x = x[:, good_inds]
+            self._good_x_inds = np.where(self._numeric_df.isnull().sum() == 0)[0]
+            self._numeric_df = self._numeric_df[self._numeric_df.columns[self._good_x_inds]]
+            self._x = x[:, self._good_x_inds]
+            self._x_min = self._x_min[:, self._good_x_inds] if self._x_min is not None else None
+            self._x_max = self._x_max[:, self._good_x_inds] if self._x_max is not None else None
             self._processed_label_df = self._label_df
             os.remove(collection.filename)
             self.set_file_info()
@@ -491,18 +523,12 @@ class PCAData:
         self.load_dataframes()
         label_df = self._label_df
         numeric_df = self._numeric_df
-        self._x = np.array([[float(i) for i in numeric_df.columns]])
         data_load_end = tm.time()
 
         if scale_by:
             means = numeric_df.loc[label_df.query(scale_by).index].mean()
             std_devs = numeric_df.loc[label_df.query(scale_by).index].std()
-        else:
-            means = numeric_df.mean()
-            std_devs = numeric_df.std()
-
-        numeric_df = numeric_df.sub(means, axis=1).divide(std_devs,
-                                                          axis=1)  # do scaling before everything else
+            numeric_df = numeric_df.sub(means, axis=1).divide(std_devs, axis=1)  # do scaling before everything else
 
         if ignore_by:
             label_df = label_df.query(ignore_by)
@@ -536,10 +562,13 @@ class PCAData:
         else:
             model_numeric_df = numeric_df
 
-        good_inds = np.where(model_numeric_df.isnull().sum() == 0)[0]
-        good_columns = model_numeric_df.columns[good_inds]
+        self._good_x_inds = np.where(model_numeric_df.isnull().sum() == 0)[0]
+        good_columns = model_numeric_df.columns[self._good_x_inds]
         model_numeric_df = model_numeric_df[good_columns]
         numeric_df = numeric_df[good_columns]
+        self._x = self._x[:, self._good_x_inds]
+        self._x_min = self._x_min[:, self._good_x_inds] if self._x_min is not None else None
+        self._x_max = self._x_max[:, self._good_x_inds] if self._x_max is not None else None
         metadata = {
             'model_by': model_by or '',
             'ignore_by': ignore_by or '',
@@ -565,7 +594,6 @@ class PCAData:
         metadata['description'] = description
 
         self._processed_label_df = label_df
-        numeric_df = numeric_df.dropna(axis=1)
         start_time = tm.time()
         pca = PCA()
         model_numeric_df.to_csv('/tmp/model_numeric_df.csv')
@@ -608,7 +636,9 @@ class PCAData:
                         encircle_by,
                         plot_centroid,
                         plot_medoid,
-                        graph_only=False) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+                        graph_only=False,
+                        theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+        theme = theme or 'plotly_white'
         color_by_labels = color_by_labels or []
         encircle_by = encircle_by or []
         label_by_labels = label_by_labels or []
@@ -624,8 +654,13 @@ class PCAData:
 
         if len(color_names) > 1 and include_db_index:
             db_df = self._davies_bouldin(color_label, color_labels, True)
+            style_header = {'backgroundColor': '#303030'} if theme == 'plotly_dark' else {}
+            style_cell = {'backgroundColor': '#444444'} if theme == 'plotly_dark' else {}
             table = dash_table.DataTable(columns=[{'name': val, 'id': val} for val in db_df.columns],
-                                         data=db_df.to_dict('rows'))
+                                         data=db_df.to_dict('rows'),
+                                         style_as_list_view=True,
+                                         style_header=style_header,
+                                         style_cell=style_cell)
         else:
             table = html.Div()
 
@@ -777,18 +812,26 @@ class PCAData:
                         'line': {'color': color}
                     }
                 )
-
+        axis_line_style = {
+            'zerolinecolor': '#9FA8B2',
+            'gridcolor': '#444444',
+        } if theme == 'plotly_dark' else {}
         graph = dcc.Graph(figure={
             'data': graph_data,
             'layout': go.Layout(
                 shapes=shapes,
                 annotations=annotations,
                 height=700,
+                template=theme,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
                 xaxis={
-                    'title': f'PC{abscissa + 1}'
+                    'title': f'PC{abscissa + 1}',
+                    **axis_line_style
                 },
                 yaxis={
-                    'title': f'PC{ordinate + 1}'
+                    'title': f'PC{ordinate + 1}',
+                    **axis_line_style
                 }
             )
         })
@@ -796,7 +839,13 @@ class PCAData:
             return graph
         return graph, table
 
-    def _get_loading_plot(self, loadings) -> dcc.Graph:
+    def _get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
+        theme = theme or 'plotly_white'
+
+        axis_line_style = {
+            'zerolinecolor': '#9FA8B2',
+            'gridcolor': '#444444',
+        } if theme == 'plotly_dark' else {}
         return dcc.Graph(figure={
             'data': [
                 go.Scatter(
@@ -810,19 +859,29 @@ class PCAData:
             'layout': go.Layout(
                 xaxis={
                     'title': 'Chemical Shift (ppm)',
-                    'autorange': 'reversed'
+                    'autorange': 'reversed',
+                    **axis_line_style
                 },
                 yaxis={
-                    'title': 'PC Loading'
-                }
+                    'title': 'PC Loading',
+                    **axis_line_style
+                },
+                template=theme,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_variance_plot(self, scale_y=False, indices=None) -> dcc.Graph:
+    def _get_variance_plot(self, scale_y=False, indices=None, theme=None) -> dcc.Graph:
+        theme = theme or 'plotly_white'
         all_indices = [i for i in range(0, len(self._explained_variance_ratio))]
         indices = list(set(all_indices).intersection(set(indices)))
-        xaxis = {'title': 'Principal Component'}
-        yaxis = {'title': '% Variance Explained'}
+        axis_line_style = {
+            'zerolinecolor': '#9FA8B2',
+            'gridcolor': '#444444',
+        } if theme == 'plotly_dark' else {}
+        xaxis = {'title': 'Principal Component', **axis_line_style}
+        yaxis = {'title': '% Variance Explained', **axis_line_style}
         if not scale_y:
             yaxis['range'] = [0, 100]
         return dcc.Graph(figure={
@@ -835,11 +894,19 @@ class PCAData:
             'layout': go.Layout(
                 showlegend=False,
                 xaxis=xaxis,
-                yaxis=yaxis
+                yaxis=yaxis,
+                template=theme,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_cumulative_variance_plot(self, threshold) -> dcc.Graph:
+    def _get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
+        theme = theme or 'plotly_white'
+        axis_line_style = {
+            'zerolinecolor': '#9FA8B2',
+            'gridcolor': '#444444',
+        } if theme == 'plotly_dark' else {}
         cumulative = 100 * np.cumsum(self._explained_variance_ratio)
         first_index = np.argwhere(cumulative > threshold).flatten()[0]
         line_x = first_index + 1
@@ -853,8 +920,11 @@ class PCAData:
                 )
             ],
             'layout': go.Layout(
-                xaxis={'title': 'Number of Principal Components', 'tickvals': x_ticks},
-                yaxis={'title': '% Variance Explained', 'tickvals': y_ticks},
+                xaxis={'title': 'Number of Principal Components', 'tickvals': x_ticks, **axis_line_style},
+                yaxis={'title': '% Variance Explained', 'tickvals': y_ticks, **axis_line_style},
+                template=theme,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
                 shapes=[
                     {
                         'type': 'line',
@@ -899,6 +969,8 @@ class PCAData:
                                                      List[dcc.Graph]):
         self.load_labels()
         self.load_results()
+        from dashboards.dashboard import get_plot_theme
+        theme = get_plot_theme()
         score_plots = [self._get_score_plot(plot['ordinate'],
                                             plot['abscissa'],
                                             plot['color_by'],
@@ -906,20 +978,22 @@ class PCAData:
                                             plot['label_by'],
                                             plot['encircle_by'],
                                             plot['include_centroid'],
-                                            plot['include_medoid'])
+                                            plot['include_medoid'],
+                                            theme=theme)
                        for plot in score_plot_data]
         return (
             [
                 item for pair in score_plots for item in pair
             ] if include_db_index_tables else [pair[0] for pair in score_plots],
             [
-                self._get_loading_plot(plot['indices']) for plot in loading_plot_data
+                self._get_loading_plot(plot['indices'], theme=theme) for plot in loading_plot_data
             ],
             [
-                self._get_variance_plot(plot['scale_y'], plot['indices']) for plot in variance_plot_data
+                self._get_variance_plot(plot['scale_y'], plot['indices'], theme=theme) for plot in variance_plot_data
             ],
             [
-                self._get_cumulative_variance_plot(plot['threshold']) for plot in cumulative_variance_plot_data
+                self._get_cumulative_variance_plot(plot['threshold'],
+                                                   theme=theme) for plot in cumulative_variance_plot_data
             ]
         )
 
@@ -930,6 +1004,7 @@ class PCAData:
                        cumulative_variance_plot_data,
                        file_formats=None) -> str:
         file_formats = file_formats or []
+        pio.orca.config.use_xvfb = True
         if len(self._loaded_collection_ids) > 1:
             base_filename = 'pca_collections_' + '_'.join([str(collection_id)
                                                            for collection_id in self._loaded_collection_ids])

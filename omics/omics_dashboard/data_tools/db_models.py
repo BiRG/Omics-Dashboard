@@ -454,8 +454,7 @@ class NumericFileRecordMixin(FileRecordMixin):
                 else:
                     fp.attrs[key] = value
         else:
-            raise RuntimeError('File has not been downloaded! Use Session.download_file to download the file for this '
-                               'record')
+            raise RuntimeError('File does not exist!')
 
     def get_dataset(self, path: str) -> np.array:
         """
@@ -467,8 +466,7 @@ class NumericFileRecordMixin(FileRecordMixin):
             with h5py.File(self.filename, 'r') as fp:
                 return np.asarray(fp[path])
         else:
-            raise RuntimeError('File has not been downloaded! Use Session.download_file to download the file for this '
-                               'record')
+            raise RuntimeError('File does not exist!')
 
     def delete_dataset(self, path):
         # type: (str) -> None
