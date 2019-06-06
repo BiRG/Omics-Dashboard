@@ -216,7 +216,8 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('x-axis', html_for='abscissa-select'),
-                                    dcc.Dropdown(id='abscissa-select', options=pc_options, multi=False, value=0)
+                                    dcc.Dropdown(id='abscissa-select', options=pc_options,
+                                                 multi=False, value=0)
                                 ]
                             )
                         ]
@@ -226,7 +227,8 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('y-axis', html_for='ordinate-select'),
-                                    dcc.Dropdown(id='ordinate-select', options=pc_options, multi=False, value=1)
+                                    dcc.Dropdown(id='ordinate-select',
+                                                 options=pc_options, multi=False, value=1)
                                 ]
                             )
                         ]
@@ -236,7 +238,8 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('Color by label(s)', html_for='color-by-select'),
-                                    dcc.Dropdown(id='color-by-select', options=label_options, multi=True)
+                                    dcc.Dropdown(id='color-by-select',
+                                                 options=label_options, multi=True)
                                 ]
                             )
                         ]
@@ -246,7 +249,8 @@ def get_plot_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('Point label(s)', html_for='label-by-select'),
-                                    dcc.Dropdown(id='label-by-select', options=label_options, multi=True)
+                                    dcc.Dropdown(id='label-by-select',
+                                                 options=label_options, multi=True)
                                 ]
                             )
                         ]
@@ -599,9 +603,10 @@ def get_pca_options_form():
                                     dbc.Label(['Scale by conditions',
                                                html.Abbr('\uFE56',
                                                          title='The conditions for the records to use for scaling. If '
-                                                               'left blank, then all records in the model will be used.')],
+                                                               'left blank, then no scaling is performed.')],
                                               html_for='scale-by-value'),
-                                    dcc.Dropdown(id='scale-by-value', options=[], multi=True),
+                                    dcc.Dropdown(id='scale-by-value', options=[{'label': 'All Records',
+                                                                                'value': 'index'}], multi=True),
                                 ]
                             )
                         ]
