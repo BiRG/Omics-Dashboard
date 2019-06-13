@@ -7,7 +7,7 @@ We have to use the factory pattern because the flask app has to be initialized b
 from typing import List, Type
 
 from dashboards.dashboard import Dashboard
-from dashboards.pca.pca_dashboard import PCADashboard
+from dashboards.nmr_metabolomics.pca import PCADashboard
 
 dashboard_list: List[Type[Dashboard]] = [
     PCADashboard
