@@ -36,7 +36,7 @@ The following variables may be changed, but only `OMICSSERVER`, `SECRET`, `MYSQL
 Documentation for Omics Dashboard is located on the [wiki](https://github.com/BiRG/Omics-Dashboard/wiki) of the GitHub repository.
 
 ## Licensing
-Omics-Dashboard is licensed under the terms of the [AGPL v3](https://choosealicense.com/licenses/agpl-3.0/). This is a very restrictive and "infectious" license. Since the configuration for Omics-Dashboard frequently involves changing the source code itself, it may not be possible to use Omics-Dashboard without making your modifications available to all users of your deployment. If this presents a problem, please contact the maintainers. Licensing under more permissive terms is available upon request and will most likely be granted for nearly any use case outside of operating Omics-Dashbaord as a commercial service.
+Omics-Dashboard is licensed under the terms of the [MIT License](https://choosealicense.com/licenses/mit/).
 
 ## Bug Reports & Feature Requests
 We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/BiRG/Omics-Dashboard/issues/new/choose). Good issues should follow the templates provided.

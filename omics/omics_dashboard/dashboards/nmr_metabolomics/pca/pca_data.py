@@ -596,7 +596,6 @@ class PCAData:
         self._processed_label_df = label_df
         start_time = tm.time()
         pca = PCA()
-        model_numeric_df.to_csv('/tmp/model_numeric_df.csv')
         pca.fit(model_numeric_df)
         self._scores = pca.transform(numeric_df)
         end_time = tm.time()
