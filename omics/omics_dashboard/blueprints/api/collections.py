@@ -55,7 +55,6 @@ def get_collection(collection_id=None):
 
         if request.method == 'POST':
             if 'file' in request.files or 'file' in new_data:
-                print('file in request')
                 filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
                 if 'file' in request.files:
                     if request.files['file'].filename == '':

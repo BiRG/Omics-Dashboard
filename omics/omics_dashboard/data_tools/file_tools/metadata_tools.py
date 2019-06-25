@@ -55,11 +55,11 @@ def get_csv(filename: str, path: str) -> str:
     """Get a string containing comma-separated values for a dataset"""
     with h5py.File(filename, 'r') as infile:
         dataset = infile[str(path)]
-    s = StringIO()
-    if dataset is not None:
-        for row in dataset:
-            s.write(convert_row(row))
-            s.write('\n')
+        s = StringIO()
+        if dataset is not None:
+            for row in dataset:
+                s.write(convert_row(row))
+                s.write('\n')
         return s.getvalue()
     raise ValueError('File or path not found')
 
