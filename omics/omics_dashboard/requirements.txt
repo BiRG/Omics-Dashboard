@@ -47,3 +47,4 @@ plotly
 msgpack
 tables
 psutil
+git+git://github.com/BiRG/pyopls.git
