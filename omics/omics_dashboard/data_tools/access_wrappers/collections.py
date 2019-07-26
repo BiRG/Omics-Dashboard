@@ -288,7 +288,8 @@ def copy_collection(user: User, collection: Collection) -> Collection:
                                 all_can_write=collection.all_can_write,
                                 owner=user,
                                 creator=user,
-                                last_editor=user)
+                                last_editor=user,
+                                parent_id=collection.id)
     db.session.add(new_collection)
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'

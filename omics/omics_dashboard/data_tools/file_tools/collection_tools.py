@@ -136,3 +136,11 @@ def get_dataset(filename: str, path: str, convert_strings=False):
         if convert_strings:
             return np.asarray([row.decode('ascii') if isinstance(row, bytes) else row for row in val])
         return val
+
+
+def delete(filename: str, path: str, obj, axis=None):
+    with h5py.File(filename, 'r+') as file:
+        arr = np.array(file[path])
+        arr = np.delete(arr, obj, axis)
+        del file[path]
+        file[path] = arr

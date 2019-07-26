@@ -8,7 +8,8 @@ services:
       context: omics
       args:
         OMICSSERVER: ${OMICSSERVER}
-        WWW_UID: ${WWW_UID}
+        OMICS_UID: ${OMICS_UID}
+        OMICS_GID: ${OMICS_GID}
     env_file: common.env
     volumes:
       - data:/data
@@ -22,7 +23,8 @@ services:
       context: jobserver
       args: 
         MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-        WWW_UID: ${WWW_UID}
+        OMICS_UID: ${OMICS_UID}
+        OMICS_GID: ${OMICS_GID}
     env_file: common.env
     privileged: true
     volumes:
@@ -46,14 +48,16 @@ services:
       context: proxy
       args:
         omics_url: ${OMICSSERVER}
-        WWW_UID: ${WWW_UID}
+        OMICS_UID: ${OMICS_UID}
+        OMICS_GID: ${OMICS_GID}
     env_file: common.env
     ports:
       - ${HOSTPORT}:80
     volumes:
       - data:/data
-      - ${EXTERNALDIR}:/data/external
       - tmp:/tmp
+      - ${EXTERNALDIR}:/data/external  
+      - jobserverexecution:/cromwell-executions
     depends_on:
       - jobserver
       - omics

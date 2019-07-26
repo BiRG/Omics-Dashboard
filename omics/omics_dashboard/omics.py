@@ -1,5 +1,6 @@
 import datetime
 import os
+import traceback
 
 from flask import Flask, jsonify, send_from_directory
 from flask_login import current_user, login_required
@@ -117,7 +118,10 @@ with app.app_context():
         print('No admin user found. Created default admin user {email: "admin@admin.admin", password: "password"}')
 
     for app_type in dashboard_list:
-        app_type.create_dash_app(app)
+        try:
+            app_type.create_dash_app(app)
+        except Exception as e:
+            traceback.print_exc()
 
     for view_func in app.view_functions:
         if view_func.startswith('/dashboards'):

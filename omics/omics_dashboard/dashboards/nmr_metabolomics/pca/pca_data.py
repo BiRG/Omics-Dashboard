@@ -1,15 +1,12 @@
-from ..multivariate_analysis_data import MultivariateAnalysisData
-import itertools
 import os
 import shutil
-from typing import List, Dict, Any, Union, Tuple
+from typing import List, Dict, Union, Tuple
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import h5py
-import msgpack
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
@@ -20,11 +17,19 @@ from flask_login import current_user
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 from sklearn.decomposition import PCA
 
-import data_tools.redis as rds
-from data_tools.access_wrappers.collections import get_collection_copy, upload_collection
+from data_tools.access_wrappers.collections import upload_collection
+from ..multivariate_analysis_data import MultivariateAnalysisData
 
 
 class PCAData(MultivariateAnalysisData):
+    _empty_plot_data = {
+        'score_plots': [],
+        'loading_plots': [],
+        'variance_plots': [],
+        'cumulative_variance_plots': []
+    }
+    _redis_prefix = 'pca'
+
     def __init__(self, load_data=False):
         # any of these can be None
         super().__init__(load_data)
@@ -76,8 +81,10 @@ class PCAData(MultivariateAnalysisData):
         self.load_labels()
 
     def save_results(self, filename=None, file_format='hdf5'):
+        if not filename:
+            filename = self._results_filename
         super().save_results(filename, file_format)
-        with h5py.File(filename, 'w') as file:  # always create new because dimensions might change
+        with h5py.File(filename, 'r+') as file:  # always create new because dimensions might change
             file['loadings'] = self._loadings
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
@@ -211,7 +218,7 @@ class PCAData(MultivariateAnalysisData):
         def _save_scores(name, file_format):
             if file_format == 'csv':
                 scores_df = pd.DataFrame(data=self._scores,
-                                         columns=[f'PC{i+1}' for i in range(0, len(self._scores))],
+                                         columns=[f'PC{i + 1}' for i in range(self._scores.shape[1])],
                                          index=self._numeric_df.index)
                 scores_df.to_csv(name)
             else:
@@ -224,7 +231,7 @@ class PCAData(MultivariateAnalysisData):
             if file_format == 'csv':
                 loadings_df = pd.DataFrame(data=self._loadings,
                                            columns=np.ravel(self._x),
-                                           index=[f'PC{i+1}' for i in range(0, len(self._loadings))])
+                                           index=[f'PC{i + 1}' for i in range(self._loadings.shape[1])])
                 loadings_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
@@ -248,7 +255,7 @@ class PCAData(MultivariateAnalysisData):
             if file_format == 'csv':
                 variance_df = pd.DataFrame(data=self._explained_variance_ratio,
                                            columns=['explained_variance_ratio'],
-                                           index=[f'PC{i+1}' for i in range(0, len(self._explained_variance_ratio))])
+                                           index=[f'PC{i + 1}' for i in range(len(self._explained_variance_ratio))])
                 variance_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
@@ -360,6 +367,7 @@ class PCAData(MultivariateAnalysisData):
     def _get_score_plot(self,
                         ordinate,
                         abscissa,
+                        applicate,
                         color_by_labels,
                         include_db_index,
                         label_by_labels,
@@ -368,6 +376,7 @@ class PCAData(MultivariateAnalysisData):
                         plot_medoid,
                         graph_only=False,
                         theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+        is_3d = applicate != -1
         theme = theme or 'plotly_white'
         color_by_labels = color_by_labels or []
         encircle_by = encircle_by or []
@@ -401,7 +410,20 @@ class PCAData(MultivariateAnalysisData):
                 name=color_label,
                 mode='markers',
                 marker={
-                    'opacity': 0
+                    'opacity': 0,
+                    'size': 0,
+                    'color': 'rgba(0,0,0,0)'
+                }
+            ) if not is_3d else go.Scatter3d(
+                x=[0],
+                y=[0],
+                z=[0],
+                name=color_label,
+                mode='markers',
+                marker={
+                    'opacity': 0,
+                    'size': 0,
+                    'color': 'rgba(0,0,0,0)'
                 }
             )
         ]
@@ -431,6 +453,20 @@ class PCAData(MultivariateAnalysisData):
                         'line': {'width': 0.5, 'color': 'white'},
                         'color': color
                     }
+                ) if not is_3d else go.Scatter3d(
+                    x=self._scores[inds, abscissa],
+                    y=self._scores[inds, ordinate],
+                    z=self._scores[inds, applicate],
+                    text=['<br>'.join([f'{label}: {label_df[label][ind]}' for label in
+                                       label_df.columns]) for ind in inds],
+                    name=name,
+                    mode='markers',
+                    marker={
+                        'size': 5,
+                        'opacity': 0.5,
+                        'line': {'width': 0.5, 'color': 'white'},
+                        'color': color
+                    }
                 )
             )
             if plot_centroid:
@@ -443,6 +479,20 @@ class PCAData(MultivariateAnalysisData):
                         mode='markers',
                         marker={
                             'size': 20,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'x'
+                        }
+                    ) if not is_3d else go.Scatter3d(
+                        x=[np.mean(self._scores[inds, abscissa])],
+                        y=[np.mean(self._scores[inds, ordinate])],
+                        z=[np.mean(self._scores[inds, applicate])],
+                        text=f'{name} centroid',
+                        name=f'{name} centroid',
+                        mode='markers',
+                        marker={
+                            'size': 5,
                             'opacity': 0.85,
                             'line': {'width': 0.5, 'color': 'white'},
                             'color': color,
@@ -465,10 +515,33 @@ class PCAData(MultivariateAnalysisData):
                             'color': color,
                             'symbol': 'cross'
                         }
+                    ) if not is_3d else go.Scatter3d(
+                        x=[np.median(self._scores[inds, abscissa])],
+                        y=[np.median(self._scores[inds, ordinate])],
+                        z=[np.median(self._scores[inds, applicate])],
+                        text=f'{name} medoid',
+                        name=f'{name} medoid',
+                        mode='markers',
+                        marker={
+                            'size': 5,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'cross'
+                        }
                     )
                 )
             if label_labels is not None:
-                annotations = annotations + [
+                annotations += [
+                    {
+                        'x': self._scores[ind, abscissa],
+                        'y': self._scores[ind, ordinate],
+                        'xref': 'x',
+                        'yref': 'y',
+                        'text': label_labels[ind],
+                        'showarrow': False
+                    } for ind in inds
+                ] if not is_3d else [
                     {
                         'x': self._scores[ind, abscissa],
                         'y': self._scores[ind, ordinate],
@@ -478,92 +551,119 @@ class PCAData(MultivariateAnalysisData):
                         'showarrow': False
                     } for ind in inds
                 ]
-            for metric in encircle_by:
-                if metric[1:] == 'std':
-                    x_std = np.std(self._scores[inds, abscissa])
-                    y_std = np.std(self._scores[inds, ordinate])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x0 = x_mean - x_std * float(metric[0])
-                    x1 = x_mean + x_std * float(metric[0])
-                    y0 = y_mean - y_std * float(metric[0])
-                    y1 = y_mean + y_std * float(metric[0])
-                if metric[1:] == 'sem':
-                    x_sem = stats.sem(self._scores[inds, abscissa])
-                    y_sem = stats.sem(self._scores[inds, ordinate])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x0 = x_mean - x_sem * float(metric[0])
-                    x1 = x_mean + x_sem * float(metric[0])
-                    y0 = y_mean - y_sem * float(metric[0])
-                    y1 = y_mean + y_sem * float(metric[0])
-                elif metric == 'range':
-                    x0 = np.min(self._scores[inds, abscissa])
-                    x1 = np.max(self._scores[inds, abscissa])
-                    y0 = np.min(self._scores[inds, ordinate])
-                    y1 = np.max(self._scores[inds, ordinate])
-                elif metric == '95percentile':
-                    x_ptile = np.percentile(self._scores[inds, abscissa], 95)
-                    y_ptile = np.percentile(self._scores[inds, ordinate], 95)
-                    x_median = np.median(self._scores[inds, abscissa])
-                    y_median = np.median(self._scores[inds, ordinate])
-                    x0 = x_median - x_ptile
-                    x1 = x_median + x_ptile
-                    y0 = y_median - y_ptile
-                    y1 = y_median + y_ptile
-                elif metric[2:] == 'conf':
-                    conf = float(metric[:2]) / 100.0
-                    n = len(self._scores[inds, abscissa])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
-                    y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
-                    x0 = x_mean - x_h
-                    x1 = x_mean + x_h
-                    y0 = y_mean - y_h
-                    y1 = y_mean + y_h
-                else:
-                    x0 = 0
-                    x1 = 0
-                    y0 = 0
-                    y1 = 0
+            if not is_3d:
+                for metric in encircle_by:
+                    if metric.endswith('std'):
+                        x_std = np.std(self._scores[inds, abscissa])
+                        y_std = np.std(self._scores[inds, ordinate])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x0 = x_mean - x_std * float(metric[0])
+                        x1 = x_mean + x_std * float(metric[0])
+                        y0 = y_mean - y_std * float(metric[0])
+                        y1 = y_mean + y_std * float(metric[0])
+                    if metric.endswith('sem'):
+                        x_sem = stats.sem(self._scores[inds, abscissa])
+                        y_sem = stats.sem(self._scores[inds, ordinate])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x0 = x_mean - x_sem * float(metric[0])
+                        x1 = x_mean + x_sem * float(metric[0])
+                        y0 = y_mean - y_sem * float(metric[0])
+                        y1 = y_mean + y_sem * float(metric[0])
+                    elif metric == 'range':
+                        x0 = np.min(self._scores[inds, abscissa])
+                        x1 = np.max(self._scores[inds, abscissa])
+                        y0 = np.min(self._scores[inds, ordinate])
+                        y1 = np.max(self._scores[inds, ordinate])
+                    elif metric == '95percentile':
+                        x_ptile = np.percentile(self._scores[inds, abscissa], 95)
+                        y_ptile = np.percentile(self._scores[inds, ordinate], 95)
+                        x_median = np.median(self._scores[inds, abscissa])
+                        y_median = np.median(self._scores[inds, ordinate])
+                        x0 = x_median - x_ptile
+                        x1 = x_median + x_ptile
+                        y0 = y_median - y_ptile
+                        y1 = y_median + y_ptile
+                    elif metric.endswith('conf'):
+                        conf = float(metric[:2]) / 100.0
+                        n = len(self._scores[inds, abscissa])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        x0 = x_mean - x_h
+                        x1 = x_mean + x_h
+                        y0 = y_mean - y_h
+                        y1 = y_mean + y_h
+                    else:
+                        x0 = 0
+                        x1 = 0
+                        y0 = 0
+                        y1 = 0
 
-                shapes.append(
-                    {
-                        'type': 'circle',
-                        'xref': 'x',
-                        'yref': 'y',
-                        'x0': x0,
-                        'y0': y0,
-                        'x1': x1,
-                        'y1': y1,
-                        'opacity': 0.25,
-                        'fillcolor': color,
-                        'line': {'color': color}
-                    }
-                )
+                    shapes.append(
+                        {
+                            'type': 'circle',
+                            'xref': 'x',
+                            'yref': 'y',
+                            'x0': x0,
+                            'y0': y0,
+                            'x1': x1,
+                            'y1': y1,
+                            'opacity': 0.25,
+                            'fillcolor': color,
+                            'line': {'color': color}
+                        }
+                    )
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
-        graph = dcc.Graph(figure={
-            'data': graph_data,
-            'layout': go.Layout(
-                shapes=shapes,
-                annotations=annotations,
-                height=700,
-                template=theme,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                xaxis={
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
+        layout = go.Layout(
+            shapes=shapes,
+            annotations=annotations,
+            height=700,
+            font={'size': 16},
+            template=theme,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            xaxis={
+                'title': f'PC{abscissa + 1}',
+                **axis_line_style
+            },
+            yaxis={
+                'title': f'PC{ordinate + 1}',
+                **axis_line_style
+            }
+        ) if not is_3d else go.Layout(
+            annotations=annotations,
+            height=700,
+            font={'size': 16},
+            template=theme,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            scene={
+                'xaxis': {
                     'title': f'PC{abscissa + 1}',
                     **axis_line_style
                 },
-                yaxis={
+                'yaxis': {
                     'title': f'PC{ordinate + 1}',
                     **axis_line_style
+                },
+                'zaxis': {
+                    'title': f'PC{applicate + 1}',
+                    **axis_line_style
                 }
-            )
+            }
+        )
+        graph = dcc.Graph(figure={
+            'data': graph_data,
+            'layout': layout
         })
         if graph_only:
             return graph
@@ -571,11 +671,13 @@ class PCAData(MultivariateAnalysisData):
 
     def _get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
-
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         return dcc.Graph(figure={
             'data': [
                 go.Scatter(
@@ -607,9 +709,12 @@ class PCAData(MultivariateAnalysisData):
         all_indices = [i for i in range(0, len(self._explained_variance_ratio))]
         indices = list(set(all_indices).intersection(set(indices)))
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         xaxis = {'title': 'Principal Component', **axis_line_style}
         yaxis = {'title': '% Variance Explained', **axis_line_style}
         if not scale_y:
@@ -634,9 +739,12 @@ class PCAData(MultivariateAnalysisData):
     def _get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         cumulative = 100 * np.cumsum(self._explained_variance_ratio)
         first_index = np.argwhere(cumulative > threshold).flatten()[0]
         line_x = first_index + 1
@@ -703,6 +811,7 @@ class PCAData(MultivariateAnalysisData):
         theme = get_plot_theme()
         score_plots = [self._get_score_plot(plot['ordinate'],
                                             plot['abscissa'],
+                                            plot['applicate'],
                                             plot['color_by'],
                                             include_db_index_tables and plot['include_db_index'],
                                             plot['label_by'],

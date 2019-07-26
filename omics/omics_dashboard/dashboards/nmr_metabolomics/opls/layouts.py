@@ -2,8 +2,8 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-
 from flask_login import current_user
+
 from dashboards.navbar import get_navbar
 from data_tools.access_wrappers.analyses import get_analyses
 from data_tools.access_wrappers.collections import get_collections
@@ -212,12 +212,14 @@ def get_opls_options_form():
     try:
         opls_data = OPLSData(load_data=True)
         label_options = [{'label': label, 'value': label} for label in opls_data.labels]
+        label_options_with_type = [{'label': label, 'value': label} for label in opls_data.get_label_data(True)]
         loaded_badges = opls_data.get_collection_badges()
         collection_load_info = opls_data.get_collection_load_info()
     except:
         loaded_badges = [html.Span([dbc.Badge('None', className='badge-pill')])]
         collection_load_info = 'Loaded collections.'
         label_options = []
+        label_options_with_type = []
 
     return dbc.Form(
         [
@@ -265,8 +267,8 @@ def get_opls_options_form():
                                 [
                                     dbc.Label(['Target variable.', html.Abbr('\uFE56',
                                                                              title='The target ("y") variable.')],
-                                              html_for='target'),
-                                    dcc.Dropdown(id='target', options=label_options, multi=False)
+                                              html_for='target-variable'),
+                                    dcc.Dropdown(id='target-variable', options=label_options_with_type, multi=False)
                                 ]
                             )
                         ]
@@ -284,11 +286,11 @@ def get_opls_options_form():
                                     dcc.Dropdown(id='regression-type',
                                                  options=[
                                                             {
-                                                                'name': 'Regression', 
+                                                                'label': 'Regression',
                                                                 'value': 'regression'
                                                             },
                                                             {
-                                                                'name': 'Discrimination',
+                                                                'label': 'Discrimination',
                                                                 'value': 'discrimination'
                                                             }
                                                          ],
@@ -319,11 +321,11 @@ def get_opls_options_form():
                                     dcc.Dropdown(id='multiclass-behavior',
                                                  options=[
                                                      {
-                                                         'name': 'One v. one',
+                                                         'label': 'One v. one',
                                                          'value': 'one_v_one',
                                                      },
                                                      {
-                                                         'name': 'One v. all',
+                                                         'label': 'One v. all',
                                                          'value': 'one_v_all'
                                                      }
                                                  ],
@@ -342,7 +344,7 @@ def get_opls_options_form():
                                 [
                                     dbc.Label(
                                         [
-                                            'Cross-validation folds.',
+                                            'Cross-validation folds',
                                             html.Abbr('\uFE56',
                                                       title='The number of test/train splits for the test to determine '
                                                             'the significance of regression quality metrics.')
@@ -358,12 +360,31 @@ def get_opls_options_form():
                                 [
                                     dbc.Label(
                                         [
+                                            'Minimum orthogonal components.',
+                                            html.Abbr('\uFE56',
+                                                      title='The minimum number of orthogonal components to remove.')
+                                        ], html_for='min-n-components'),
+                                    dbc.Input(id='min-n-components', type='number', value=1, min=1)
+                                ]
+                            )
+                        ]
+                    ),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label(
+                                        [
                                             'Inner test \u03B1',
                                             html.Abbr('\uFE56',
                                                       title='A two-sided p-value threshold which is used to determine '
                                                             'which features need further scrutiny.')
                                         ], html_for='inner-test-alpha'),
-                                    dbc.Input(id='inner-test-alpha', type='number', value=0.2)
+                                    dbc.Input(id='inner-test-alpha', type='number', value=0.2, step=0.05)
                                 ]
                             )
                         ]
@@ -379,11 +400,15 @@ def get_opls_options_form():
                                                       title='A two-sided p-value threshold which is used to determine '
                                                             'which features are significant.')
                                         ], html_for='outer-test-alpha'),
-                                    dbc.Input(id='outer-test-alpha', type='number', value=0.2)
+                                    dbc.Input(id='outer-test-alpha', type='number', value=0.01, step=0.01)
                                 ]
                             )
                         ]
-                    ),
+                    )
+                ]
+            ),
+            dbc.Row(
+                [
                     dbc.Col(
                         [
                             dbc.FormGroup(
@@ -625,76 +650,63 @@ def get_feature_explorer():
     )
 
 
+def get_results_form():
+    return dbc.Tabs(
+        [
+            dbc.Tab(
+                dbc.Card(dbc.CardBody([], id='summary-card-body'), id='summary-card', className='row mt-3'),
+                id='summary-tab', label='Summary'
+            ),
+            dbc.Tab(
+                dbc.Card(dbc.CardBody([], id='quality-card-body'), id='quality-card', className='row mt-3'),
+                id='quality-tab', label='Quality Metrics'
+            ),
+            dbc.Tab(
+                dbc.Card(
+                    dbc.CardBody([
+                        dbc.Form(
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Class pair', html_for='validator-selector'),
+                                    dcc.Dropdown(id='validator-selector')
+                                ]
+                            )
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col([
+                                    dash_table.DataTable(id='feature-table')
+                                ], width=4, id='feature-table-wrapper'),
+                                dbc.Col(id='kde-plot-wrapper')
+                            ]
+                        )
+                    ], id='significance-card-body'), id='variable-significance-card', className='row mt-3'
+                ), id='variable-significance-tab', label='Variable Significance'
+            )
+        ], id='results-tabs', className='text-white bg-primary'
+    )
+
+
 def get_layout():
     return html.Div(
         [
             get_navbar(),
             html.Br(),
-            dbc.Container([
-                html.H1('Orthogonal Projection to Latent Structures'),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('OPLS Options', className='text-white bg-primary'),
-                        dbc.CardBody(
-                            [
-                                get_opls_options_form()
-                            ]
-                        )
-                    ]
-                ),
-                html.Br(),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Save Results', className='text-white bg-primary'),
-                        dbc.CardBody(
-                            [
-                                get_save_results_form()
-                            ]
-                        )
-                    ]
-                ),
-                html.Br(),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Summary', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='summary-card-body')
-                            ]
-                        )
-                    ],
-                    id='summary-card', className='row mt-3'
-                ),
-                html.Br(),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Scores', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='score-card-body')
-                            ]
-                        )
-                    ],
-                    id='scores-card', className='row mt-3'
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Loadings', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='loading-card-body')
-                            ]
-                        )
-                    ], id='loadings-card', className='row mt-3'),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Variable Significance', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='significance-card-body')
-                            ]
-                        )
-                    ], id='significance-card', className='row mt-3'),
-            ])
+            dbc.Container(
+                [
+                    html.H1('Orthogonal Projection to Latent Structures'),
+
+                    dbc.Tabs(
+                        [
+                            dbc.Tab(dbc.Card(dbc.CardBody(get_opls_options_form())),
+                                    id='opls-options-tab', label='OPLS Options'),
+                            dbc.Tab(dbc.Card(dbc.CardBody(get_save_results_form())),
+                                    id='save-results-tab', label='Save Results'),
+                            dbc.Tab(dbc.Card(dbc.CardBody(get_results_form())),
+                                    id='results-tab', label='Results')
+                        ], id='tabs'
+                    )
+                ]
+            )
         ]
     )

@@ -64,11 +64,19 @@ class PCADashboard(Dashboard):
             return PCADashboard._on_label_key_select(label_keys)
 
         @app.callback(
+            [Output('project-by-value', 'options')],
+            [Input('project-by', 'value')]
+        )
+        def update_project_by_options(label_keys):
+            return PCADashboard._on_label_key_select(label_keys)
+
+        @app.callback(
             [Output('scale-by', 'options'),
              Output('model-by', 'options'),
              Output('ignore-by', 'options'),
              Output('pair-on', 'options'),
              Output('pair-with', 'options'),
+             Output('project-by', 'options'),
              Output('color-by-select', 'options'),
              Output('label-by-select', 'options'),
              Output('loaded-collections', 'children'),
@@ -90,17 +98,18 @@ class PCADashboard(Dashboard):
                 label_data,
                 label_data,
                 label_data,
+                label_data,
                 pca_data.get_collection_badges(),
                 pca_data.get_collection_load_info()
             )
 
         @app.callback(
             [Output('message', 'children'),
-             Output('plot-button', 'disabled'),
              Output('abscissa-select', 'options'),
              Output('abscissa-select', 'value'),
              Output('ordinate-select', 'options'),
              Output('ordinate-select', 'value'),
+             Output('applicate-select', 'options'),
              Output('loading-select', 'options'),
              Output('loading-select', 'value'),
              Output('variance-select', 'options'),
@@ -111,17 +120,21 @@ class PCADashboard(Dashboard):
              State('model-by-value', 'value'),
              State('ignore-by-value', 'value'),
              State('pair-on', 'value'),
-             State('pair-with-value', 'value')]
+             State('pair-with-value', 'value'),
+             State('project-by-value', 'value')]
         )
         def perform_pca(n_clicks,
                         scale_by_queries,
                         model_by_queries,
                         ignore_by_queries,
-                        pair_on, pair_with_queries):
+                        pair_on, pair_with_queries,
+                        project_by_queries):
             if not n_clicks:
                 raise ValueError('Callback triggered without click.')
+            print(f'--------n_clicks: {n_clicks}------')
             scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
             model_by = ' | '.join(model_by_queries) if model_by_queries and len(model_by_queries) else None
+            project_by = ' | '.join(project_by_queries) if project_by_queries and len(project_by_queries) else None
             ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
             pair_on = pair_on if pair_on and len(pair_on) else None
             pair_with = ' | '.join(pair_with_queries) if pair_with_queries and len(
@@ -132,7 +145,8 @@ class PCADashboard(Dashboard):
                                                                          ignore_by,
                                                                          scale_by,
                                                                          pair_on,
-                                                                         pair_with)
+                                                                         pair_with,
+                                                                         project_by)
                 pc_options = pca_data.get_pc_options()
                 all_pc_options = [option['value'] for option in pc_options]
                 ten_pc_options = [option['value'] for option in pc_options[:10]]
@@ -148,11 +162,11 @@ class PCADashboard(Dashboard):
 
             return (
                 dbc.Alert(message, color=message_color, dismissable=True),
-                False,
                 pc_options,
                 0,
                 pc_options,
                 1,
+                pc_options,
                 pc_options,
                 ten_pc_options,
                 pc_options,
@@ -166,6 +180,7 @@ class PCADashboard(Dashboard):
             [
                 State('abscissa-select', 'value'),
                 State('ordinate-select', 'value'),
+                State('applicate-select', 'value'),
                 State('color-by-select', 'value'),
                 State('label-by-select', 'value'),
                 State('db-index', 'checked'),
@@ -177,6 +192,7 @@ class PCADashboard(Dashboard):
         def add_score_plot(n_clicks,
                            abscissa_value,
                            ordinate_value,
+                           applicate_value,
                            color_by_value,
                            label_by_value,
                            include_db_index,
@@ -187,10 +203,14 @@ class PCADashboard(Dashboard):
                 raise ValueError('')
 
             plot_data = PCAData.get_plot_data()
+            if abscissa_value is None or ordinate_value is None:
+                return
+
             plot_data['score_plots'].append(
                 {
                     'ordinate': ordinate_value,
                     'abscissa': abscissa_value,
+                    'applicate': applicate_value,
                     'color_by': color_by_value,
                     'label_by': label_by_value,
                     'include_centroid': include_centroid,
@@ -201,10 +221,19 @@ class PCADashboard(Dashboard):
             )
             PCAData.set_plot_data(plot_data)
 
+            def _score_plot_info(plot):
+                description = f'PC{plot["applicate"] + 1} vs ' if plot['applicate'] is not None and plot[
+                    'applicate'] != -1 else ''
+                description += f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1}'
+                description += f' colored by {plot["color_by"]}' if plot['color_by'] is not None else ''
+                description += f' encircled by {plot["encircle_by"]}' if plot['encircle_by'] is not None else ''
+                description += f' with medoids' if plot['include_medoid'] else ''
+                description += f' with centroids' if plot['include_centroid'] else ''
+                description += f' with DB index table' if plot['include_db_index'] else ''
+                return description
+
             return [[
-                dbc.ListGroupItem(f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1} by {plot["color_by"]}' + (
-                    ' with DB Index' if plot['include_db_index'] else ''))
-                for plot in plot_data['score_plots']
+                dbc.ListGroupItem(_score_plot_info(plot)) for plot in plot_data['score_plots']
             ]]
 
         @app.callback(
@@ -272,17 +301,18 @@ class PCADashboard(Dashboard):
              Output('loading-card-body', 'children'),
              Output('variance-card-body', 'children'),
              Output('cumulative-variance-card-body', 'children')],
-            [Input('plot-button', 'n_clicks')]
+            [Input('tabs', 'active_tab')]
         )
-        def update_figure(n_clicks):
-            if not n_clicks:
-                raise ValueError('Callback triggered without click.')
-            plot_data = PCAData.get_plot_data()
-            pca_data = PCAData()
-            return pca_data.get_plots(plot_data['score_plots'],
-                                      plot_data['loading_plots'],
-                                      plot_data['variance_plots'],
-                                      plot_data['cumulative_variance_plots'])
+        def update_figure(active_tab):
+            if active_tab == 'tab-3':
+                plot_data = PCAData.get_plot_data()
+                pca_data = PCAData()
+                return pca_data.get_plots(plot_data['score_plots'],
+                                          plot_data['loading_plots'],
+                                          plot_data['variance_plots'],
+                                          plot_data['cumulative_variance_plots'])
+            else:
+                return [], [], [], []
 
         @app.callback(
             [Output('score-plot-list-wrapper', 'children')],

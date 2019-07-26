@@ -6,7 +6,7 @@ from flask_login import current_user
 from dashboards.navbar import get_navbar
 from data_tools.access_wrappers.analyses import get_analyses
 from data_tools.access_wrappers.collections import get_collections
-from .pca_data import get_plot_data, PCAData, component_list
+from .pca_data import PCAData
 
 
 def get_save_results_form():
@@ -205,7 +205,7 @@ def get_plot_options_form():
         label_options = []
         results_exist = False
         pc_options = []
-    plot_data = get_plot_data()
+    plot_data = PCAData.get_plot_data()
     return dbc.Form(
         [
             html.H5('Scores Plots'),
@@ -229,6 +229,18 @@ def get_plot_options_form():
                                     dbc.Label('y-axis', html_for='ordinate-select'),
                                     dcc.Dropdown(id='ordinate-select',
                                                  options=pc_options, multi=False, value=1)
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('z-axis', html_for='applicate-select'),
+                                    dcc.Dropdown(id='applicate-select',
+                                                 options=[{'label': f'None', 'value': -1}] + pc_options,
+                                                 multi=False, value=-1)
                                 ]
                             )
                         ]
@@ -342,7 +354,7 @@ def get_plot_options_form():
                         [
                             dbc.ListGroupItem(
                                 f'PC{score_plot["ordinate"]+1} vs PC{score_plot["abscissa"]+1} by {score_plot["color_by"]}')
-                            for score_plot in get_plot_data()["score_plots"]
+                            for score_plot in PCAData.get_plot_data()["score_plots"]
                         ], id='score-plot-list'
                     )
                 ], className='form-row', id='score-plot-list-wrapper'
@@ -387,7 +399,8 @@ def get_plot_options_form():
                 [
                     dbc.ListGroup(
                         [
-                            dbc.ListGroupItem(component_list(plot['indices'])) for plot in plot_data['loading_plots']
+                            dbc.ListGroupItem(PCAData.component_list(plot['indices'])) for plot in
+                            plot_data['loading_plots']
                         ], id='loading-plot-list'
                     )
                 ], className='form-row', id='loading-plot-list-wrapper'
@@ -443,7 +456,7 @@ def get_plot_options_form():
                     dbc.ListGroup(
                         [
 
-                            dbc.ListGroupItem(component_list(plot['indices'])
+                            dbc.ListGroupItem(PCAData.component_list(plot['indices'])
                                               + (' (scaled y-axis)' if plot['scale_y'] else ''))
                             for plot in plot_data['variance_plots']
                         ], id='variance-plot-list'
@@ -493,7 +506,7 @@ def get_plot_options_form():
                             dbc.ListGroupItem(
                                 [
                                     f"{cumulative_variance_plot['threshold']}"
-                                    for cumulative_variance_plot in get_plot_data()['cumulative_variance_plots']
+                                    for cumulative_variance_plot in PCAData.get_plot_data()['cumulative_variance_plots']
                                 ]
                             )
                         ], id='cumulative-variance-plot-list'
@@ -510,13 +523,6 @@ def get_plot_options_form():
                         ]
                     )
                 ], className='form-row'
-            ),
-            dbc.FormGroup(
-                [
-                    dbc.Button('Plot PCA Results', id='plot-button', color='primary',
-                               className='btn btn-block form-control',
-                               disabled=results_exist)
-                ]
             )
         ]
     )
@@ -725,6 +731,38 @@ def get_pca_options_form():
                     ),
                 ]
             ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label(['Project by label(s)',
+                                               html.Abbr('\uFE56',
+                                                         title='Select additional data to be projected'
+                                                               ' on the PC axes created by the model.')],
+                                              html_for='additional-projection'),
+                                    dcc.Dropdown(id='project-by', options=label_options, multi=True)
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label(['Project by conditions',
+                                               html.Abbr('\uFE56',
+                                                         title='The conditions which must be satisfied for the records'
+                                                               ' to be projected.')],
+                                              html_for='project-by-value'),
+                                    dcc.Dropdown(id='project-by-value', options=[], multi=True)
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            ),
             dbc.FormGroup(
                 [
                     dcc.Loading(
@@ -740,6 +778,34 @@ def get_pca_options_form():
     )
 
 
+def get_plot_display_form():
+    return dcc.Loading(
+        dbc.Tabs(
+            [
+                dbc.Tab(
+                    dbc.Card(dbc.CardBody([], id='score-card-body'),
+                             id='scores-card', className='row mt-3'),
+                    label='Scores'
+                ),
+                dbc.Tab(
+                    dbc.Card(dbc.CardBody([], id='loading-card-body'),
+                             id='loadings-card', className='row mt-3'),
+                    label='Loadings'
+                ),
+                dbc.Tab(
+                    dbc.Card(dbc.CardBody([], id='variance-card-body'),
+                             id='variance-card', className='row mt-3'),
+                    label='Variance'
+                ),
+                dbc.Tab(
+                    dbc.Card(dbc.CardBody([], id='cumulative-variance-card-body'),
+                             id='cumulative-variance-card', className='row mt-3'),
+                    label='Cumulative Variance')
+            ], className='text-white bg-primary'
+        )
+    )
+
+
 def get_layout():
     return html.Div(
         [
@@ -747,76 +813,21 @@ def get_layout():
             html.Br(),
             dbc.Container([
                 html.H1('Principal Component Analysis'),
-                dbc.Card(
+                dbc.Tabs(
                     [
-                        dbc.CardHeader('PCA Options', className='text-white bg-primary'),
-                        dbc.CardBody(
-                            [
-                                get_pca_options_form()
-                            ]
+                        dbc.Tab(
+                            dbc.Card(dbc.CardBody(get_pca_options_form())), id='pca-options-tab', label='PCA Options'
+                        ),
+                        dbc.Tab(
+                            dbc.Card(dbc.CardBody(get_plot_options_form())), id='plot-options-tab', label='Plot Options'
+                        ),
+                        dbc.Tab(
+                            dbc.Card(dbc.CardBody(get_save_results_form())), id='save-tab', label='Save Results'
+                        ),
+                        dbc.Tab(
+                            dbc.Card(dbc.CardBody(get_plot_display_form())), id='plot-tab', label='View Plots'
                         )
-                    ]
-                ),
-                html.Br(),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Save Results', className='text-white bg-primary'),
-                        dbc.CardBody(
-                            [
-                                get_save_results_form()
-                            ]
-                        )
-                    ]
-                ),
-                html.Br(),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Plot Options', className='text-white bg-primary'),
-                        dbc.CardBody(
-                            [
-                                get_plot_options_form()
-                            ]
-                        )
-                    ]
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Scores', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='score-card-body')
-                            ]
-                        )
-                    ],
-                    id='scores-card', className='row mt-3'
-                ),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Loadings', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='loading-card-body')
-                            ]
-                        )
-                    ], id='loadings-card', className='row mt-3'),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Variance Explained', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='variance-card-body')
-                            ]
-                        )
-                    ], id='variance-card', className='row mt-3'),
-                dbc.Card(
-                    [
-                        dbc.CardHeader('Cumulative Variance Explained', className='text-white bg-primary'),
-                        dcc.Loading(
-                            [
-                                dbc.CardBody([], id='cumulative-variance-card-body')
-                            ]
-                        )
-                    ], id='cumulative-variance-card', className='row mt-3'
+                    ], id='tabs'
                 )
             ])
         ]

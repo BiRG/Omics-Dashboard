@@ -4,14 +4,14 @@ import shutil
 import time as tm
 from typing import List, Dict, Any
 
-import dash_html_components as html
 import dash_bootstrap_components as dbc
+import dash_html_components as html
 import h5py
 import msgpack
 import numpy as np
 import pandas as pd
 from flask_login import current_user
-
+from sklearn.utils.multiclass import type_of_target
 
 import data_tools.redis as rds
 from data_tools.access_wrappers.collections import get_collection_copy
@@ -19,6 +19,7 @@ from data_tools.access_wrappers.collections import get_collection_copy
 
 class MultivariateAnalysisData:
     _redis_prefix = ''
+    _empty_plot_data = {}
 
     def __init__(self, load_data=False):
         # any of these can be None
@@ -32,7 +33,6 @@ class MultivariateAnalysisData:
         self._dataframe_filename = None
         self._results_filename = None
         self._good_x_inds = None
-        self._empty_plot_data = {}
         self.load_file_info()
         if load_data:
             try:
@@ -157,7 +157,7 @@ class MultivariateAnalysisData:
                 self._x_max.reshape((1, -1))
         self.load_labels()
 
-    def save_results(self, filename=None, file_format='hdf5'):
+    def save_results(self, filename=None, file_format='h5'):
         if not filename:
             filename = self._results_filename
         with h5py.File(filename, 'w') as file:  # always create new because dimensions might change
@@ -180,8 +180,7 @@ class MultivariateAnalysisData:
         """
         filename = filename or self._results_filename
         with h5py.File(filename, 'r+') as file:
-            for key, value in attrs.items():
-                file.attrs[key] = value
+            file.attrs.update(attrs)
 
     def download_results(self, **kwargs):
         raise NotImplementedError()
@@ -246,12 +245,16 @@ class MultivariateAnalysisData:
                          scale_by: str = None,
                          pair_on: List[str] = None,
                          pair_with: str = None,
+                         project_by: str = None,
                          **kwargs) -> (str, str, str):
         data_load_start = tm.time()
         self.load_dataframes()
         label_df = self._label_df
         numeric_df = self._numeric_df
         data_load_end = tm.time()
+
+        if model_by == 'index':
+            model_by = None
 
         if scale_by:
             means = numeric_df.loc[label_df.query(scale_by).index].mean()
@@ -264,6 +267,7 @@ class MultivariateAnalysisData:
 
         warnings = []
         message_color = 'success'
+
         if pair_on and pair_with:
             good_queries = []
             for vals, idx, in label_df.groupby(pair_on).groups.items():
@@ -272,23 +276,35 @@ class MultivariateAnalysisData:
                     vals = [vals]
                 try:
                     target_rows = label_df.loc[idx].query(pair_with)
-                    numeric_df.loc[idx].sub(target_rows.mean(), axis=1)
+                    numeric_df.loc[idx] = numeric_df.loc[idx].sub(numeric_df.loc[target_rows.index].mean())
                 except KeyError:
                     target_rows = []
                 if not len(target_rows):
-                    warnings.append(f'No records matching {pair_with} for {pair_on}=={vals}! '
-                                    f'{pair_on}=={vals} excluded from analysis.')
+                    warnings.append('\n'.join([f'No records matching {pair_with} for {pair_on_i}=="{vals_i}!". '
+                                               f'{pair_on_i}=="{vals_i}" excluded from analysis.'
+                                               for pair_on_i, vals_i in zip(pair_on, vals)]))
                     good_queries.append(
-                        '&'.join([f'{pair_on_i}!={vals_i}' for pair_on_i, vals_i in zip(pair_on, vals)]))
+                        ' & '.join([f'{pair_on_i}!="{vals_i}"' for pair_on_i, vals_i in zip(pair_on, vals)]))
                     message_color = 'warning'
             if len(good_queries):
-                label_df = label_df.query('&'.join(good_queries))
+                query = ' & '.join(good_queries)
+                label_df = label_df.query(query)
                 numeric_df = numeric_df.loc[label_df.index]
 
         if model_by:
+            if project_by:
+                label_df = label_df.query(f'({model_by}) | ({project_by})')
+            else:
+                label_df = label_df.query(model_by)
+            if pair_on and pair_with:
+                label_df = label_df.query(f'not {pair_with}')
+            numeric_df = numeric_df.loc[label_df.index]
             model_label_df = label_df.query(model_by)
             model_numeric_df = numeric_df.loc[model_label_df.index]
         else:
+            if pair_on and pair_with:
+                label_df = label_df.query(f'not {pair_with}')
+            numeric_df = numeric_df.loc[label_df.index]
             model_label_df = label_df
             model_numeric_df = numeric_df
 
@@ -305,6 +321,7 @@ class MultivariateAnalysisData:
             'scale_by': scale_by or '',
             'pair_on': ','.join(pair_on) if pair_on else '',
             'pair_with': pair_with or '',
+            'project_by': project_by or ''
         }
         name = self._redis_prefix.upper()
         if len(self._loaded_collection_ids) > 1:
@@ -360,7 +377,13 @@ class MultivariateAnalysisData:
     def get_collection_load_info(self) -> str:
         return f'Collections loaded in {os.path.dirname(self._dataframe_filename)}'
 
-    def get_label_data(self) -> List[Dict[str, str]]:
+    def get_label_data(self, with_type=False) -> List[Dict[str, str]]:
         self.load_dataframes()
-        return [{'label': label, 'value': label} for label in self.labels]
-
+        types = {
+            label: f' ({type_of_target(self._label_df[label])})'
+            for label in self.labels
+        } if with_type else {
+            label: ''
+            for label in self.labels
+        }
+        return [{'label': f'{label}{types[label]}', 'value': label} for label in self.labels]
