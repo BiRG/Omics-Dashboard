@@ -3,7 +3,7 @@ ARG MYSQL_PASSWORD
 ARG OMICS_UID
 ARG OMICS_GID
 RUN mkdir -p /usr/share/man/man1
-RUN apt -y update && apt -y install wget openjdk-8-jre-headless build-essential gcc gfortran mysql-client \
+RUN apt -y update && apt -y install wget openjdk-8-jre-headless build-essential gcc gfortran mysql-client git \
       && rm -rf /var/lib/apt/lists/*
 RUN pip install --upgrade pip
 ADD requirements.txt .

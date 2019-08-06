@@ -1,6 +1,10 @@
 {% extends 'entry.html' %}
-{% from 'components/collection_list.html' import collection_list, collection_list_script %}
-{% block content %}
+{% from 'components/collection_list.html' import collection_list, collection_list_tab, collection_list_script %}
+{% block tabnav %}
+    {{ super() }}
+    {{ collection_list_tab() }}
+{% endblock %}
+{% block tabpanels %}
 {{ super() }}
 {{ collection_list(page_data.collection_table_data) }}
 {% endblock %}

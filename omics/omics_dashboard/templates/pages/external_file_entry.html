@@ -1,16 +1,23 @@
 {% extends 'entry.html' %}
-{% from 'components/macros.html' import list_table, download_button %}
+{% from 'components/dangerzone.html' import dangerzone_tab, dangerzone %}
+{% from 'components/macros.html' import list_table_tab, list_table_tab_panel, download_button %}
 {% block headline %}
     {{ super() }}
     <p>
         {{ download_button(page_data.download_url) }}
     </p>
 {% endblock %}
-{% block content %}
+{% block tabnav %}
     {{ super() }}
-    {{ list_table(page_data.analysis_table_data) }}
+    {{ list_table_tab(page_data.analysis_table_data) }}
+{% endblock %}
+{% block lasttab %}
+    {{ dangerzone_tab() }}
+{% endblock %}
+{% block tabpanels %}
+    {{ super() }}
+    {{ list_table_tab_panel(page_data.analysis_table_data) }}
 {%- endblock %}
-
-{% block postcontent %}
+{% block lastpanels %}
     {{ dangerzone(page_data.name, 'Deleting this record WILL NOT delete the file on disk.') }}
-{%- endblock %}
+{% endblock %}

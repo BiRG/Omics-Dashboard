@@ -38,7 +38,7 @@ services:
       - jobserverdb
     container_name: omics_jobserver
   jobserverdb:
-    image: mariadb:latest
+    image: mariadb:10.4
     env_file: common.env
     volumes:
       - jobserverdb:/var/lib/mysql

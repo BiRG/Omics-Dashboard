@@ -148,13 +148,11 @@
   {%- endblock %}
   <div id="content" class="container page-contents">
     <br>
-    <h1 class="display-4">
+      <h2>
     {% block headline %}
     {%- endblock  %}
-    </h1>
+      </h2>
     {% block content %}
-    {%- endblock %}
-    {% block postcontent %}
     {%- endblock %}
   </div>
 {% block footer %}
@@ -176,7 +174,15 @@
     <script>
       $(document).ready(() => {
         $('.selectpicker').selectpicker();
-        $('.data-table').dataTable({order: [[0, 'desc']], buttons:['colvis']});
+          $('.data-table').dataTable({
+              order: [[0, 'desc']],
+              buttons: [{extend: 'colvis', className: 'btn btn-secondary'}]
+          });
+
+          $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+              $($.fn.dataTable.tables(true)).css('width', '100%');
+              $($.fn.dataTable.tables(true)).DataTable().columns.adjust().draw();
+          });
       });
     </script>
   {%- endblock %}

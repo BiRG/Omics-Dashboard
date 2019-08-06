@@ -1,10 +1,14 @@
 {% extends 'entry.html' %}
-{% from 'components/sample_list.html' import sample_list_scripts, sample_list_table with context %}
-{% block content %}
+{% from 'components/sample_list.html' import sample_list_scripts, sample_list_table, sample_list_table_tab with context %}
+{% block tabnav %}
+    {{ super() }}
+    {{ sample_list_table_tab() }}
+{% endblock %}
+{% block tabpanels %}
   {{ super() }}
   {{ sample_list_table(page_data.sample_table_data) }}
 {% endblock %}
-{% block postcontent %}
+{% block lastpanels %}
     {{ dangerzone(page_data.name, 'Deleting this group deletes all samples in the group you are permitted to delete if those samples are in no other groups.') }}
 {%- endblock %}
 {% block scripts %}

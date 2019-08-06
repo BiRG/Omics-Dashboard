@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 import sys
-import h5py
-import pandas as pd
+from os.path import splitext, basename
+
+from omics_dashboard_client.hdf_tools.collection_tools import get_dataframe
+
 filename = sys.argv[1]
-with h5py.File(filename, 'r') as file:
-    df = pd.DataFrame(data=np.asarray(file['/Y']).T,
-                      columns=np.asarray(file['/x']).flatten(),
-                      index=np.asarray(file['/baseSampleId']).flatten())
-    for key in file.keys():
-        if isinstance(file[key], h5py.Dataset) and file[key].shape[0] == 1 and file[key].shape[1] == len(df):
-            if file[key].dtype.type is np.string_:
-                df[key] = [row.decode('utf-8') for row in file[key][0]]
-            else:
-                df[key] = file[key][0]
-df.to_csv(f'{filename}.csv')
+numeric_columns = sys.argv[2].lower() == 'true' if len(sys.argv) > 2 else True
+include_labels = sys.argv[3].lower() == 'true' if len(sys.argv) > 3 else True
+include_only_labels = sys.argv[4].lower() == 'true' if len(sys.argv) > 4 else False
+
+df = get_dataframe(filename,
+                   include_labels=include_labels,
+                   numeric_columns=numeric_columns,
+                   include_only_labels=include_only_labels)
+df.to_csv(f'{splitext(basename(filename))[0]}.csv')
+

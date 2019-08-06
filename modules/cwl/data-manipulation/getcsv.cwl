@@ -4,8 +4,8 @@ id: getcsv
 baseCommand:
   - getcsv.py
 inputs:
-  - id: collection
-    doc: A collection id.
+  - id: inputFile
+    doc: A collection file.
     type: File
     inputBinding:
       position: 0

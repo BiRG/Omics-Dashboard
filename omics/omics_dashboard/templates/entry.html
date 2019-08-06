@@ -1,17 +1,29 @@
 {% extends 'base.html' %}
 {% block title %}Omics Dashboard - {{ page_data.record_type }} {{ page_data.id }}{% endblock %}
 {% from 'components/modal.html' import modal, modal_script %}
-{% from 'components/attribute_editor.html' import attribute_editor, attribute_editor_script with context %}
-{% from 'components/dangerzone.html' import dangerzone, dangerzone_script with context %}
+{% from 'components/attribute_editor.html' import attribute_editor, attribute_editor_tab, attribute_editor_script with context %}
+{% from 'components/dangerzone.html' import dangerzone, dangerzone_tab, dangerzone_script with context %}
 {% block headline %} {{ page_data.name }} ({{ page_data.record_type }} {{ page_data.id }}){% endblock -%}
 {% block content %}
-  {{ super() }}
   {{ modal() }}
-  {{ attribute_editor(page_data.attribute_table_data) }}
-{%- endblock %}
-{% block postcontent %}
-  {{ super() }}
-  {{ dangerzone(page_data.name) }}
+    <ul class="nav nav-tabs" id="tabs" role="tablist">
+        {% block tabnav %}
+            <!-- tabnav -->
+            {{ attribute_editor_tab() }}
+        {% endblock -%}
+        {% block lasttab %}
+            <!-- delete tab -->
+            {{ dangerzone_tab() }}
+        {% endblock -%}
+    </ul>
+    <div class="tab-content" id="tab-content">
+        {% block tabpanels %}
+            {{ attribute_editor(page_data.attribute_table_data) }}
+        {%- endblock %}
+        {% block lastpanels %}
+            {{ dangerzone(page_data.name) }}
+        {%- endblock %}
+    </div>
 {%- endblock %}
 {% block scripts %}
   {{ super() }}

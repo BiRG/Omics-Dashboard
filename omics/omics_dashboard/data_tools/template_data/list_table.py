@@ -1,6 +1,7 @@
 from typing import Any, Union, List, Type
 
 from dashboards import Dashboard
+from data_tools.access_wrappers.jobserver_control import Job
 from data_tools.access_wrappers.users import is_write_permitted
 from data_tools.access_wrappers.workflows import WorkflowModule
 from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
@@ -49,6 +50,13 @@ class ListTableRow:
             self.values['Subpackage'] = ListTableCell(record.subpackage_name)
         if isinstance(record, ExternalFile):
             self.values['Path'] = ListTableCell(record.filename)
+        if isinstance(record, Job):
+            self.values['Date Started'] = ListTableCell(record.start.strftime('%-d %b %Y %H:%M'),
+                                                        order_value=record.start.timestamp())
+            self.values['Date Ended'] = ListTableCell(record.end.strftime('%-d %b %Y %H:%M'),
+                                                      order_value=record.end.timestamp())
+            self.values['Date Submitted'] = ListTableCell(record.submission.strftime('%-d %b %Y %H:%M'),
+                                                          order_value=record.submission.timestamp())
 
 
 class FileListTableRow:
@@ -57,7 +65,7 @@ class FileListTableRow:
     """
     def __init__(self, record: Union[Sample, Collection], editable: bool = False, special_val: bool = None, special_val_heading: str = None):
         self.values = {'ID': ListTableCell(record.id), 'Name': ListTableCell(record.name, get_item_link(record))}
-        if record.file_exists():
+        if record.file_exists:
             for key, value in record.get_file_attributes().items():
                 value_editable = editable if key not in {'max_row_count', 'max_col_count', 'date_modified'} else False
                 self.values[key] = ListTableCell(value, None, value_editable)

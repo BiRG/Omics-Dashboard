@@ -1,43 +1,25 @@
 {% extends 'entry.html' %}
-{% from 'components/job_chart.html' import job_chart, job_chart_script with context %}
+{% from 'components/job_chart.html' import job_chart, job_chart_tab, job_chart_script with context %}
+{% from 'components/job_log_accordion.html' import job_log_accordion, job_log_accordion_tab %}
 {% block headline %}
   <h1 class="display-4">{{ page_data.name }}</h1>
 {% endblock %}
-{% block content %}
+{% block tabnav %}
+    {{ super() }}
+    {{ job_chart_tab() }}
+    {{ job_log_accordion_tab() }}
+{% endblock %}
+{% block lasttab %}
+    {# override super() to not include "Delete" pane #}
+{% endblock %}
+
+{% block tabpanels %}
   {{ super() }}
   {{ job_chart() }}
-  <div class="row mt-3">
-    <div class="card w-100">
-      <h4 class="card-header text-white bg-primary">Logs</h4>
-      <div class="card-body">
-        <div id="log-accordion">
-          {% for log_id, log_text in page_data.logs.items() %}
-          <div class="card">
-            <div class="card-header" id="{{ log_id | make_valid_tag }}-heading">
-              <h5 class="mb-0">
-                <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#{{ log_id | make_valid_tag }}" aria-expanded="false" aria-controls="{{ log_id | make_valid_tag }}">
-                  {{ log_id }}
-                </button>
-              </h5>
-            </div>
-
-            <div id="{{ log_id | make_valid_tag }}" class="collapse" aria-labelledby="{{ log_id | make_valid_tag }}-heading" data-parent="#log-accordion">
-              <div class="card-body">
-                <pre>
-                  <code>
-                    {{ log_text }}
-                  </code>
-                </pre>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
+    {{ job_log_accordion(page_data) }}
 {% endblock %}
-{% block postcontent %}
+{% block lastpanels %}
+    {# override super() to not include "Delete" pane #}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

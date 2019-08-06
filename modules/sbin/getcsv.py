@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-#python3 getcsv.py collection path
-#collection is hdf5
-import h5py
-import numpy
-from os.path import basename
-filename = f'{basename(path)}.csv'
-with h5py.File(collection, 'r') as file:
-    arr = numpy.asarray(file[path])
-    numpy.savetxt(filename, arr, delimiter=",")
-    
+# python3 getcsv.py collection path
+# collection is hdf5
+
+from os.path import splitext
+import sys
+from omics_dashboard_client.hdf_tools.collection_tools import get_dataset
+import numpy as np
+
+filename = sys.argv[1]
+path = sys.argv[2]
+
+dataset = get_dataset(filename, path, True)
+np.savetxt(f'{splitext(filename)[0].replace("/", "_")}.csv', dataset, delimiter=',')

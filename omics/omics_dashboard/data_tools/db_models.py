@@ -6,6 +6,7 @@ UserGroup provides User metadata but User provides only UserGroup ids
 """
 import json
 import os
+import pathlib
 from typing import Dict, Any, List
 
 import bcrypt
@@ -378,6 +379,7 @@ class FileRecordMixin(OmicsRecordMixin):
                 data = {}  # technically correct
         return {key: type(value).__name__ for key, value in data.items()}
 
+    @property
     def file_exists(self):
         return os.path.isfile(self.filename) if self.filename is not None else False
 
@@ -387,10 +389,10 @@ class NumericFileRecordMixin(FileRecordMixin):
     file_ext = 'h5'
 
     def get_dimensions(self):
-        return mdt.approximate_dims(self.filename) if self.file_exists() else (None, None)
+        return mdt.approximate_dims(self.filename) if self.file_exists else (None, None)
 
     def get_dataset_info(self):
-        return mdt.get_all_dataset_info(self.filename) if self.file_exists() else {}
+        return mdt.get_all_dataset_info(self.filename) if self.file_exists else {}
 
     def get_attrs(self, path: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -617,7 +619,7 @@ class Sample(NumericFileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'sample_group_ids': [group.id for group in self.sample_groups],
-            'file_info': self.get_file_info() if self.file_exists() else {},
+            'file_info': self.get_file_info() if self.file_exists else {},
             'created_on': self.created_on.isoformat(),
             'updated_on': self.updated_on.isoformat()
         }
@@ -679,7 +681,7 @@ class Collection(NumericFileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'file_info': self.get_file_info() if self.file_exists() else {},
+            'file_info': self.get_file_info() if self.file_exists else {},
             'created_on': self.created_on.isoformat(),
             'updated_on': self.updated_on.isoformat()
         }
@@ -691,8 +693,45 @@ class ExternalFile(FileRecordMixin, db.Model):
     file_ext = ''  # Only used by FileRecordMixin models that are "registered" but should be blank here.
     analyses = db.relationship('Analysis', secondary=external_file_analysis_membership, back_populates='external_files')
 
+    admin_keys = {
+        'creator',
+        'creator_id',
+        'last_editor',
+        'last_editor_id',
+    }  # filename is editable
+
     @property
-    def file_type(self): return magic.from_file(self.filename, mime=True)
+    def file_type(self):
+        if self.file_exists:
+            if not self.is_directory:
+                return magic.from_file(self.filename, mime=True)
+            else:
+                return 'directory'
+        else:
+            return 'file does not exist'
+
+    @property
+    def is_directory(self):
+        return os.path.isdir(self.filename)
+
+    @property
+    def children(self):
+        if self.is_directory:
+            file_info = []
+            path = pathlib.Path(self.filename)
+            for p in path.glob('**/*'):
+                if p.is_file():
+                    info = {
+                        'absolute_path': str(p.absolute()),
+                        'relative_path': str(p.relative_to(path)),
+                        'file_type': magic.from_file(str(p))
+                    }
+                    stat = p.stat()
+                    info.update({key: getattr(stat, key) for key in dir(stat) if key.startswith('st_')})
+                    file_info.append(info)
+            return file_info
+        else:
+            return None
 
     @staticmethod
     def delete_file(mapper, connection, target):
@@ -707,8 +746,15 @@ class ExternalFile(FileRecordMixin, db.Model):
         raise RuntimeError('register_listeners not supported on ExternalFile')
 
     def get_file_info(self):
-        stat = os.stat(self.filename)
-        return {key: getattr(stat, key) for key in dir(stat) if key.startswith('st_')}
+        if self.file_exists:
+            stat = os.stat(self.filename)
+            return {key: getattr(stat, key) for key in dir(stat) if key.startswith('st_')}
+        else:
+            return None
+
+    @property
+    def file_exists(self):
+        return super().file_exists or self.is_directory
 
     def to_dict(self):
         return {
@@ -726,9 +772,10 @@ class ExternalFile(FileRecordMixin, db.Model):
             'filename': self.filename,
             'file_type': self.file_type,
             'analysis_ids': [analysis.id for analysis in self.analyses],
-            'file_info': self.get_file_info() if self.file_exists() else {},
+            'file_info': self.get_file_info() if self.file_exists else {},
             'created_on': self.created_on.isoformat(),
-            'updated_on': self.updated_on.isoformat()
+            'updated_on': self.updated_on.isoformat(),
+            'children': self.children if self.children is not None else []
         }
 
 

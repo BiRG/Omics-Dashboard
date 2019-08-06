@@ -66,6 +66,7 @@ def get_workflow_template(name: str, description: str, workflow_id: int) -> Dict
     return {
         'class': 'Workflow',
         'cwlVersion': 'v1.0',
+        '$namespaces': {'sbg': 'https://www.sevenbridges.com'},
         'label': name,
         'doc': description,
         'id': f'workflow{workflow_id}',
@@ -156,8 +157,8 @@ def create_workflow(user: User, data: Dict[str, Any]) -> Workflow:
     db.session.commit()
     if 'workflow_definition' not in data:
         data['workflow_definition'] = get_workflow_template(workflow.name,
-                                                 data['description'] if 'description' in data else '',
-                                                 workflow.id)
+                                                            data['description'] if 'description' in data else '',
+                                                            workflow.id)
     with open(workflow.filename, 'w+') as file:
         if workflow.file_type == 'json':
             json.dump(data['workflow_definition'], file)

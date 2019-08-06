@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # python3 getcollection.py collection_id auth_token
-import os
+
 import sys
-from requests import get
+from omics_dashboard_client import Session, Collection
+import shutil
+
 collection_id = int(sys.argv[1])
 omics_url = sys.argv[2]
-auth_token = f'JWT {sys.argv[3]}'
-res = get(f'{omics_url}/api/collections/{collection_id}',
-	  headers={'Authorization': auth_token})
-with open(f'{collection_id}.h5', 'wb') as outfile:
-    shutil.copyfileobj(response.raw, outfile)
+auth_token = sys.argv[3]
+session = Session(omics_url, auth_token=auth_token)
+print(collection_id)
+collection = session.get(Collection, collection_id, True)
+shutil.copy(collection.local_filename, f'{collection_id}.h5')

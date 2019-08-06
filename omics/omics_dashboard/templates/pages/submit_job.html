@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Omics Dashboard - Submit Job for {{ page_data.label }}{% endblock %}
+{% from 'components/create_form.html' import create_form_script, form_checkbox_entry, form_entry with context %}
+{% macro submit_form_entry(entry_data) %}
+    {% from 'components/macros.html' import selector with context %}
+    {% if entry_data.select_multiple and entry_data.input_type != 'File' %}
+        <div class="form-group">
+            <label for="{{ entry_data.id | make_valid_tag }}">{{ entry_data.label }}
+                <abbr title="Enter values separated by commas. If you need to include a comma, escape it as '\,', if you need to use a backslash, escape it as '\\'.">﹖</abbr>
+            </label>
+            <input type="text" class="form-control" name="{{ entry_data.id }}" id="{{ entry_data.id | make_valid_tag }}"
+                   placeholder="{{ entry_data.value }}" {% if not entry_data.editable %}disabled{%- endif -%}>
+        </div>
+    {% elif entry_data.input_type in ('int', 'long') %}
+        <div class="form-group">
+            <label for="{{ entry_data.id | make_valid_tag }}">{{ entry_data.label }}</label>
+            <input class="number" pattern="\d*" name="{{ entry_data.id }}" step="1"
+                   id="{{ entry_data.id | make_valid_tag }}" placeholder="{{ entry_data.value }}"
+                   {% if not entry_data.editable %}disabled{%- endif -%}>
+        </div>
+    {% elif entry_data.input_type in ('float', 'double') %}
+        <div class="form-group">
+            <label for="{{ entry_data.id | make_valid_tag }}">{{ entry_data.label }}</label>
+            <input class="number" pattern="[0-9]+([\.,][0-9]+)?" step="0.01" name="{{ entry_data.id }}"
+                   id="{{ entry_data.id | make_valid_tag }}" placeholder="{{ entry_data.value }}"
+                   {% if not entry_data.editable %}disabled{%- endif -%}>
+        </div>
+    {% elif entry_data.input_type == 'File' %}
+        {{ selector(entry_data) }}
+    {% elif entry_data.input_type == 'boolean' %}
+        {{ form_checkbox_entry(entry_data) }}
+    {% else %}
+        <div class="form-group">
+            <label for="{{ entry_data.id | make_valid_tag }}">{{ entry_data.label }}</label>
+            <input type="text" class="form-control" name="{{ entry_data.id }}" id="{{ entry_data.id | make_valid_tag }}"
+                   placeholder="{{ entry_data.value }}" {% if not entry_data.editable %}disabled{%- endif -%}>
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro submit_form(entries, create_form_data, label, error=none, msg=none) %}
+    <div class="row mt-3">
+        <div class="card w-50 mx-auto" style="max-width: 25rem;">
+            <h4 class="card-header text-white bg-primary">Submit Job for {{ page_data.label }}</h4>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% for entry_data in entries %}
+                        {{ submit_form_entry(entry_data) }}
+                    {%- endfor %}
+                    {% if create_form_data is not none %}
+                        <h4>Created file metadata</h4>
+                        {% for entry_data in create_form_data.entries %}
+                            {{ form_entry(entry_data) }}
+                        {%- endfor %}
+                    {% endif %}
+                    <div class="form-group">
+                        <input type="submit" class="btn btn-primary btn-block form-control" value="Submit">
+                    </div>
+                </form>
+                {% if error %}
+                    <div class="alert alert-danger alert-dismissable" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                                aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+                        <strong>Error:</strong> {{ error }}
+                    </div>
+                {%- endif %}
+                {% if msg %}
+                    <div class="alert alert-primary alert-dismissable" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                                aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+                        {{ msg }}
+                    </div>
+                {%- endif %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% block content %}
+    {{ submit_form(page_data.inputs, page_data.create_form_data, page_data.label) }}
+{% endblock %}

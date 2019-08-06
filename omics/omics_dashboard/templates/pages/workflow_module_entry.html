@@ -1,9 +1,17 @@
-{% extends 'base.html' %}
-{% from 'components/text_viewer.html' import text_viewer %}
-{% from 'components/attribute_editor.html' import attribute_editor with context %}
+{% extends 'entry.html' %}
+{% from 'components/text_viewer.html' import text_viewer, text_viewer_tab %}
+{% from 'components/attribute_editor.html' import attribute_editor, attribute_editor_tab with context %}
 {% block headline %}{{ page_data.id }}{% endblock %}
-{% block content %}
-    {{ super() }}
+{% block tabnav %}
+    {{ attribute_editor_tab() }}
+    {{ text_viewer_tab('CWL Module Definition') }}
+{% endblock %}
+{% block lasttab %}
+    {# remove 'Delete' tab #}
+{% endblock %}
+{% block tabpanels %}
     {{ attribute_editor(page_data.attribute_table_data) }}
     {{ text_viewer('CWL Module Definition', page_data.workflow_module_contents) }}
 {% endblock %}
+{% block lastpanels %}
+{% endblock -%}

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from flask import render_template, request, redirect, url_for, Blueprint
 from flask_login import login_required
@@ -54,6 +55,9 @@ def render_create_external_file():
 
             if 'filename' in data and data['filename']:
                 data['filename'] = os.path.join(DATADIR, 'external', secure_filename(data['filename']))
+                if (not os.path.isfile(data['filename'])) and (not request.files.get('file')):
+                    Path(data['filename']).parent.mkdir(exist_ok=True, parents=True)
+                    Path(data['filename']).touch()
                 if request.files.get('file') and os.path.isfile(data['filename']):
                     raise ValueError(f'File {data["filename"]} already exists!')
             else:
@@ -62,7 +66,6 @@ def render_create_external_file():
 
             if request.files.get('file'):
                 file = request.files.get('file')
-                print(f'data["filename"] @ line 57: {data["filename"]}')
                 if 'filename' in data and not data['filename']:
                     del data['filename']
                 if 'filename' in data and os.path.isfile(data['filename']):

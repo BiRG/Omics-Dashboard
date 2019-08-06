@@ -1,8 +1,13 @@
+{% macro sample_list_table_tab() %}
+    <li class="nav-item">
+        <a class="nav-link" id="sample-list-tab" data-toggle="tab" href="#sample-list-tab-panel" role="tab"
+           aria-controls="sample-list-tab-panel" aria-selected="false">Samples</a>
+    </li>
+{% endmacro %}
 {% macro sample_list_table(samples) %}
  {# samples is of the "ListTableData" class #}
-<div class="row mt-3">
+    <div class="tab-pane fade" id="sample-list-tab-panel" role="tabpanel" aria-labelledby="sample-list-tab">
   <div class="card w-100">
-    <h4 class="card-header text-white bg-primary">Samples</h4>
     <div class="card-body">
       <h6 class="card-subtitle text-muted">Use Ctrl-click (or ⌘-click) on the ID column to select multiple samples. <br>
         Samples with names including "PLACEHOLDER" are empty pending completion of the sample upload workflow. <br>

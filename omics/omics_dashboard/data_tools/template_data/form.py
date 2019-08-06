@@ -1,11 +1,13 @@
-from typing import List, Any
+from typing import List, Any, Dict
 
+from data_tools.access_wrappers.analyses import get_analyses
 from data_tools.access_wrappers.collections import get_collections
 from data_tools.access_wrappers.sample_creation import get_parsing_modules, get_preprocessing_modules
 from data_tools.access_wrappers.samples import get_samples
 from data_tools.access_wrappers.user_groups import get_included_groups
-from data_tools.access_wrappers.users import get_users
-from data_tools.db_models import User, Collection, Sample
+from data_tools.access_wrappers.users import get_users, get_all_read_permitted_records
+from data_tools.db_models import User, Collection, Sample, ExternalFile
+from data_tools.util import DATADIR
 
 
 class SelectOption:
@@ -34,8 +36,72 @@ class FormEntry:
         self.select_multiple = select_multiple
 
 
+class JobInputEntry:
+    def __init__(self, wf_input, current_user):
+        if wf_input['id'] in ('omics_url', 'omics_auth_token'):
+            self.editable = False
+            self.value = 'Set by Omics Dashboard'
+        else:
+            self.editable = True
+            self.value = wf_input['default'] if 'default' in wf_input else ''
+        self.id = wf_input['id']
+        if wf_input['type'].endswith('[]'):
+            self.input_type = wf_input['type'][:-2]
+            self.select_multiple = True
+        else:
+            self.input_type = wf_input['type']
+            self.select_multiple = False
+        self.label = wf_input['label'] if 'label' in wf_input else wf_input['id']
+        self.doc = wf_input['doc'] if 'doc' in wf_input else ''
+        self.select_options = []
+        if wf_input['type'].startswith('File'):
+            for collection in get_all_read_permitted_records(current_user, Collection):
+                self.select_options.append(SelectOption(collection.filename,
+                                                        f'Collection {collection.id}: {collection.name}'))
+            for external_file in get_all_read_permitted_records(current_user, ExternalFile):
+                if external_file.file_exists():
+                    self.select_options.append(SelectOption(external_file.filename,
+                                                            f'External File {external_file.id}: {external_file.name}'))
+
+
+class JobOutputEntry:
+    def __init__(self, wf_output):
+        self.id = wf_output['id']
+        self.input_type = wf_output['type']
+        self.label = wf_output['label'] if 'label' in wf_output else wf_output['id']
+        self.doc = wf_output['doc'] if 'doc' in wf_output else ''
+
+
+class SubmitFormData:
+    def __init__(self, current_user: User, workflow: Dict[str, Any], label: str):
+        self.label = label
+        self.inputs = []
+        self.outputs = []
+        self.current_user = current_user
+        self.creates_files = False
+        for wf_input in workflow['inputs']:
+            self.inputs.append(JobInputEntry(wf_input, current_user))
+        for wf_output in workflow['outputs']:
+            self.outputs.append(JobOutputEntry(wf_output))
+            if wf_output['type'].startswith('File'):
+                self.creates_files = True
+        if self.creates_files:
+            self.create_form_data = CreateFormData(current_user, 'Result File', '_')
+            analysis_options = [
+                SelectOption(analysis.id, f'{analysis.id}: {analysis.name}') for analysis in get_analyses(current_user)
+            ]
+
+            self.create_form_data.entries.append(FormEntry('_groupWriteCheckbox', '_group_can_write',
+                                                           'User group members can edit or delete?', True, 'checkbox'))
+            self.create_form_data.entries.append(FormEntry('_analysisSelect', '_analysis_ids', 'Analyses',
+                                                           input_type='select', select_options=analysis_options,
+                                                           select_multiple=True))
+        else:
+            self.create_form_data = None
+
+
 class CreateFormData:
-    def __init__(self, current_user: User, label: str):
+    def __init__(self, current_user: User, label: str, prefix=''):
         self.label = label
         user_group_options = [SelectOption('', 'None', current_user.primary_user_group is None)] + \
                              [SelectOption(user_group.id,
@@ -43,12 +109,16 @@ class CreateFormData:
                                            user_group is current_user.primary_user_group)
                               for user_group in get_included_groups(current_user, current_user)]
         self.entries = [
-            FormEntry('nameInput', 'name', 'Name', 'Enter name'),
-            FormEntry('descriptionTextArea', 'description', 'Description', 'Enter description', 'textarea'),
-            FormEntry('userGroupSelect', 'user_group_id', 'User Group', '', 'select', select_options=user_group_options),
-            FormEntry('allReadCheckbox', 'all_can_read', 'Anyone can view?', True, 'checkbox'),
-            FormEntry('groupReadCheckbox', 'group_can_read', 'User group members can view?', True, 'checkbox'),
-            FormEntry('allWriteCheckbox', 'all_can_write', 'Anyone can edit or delete?', False, 'checkbox')
+            FormEntry(f'{prefix}nameInput', f'{prefix}name', 'Name', 'Enter name'),
+            FormEntry(f'{prefix}descriptionTextArea', f'{prefix}description', 'Description', 'Enter description',
+                      'textarea'),
+            FormEntry(f'{prefix}userGroupSelect', f'{prefix}user_group_id', 'User Group', '', 'select',
+                      select_options=user_group_options),
+            FormEntry(f'{prefix}allReadCheckbox', f'{prefix}all_can_read', 'Anyone can view?', True, 'checkbox'),
+            FormEntry(f'{prefix}groupReadCheckbox', f'{prefix}group_can_read', 'User group members can view?', True,
+                      'checkbox'),
+            FormEntry(f'{prefix}allWriteCheckbox', f'{prefix}all_can_write', 'Anyone can edit or delete?', False,
+                      'checkbox')
         ]
 
 
@@ -69,7 +139,8 @@ class AnalysisCreateFormData(CreateFormData):
 class ExternalFileCreateFormData(CreateFormData):
     def __init__(self, current_user: User):
         super(ExternalFileCreateFormData, self).__init__(current_user, 'Create External File Record')
-        self.entries.append(FormEntry('filenameInput', 'filename', 'Filename /data/external/', 'Enter filename'))
+        self.entries.append(
+            FormEntry('filenameInput', 'filename', f'Filename (relative to {DATADIR}/external/)', 'Enter filename'))
         self.entries.append(FormEntry('fileInput', 'file', 'File', input_type='file', select_multiple=False))
 
 
@@ -170,7 +241,7 @@ class ProfileUpdateFormData:
 
 class PasswordResetFormData:
     def __init__(self):
-        self.label = 'Change user password'
+        self.label = 'Change User Password'
         self.entries = [
             FormEntry('changeEmailInput', 'changeEmail', 'User\'s email address', 'email@example.com', 'email'),
             FormEntry('passwordInput1', 'changePassword1', 'New password', 'Password', 'password'),

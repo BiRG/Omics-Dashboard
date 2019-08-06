@@ -1,8 +1,15 @@
+{% macro attribute_editor_tab() %}
+    <li class="nav-item">
+        <a class="nav-link active" id="attribute-editor-tab" data-toggle="tab" href="#attribute-editor-tab-pane"
+           role="tab" aria-controls="attribute-editor-tab-pane" aria-selected="true">Attributes</a>
+    </li>
+{% endmacro %}
+
 {% macro attribute_editor(table_data) %}
   {# attributes is of the "ListTableData" class #}
-  <div class="row mt-3">
+    <div class="tab-pane fade show active" id="attribute-editor-tab-pane" role="tabpanel"
+         aria-labelledby="attribute-editor-tab">
     <div class="card w-100">
-      <h4 class="card-header text-white bg-primary">Attributes</h4>
       <div class="card-body">
       {% if table_data.editable %}
         <h6 class="card-subtitle mb-2 text-muted">You have permission to edit this record.</h6>

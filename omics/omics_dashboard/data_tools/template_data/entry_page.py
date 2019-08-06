@@ -125,7 +125,7 @@ class UserPageData(EntryPageData):
         self.target_admin = target_user.admin
         self.user_group_table_data = ListTableData(current_user,
                                                    get_read_permitted_records(current_user, target_user.user_groups),
-                                                   f'{target_user.name}\'s User Groups',
+                                                   f'User Groups',
                                                    special_val_heading='Admin',
                                                    special_vals=user_group_admin)
 

@@ -1,4 +1,5 @@
 import os
+
 import h5py
 
 
@@ -32,4 +33,4 @@ TMPDIR: str = os.environ['TMPDIR'] if 'TMPDIR' in os.environ else '/tmp'
 COMPUTESERVER: str = os.environ['COMPUTESERVER']
 MODULEDIR: str = os.path.join(os.environ['MODULEDIR'], 'cwl') if 'MODULEDIR' in os.environ else DATADIR + '/modules/cwl'
 UPLOADDIR: str = f'{TMPDIR}/uploads'
-
+OMICSSERVER: str = os.environ['OMICSSERVER']
