@@ -1,5 +1,5 @@
 {% extends 'entry.html' %}
-{% from 'components/job_chart.html' import job_chart, job_chart_tab, job_chart_script with context %}
+{% from 'components/job_chart.html' import job_chart, job_chart_tab, job_chart_script, job_cancel_modal with context %}
 {% from 'components/job_log_accordion.html' import job_log_accordion, job_log_accordion_tab %}
 {% block headline %}
   <h1 class="display-4">{{ page_data.name }}</h1>
@@ -19,9 +19,10 @@
     {{ job_log_accordion(page_data) }}
 {% endblock %}
 {% block lastpanels %}
+    {{ job_cancel_modal() }}
     {# override super() to not include "Delete" pane #}
 {% endblock %}
 {% block scripts %}
   {{ super() }}
-  {{ job_chart_script(page_data.job_chart_url) }}
+    {{ job_chart_script(page_data.job_chart_url, page_data.update_url) }}
 {% endblock %}

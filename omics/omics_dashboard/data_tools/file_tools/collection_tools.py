@@ -103,9 +103,7 @@ def update_array(filename: str, path: str, i: int, j: int, val):
     i = 0 if i is None else i
     j = 0 if j is None else j
     with h5py.File(filename, 'r+') as file:
-        print('file opened')
         val = file[path].dtype.type(val)
-        print(val)
         if len(file[path].shape) == 1:
             file[path][int(i)] = val
         else:

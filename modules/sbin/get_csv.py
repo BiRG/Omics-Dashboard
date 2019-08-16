@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# python3 getcsv.py collection path
+# python3 get_csv.py collection path
 # collection is hdf5
 
 from os.path import splitext

@@ -23,7 +23,7 @@ def get_job(job_id=None):
         user = get_current_user()
         job = dt.jobserver_control.get_job(job_id)
         if request.method == 'POST':
-            action = request.args.get('method')
+            action = request.args.get('action')
             if action:
                 if action == 'resume':
                     return jsonify(dt.jobserver_control.resume_job(user, job))

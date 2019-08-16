@@ -32,8 +32,11 @@ def set_value(key, value):
     """
     r = get_redis()
     hash_name = f'user{current_user.id}'
-    r.hset(hash_name, key, value)
-    r.expire(hash_name, timedelta(hours=24))
+    if value is None:
+        r.hdel(hash_name, key)
+    else:
+        r.hset(hash_name, key, value)
+        r.expire(hash_name, timedelta(hours=24))
 
 
 def get_value(key):

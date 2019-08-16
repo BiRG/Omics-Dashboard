@@ -303,7 +303,6 @@ class FileRecordMixin(OmicsRecordMixin):
             if self.is_temp and self.filename is not None:
                 os.remove(self.filename)
         except FileNotFoundError:
-            print('file not found')
             pass
 
     @staticmethod
@@ -312,7 +311,6 @@ class FileRecordMixin(OmicsRecordMixin):
             if target.filename is not None:
                 os.remove(target.filename)
         except FileNotFoundError:
-            print('file not found')
             pass
 
     @staticmethod
@@ -343,6 +341,22 @@ class FileRecordMixin(OmicsRecordMixin):
             elif self.file_type == 'json':
                 return json.load(open(self.filename, 'r'))
         return {}
+
+    def get_attr(self, key):
+        if self.file_exists:
+            try:
+                if self.file_type == 'hdf5':
+                    return h5py.File(self.filename).attrs[key]
+                elif self.file_type == 'yaml':
+                    return yaml.safe_load(open(self.filename, 'r'))[key]
+                elif self.file_type == 'json':
+                    return json.load(open(self.filename, 'r'))[key]
+                else:
+                    return None
+            except:
+                return None
+        else:
+            return None
 
     def get_file_info(self):
         """
@@ -407,20 +421,25 @@ class NumericFileRecordMixin(FileRecordMixin):
                 else:
                     return {key: value for key, value in fp.attrs.items()}
 
-    def get_attr(self, key: str, path: str = None) -> Any:
+    def get_attr(self, key: str, path: str = None, safe=False) -> Any:
         """
         Get an attribute of the file or a path (Group or Dataset) inside the file.
         :param key: The key of the attribute to access.
         :param path: Optional. Get the attribute on a Group or Dataset of the file.
         :return:
         """
-        if self.filename is not None and os.path.isfile(self.filename):
-            with h5py.File(self.filename, 'r') as fp:
-                if path is not None:
+        path = path or '/'
+        if self.file_exists:
+            try:
+                with h5py.File(self.filename, 'r') as fp:
                     return fp[path].attrs[key]
-                else:
-                    return fp.attrs[key]
+            except Exception as e:
+                if safe:
+                    return None
+                raise e
         else:
+            if safe:
+                return None
             raise RuntimeError('File has not been downloaded! Use Session.download_file to download the file for this '
                                'record')
 
@@ -566,6 +585,10 @@ class NumericFileRecordMixin(FileRecordMixin):
         filenames = [self.filename] + [other.filename for other in others]
         h5_merge(filenames, self.filename, orientation='vert', reserved_paths=['/x'], align_at='/x')
 
+    def create_empty_file(self):
+        if not self.file_exists:
+            h5py.File(self.filename, 'w')
+
 
 class Analysis(OmicsRecordMixin, db.Model):
     __tablename__ = 'analysis'
@@ -661,7 +684,11 @@ class Collection(NumericFileRecordMixin, db.Model):
     data_path = f'{DATADIR}/collections'
     kind = db.Column(db.String, default='data')  # should be 'data' or 'results'
 
-    def create_label_column(self, name: str, data_type: str='string'):
+    def merge_samples(self, samples: List[Sample], sort_by: str = 'base_sample_id'):
+        h5_merge([sample.filename for sample in samples], self.filename, orientation='vert',
+                 reserved_paths=['/x'], align_at='/x', sort_by=sort_by, merge_attributes=True)
+
+    def create_label_column(self, name: str, data_type: str = 'string'):
         mdt.add_column(self.filename, name, data_type)
 
     def to_dict(self):

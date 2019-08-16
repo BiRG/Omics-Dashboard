@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: uploadsamples
 baseCommand:
-  - uploadsamples.py
+  - upload_samples.py
 inputs:
   - id: input_files
     type: File[]

@@ -66,9 +66,9 @@ def get_collection(collection_id=None):
                         file.write(collection_file_data)
                         del new_data['file']
                 if dt.util.validate_file(filename):
-                    return jsonify(dt.collections.update_collection(user, collection, new_data, filename).to_dict())
-            return jsonify(
-                dt.collections.update_collection(user, collection, new_data).to_dict())
+                    collection = dt.collections.update_collection(user, collection, new_data, filename)
+                    return jsonify(collection.to_dict())
+            return jsonify(dt.collections.update_collection(user, collection, new_data).to_dict())
 
         if request.method == 'PATCH':
             # We can have requests to change values in arrays here contents of request will be {path, i, j, new_value}

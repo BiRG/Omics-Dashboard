@@ -60,6 +60,8 @@ def get_update_url(record):
         return url_for('users_api.get_user', user_id=record.id)
     elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files_api.get_external_file', external_file_id=record.id)
+    elif isinstance(record, dt.jobserver_control.Job):
+        return url_for('jobs_api.get_job', job_id=record.id)
     return '#'
 
 

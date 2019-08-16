@@ -2,15 +2,15 @@
 import numpy as np
 import shutil
 import sys
-import NMRproc
+from .NMR_processing import scale
 import os
 
 filename = sys.argv[1]
 frequency = np.float64(sys.argv[2])
 reference = np.float64(sys.argv[3])
 x_window = np.float64(sys.argv[4])
-outfilename = f'{os.environ["HOME"]}/out.h5'
-shutil.copy(filename, outfilename)
+out_filename = os.path.join(os.environ['HOME'], 'out.h5')
+shutil.copy(filename, out_filename)
 
-NMRproc.scale(outfilename, frequency)
+scale(out_filename, frequency)
 # NMRproc.reference('out.h5', reference, x_window) # this breaks some workflows

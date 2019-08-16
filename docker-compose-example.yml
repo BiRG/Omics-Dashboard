@@ -6,6 +6,7 @@ services:
   omics:
     build: 
       context: omics
+      dockerfile: Dockerfile  # select Dockerfile.gpu for gpu-enabled version
       args:
         OMICSSERVER: ${OMICSSERVER}
         OMICS_UID: ${OMICS_UID}
@@ -21,6 +22,7 @@ services:
   jobserver:
     build:
       context: jobserver
+      dockerfile: Dockerfile  # select Dockerfile.gpu for gpu-enabled version
       args: 
         MYSQL_PASSWORD: ${MYSQL_PASSWORD}
         OMICS_UID: ${OMICS_UID}

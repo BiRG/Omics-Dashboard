@@ -28,12 +28,12 @@ class PCAData(MultivariateAnalysisData):
         'variance_plots': [],
         'cumulative_variance_plots': []
     }
-    _redis_prefix = 'pca'
+    redis_prefix = 'pca'
 
     def __init__(self, load_data=False):
         # any of these can be None
         super().__init__(load_data)
-        self._redis_prefix = 'pca'
+        self.redis_prefix = 'pca'
         self._empty_plot_data = {
             'score_plots': [],
             'loading_plots': [],
@@ -212,7 +212,7 @@ class PCAData(MultivariateAnalysisData):
             raise ValueError('No score plot data provided')
         self.load_data()
         multiple_results = [include_scores, include_loadings, include_variance, include_db_index].count(True) > 1 \
-                            or include_db_index and len(score_plot_data) > 1
+                           or include_db_index and len(score_plot_data) > 1
         create_archive = len(file_formats) > 1 or (multiple_results and 'csv' in file_formats)
 
         def _save_scores(name, file_format):
@@ -318,6 +318,7 @@ class PCAData(MultivariateAnalysisData):
             with h5py.File(h5_filename, 'a') as current_file, h5py.File(self._results_filename) as results_file:
                 for key, value in results_file.attrs.items():
                     current_file.attrs[key] = value
+                current_file.attrs['analysis_type'] = 'pca'
             if include_scores:
                 _save_scores(h5_filename, 'hdf5')
             if include_loadings:
@@ -364,19 +365,19 @@ class PCAData(MultivariateAnalysisData):
         self._loadings = pca.components_
         self._explained_variance_ratio = pca.explained_variance_ratio_
 
-    def _get_score_plot(self,
-                        ordinate,
-                        abscissa,
-                        applicate,
-                        color_by_labels,
-                        include_db_index,
-                        label_by_labels,
-                        encircle_by,
-                        plot_centroid,
-                        plot_medoid,
-                        graph_only=False,
-                        theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
-        is_3d = applicate != -1
+    def get_score_plot(self,
+                       ordinate,
+                       abscissa,
+                       applicate,
+                       color_by_labels,
+                       include_db_index,
+                       label_by_labels,
+                       encircle_by,
+                       plot_centroid,
+                       plot_medoid,
+                       graph_only=False,
+                       theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+        is_3d = (applicate is not None) and (applicate != -1)
         theme = theme or 'plotly_white'
         color_by_labels = color_by_labels or []
         encircle_by = encircle_by or []
@@ -642,7 +643,7 @@ class PCAData(MultivariateAnalysisData):
         ) if not is_3d else go.Layout(
             annotations=annotations,
             height=700,
-            font={'size': 16},
+            font={'size': 14},
             template=theme,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
@@ -669,7 +670,7 @@ class PCAData(MultivariateAnalysisData):
             return graph
         return graph, table
 
-    def _get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
+    def get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         axis_line_style = {
             'zerolinecolor': '#375A7F',  # darkly primary
@@ -698,13 +699,14 @@ class PCAData(MultivariateAnalysisData):
                     'title': 'PC Loading',
                     **axis_line_style
                 },
+                font={'size': 16},
                 template=theme,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_variance_plot(self, scale_y=False, indices=None, theme=None) -> dcc.Graph:
+    def get_variance_plot(self, scale_y=False, indices=None, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         all_indices = [i for i in range(0, len(self._explained_variance_ratio))]
         indices = list(set(all_indices).intersection(set(indices)))
@@ -731,12 +733,13 @@ class PCAData(MultivariateAnalysisData):
                 xaxis=xaxis,
                 yaxis=yaxis,
                 template=theme,
+                font={'size': 16},
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
+    def get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         axis_line_style = {
             'zerolinecolor': '#375A7F',  # darkly primary
@@ -763,6 +766,7 @@ class PCAData(MultivariateAnalysisData):
                 template=theme,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
+                font={'size': 16},
                 shapes=[
                     {
                         'type': 'line',
@@ -809,30 +813,30 @@ class PCAData(MultivariateAnalysisData):
         self.load_results()
         from dashboards.dashboard import get_plot_theme
         theme = get_plot_theme()
-        score_plots = [self._get_score_plot(plot['ordinate'],
-                                            plot['abscissa'],
-                                            plot['applicate'],
-                                            plot['color_by'],
-                                            include_db_index_tables and plot['include_db_index'],
-                                            plot['label_by'],
-                                            plot['encircle_by'],
-                                            plot['include_centroid'],
-                                            plot['include_medoid'],
-                                            theme=theme)
+        score_plots = [self.get_score_plot(plot['ordinate'],
+                                           plot['abscissa'],
+                                           plot['applicate'],
+                                           plot['color_by'],
+                                           include_db_index_tables and plot['include_db_index'],
+                                           plot['label_by'],
+                                           plot['encircle_by'],
+                                           plot['include_centroid'],
+                                           plot['include_medoid'],
+                                           theme=theme)
                        for plot in score_plot_data]
         return (
             [
                 item for pair in score_plots for item in pair
             ] if include_db_index_tables else [pair[0] for pair in score_plots],
             [
-                self._get_loading_plot(plot['indices'], theme=theme) for plot in loading_plot_data
+                self.get_loading_plot(plot['indices'], theme=theme) for plot in loading_plot_data
             ],
             [
-                self._get_variance_plot(plot['scale_y'], plot['indices'], theme=theme) for plot in variance_plot_data
+                self.get_variance_plot(plot['scale_y'], plot['indices'], theme=theme) for plot in variance_plot_data
             ],
             [
-                self._get_cumulative_variance_plot(plot['threshold'],
-                                                   theme=theme) for plot in cumulative_variance_plot_data
+                self.get_cumulative_variance_plot(plot['threshold'],
+                                                  theme=theme) for plot in cumulative_variance_plot_data
             ]
         )
 
@@ -860,32 +864,32 @@ class PCAData(MultivariateAnalysisData):
             format_dir = os.path.join(plot_dir, file_format)
             os.mkdir(format_dir)
             for plot_info in score_plot_data:
-                plot = self._get_score_plot(plot_info['ordinate'],
-                                            plot_info['abscissa'],
-                                            plot_info['color_by'],
-                                            False,
-                                            plot_info['label_by'],
-                                            plot_info['encircle_by'],
-                                            plot_info['include_centroid'],
-                                            plot_info['include_medoid'],
-                                            True)
+                plot = self.get_score_plot(plot_info['ordinate'],
+                                           plot_info['abscissa'],
+                                           plot_info['color_by'],
+                                           False,
+                                           plot_info['label_by'],
+                                           plot_info['encircle_by'],
+                                           plot_info['include_centroid'],
+                                           plot_info['include_medoid'],
+                                           True)
                 filename = f'{base_filename}_scores_{plot_info["ordinate"]+1}_vs_{plot_info["abscissa"]+1}'
                 if plot_info['color_by']:
                     filename += '_by_' + ','.join(plot_info['color_by'])
                 filename = os.path.join(format_dir, f'{filename}.{file_format}')
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in loading_plot_data:
-                plot = self._get_loading_plot(plot_info['indices'])
+                plot = self.get_loading_plot(plot_info['indices'])
                 components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_loadings_{components}.{file_format}"
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in variance_plot_data:
-                plot = self._get_variance_plot(plot_info['scale_y'], plot_info['indices'])
+                plot = self.get_variance_plot(plot_info['scale_y'], plot_info['indices'])
                 components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_variance_{components}.{file_format}"
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in cumulative_variance_plot_data:
-                plot = self._get_cumulative_variance_plot(plot_info['threshold'])
+                plot = self.get_cumulative_variance_plot(plot_info['threshold'])
                 filename = f'{format_dir}/{base_filename}_cumulative_variance_{plot_info["threshold"]}.{file_format}'
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
         return shutil.make_archive(plot_dir, 'zip', root_dir, f"{base_filename}_plots")

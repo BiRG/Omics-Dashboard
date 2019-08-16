@@ -8,14 +8,55 @@
     <div class="tab-pane fade" id="job-chart-tab-panel" role="tabpanel" aria-labelledby="job-chart-tab">
     <div class="card w-100">
       <div class="card-body">
-          <button class="btn btn-success" onclick="drawChart();"><i class="fas fa-sync"></i> Refresh</button>
-          <div id="chart_div" style="width: auto"></div>
+          <div class="row mb-4">
+              <button class="btn btn-success" onclick="drawChart();"><i class="fas fa-sync"></i> Refresh</button>
+          </div>
+          <div id="chart_div" class="row" style="height: 350px;"></div>
+          <div class="row">
+              <button type="button" class="btn btn-danger" data-target="#cancelModal" data-toggle="modal">Cancel Job
+              </button>
+          </div>
       </div>
     </div>
   </div>
 {% endmacro %}
 
-{% macro job_chart_script(chart_data_url) %}
+{% macro job_cancel_modal() %}
+    <div class="modal fade" id="cancelModal" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Confirm Cancel</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true"><i class="far fa-window-close"></i></span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to cancel this job?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="cancelJob();">Cancel Job</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro job_chart_script(chart_data_url, update_url) %}
+    <script>
+        function cancelJob() {
+            fetch('{{ update_url }}?action=cancel',
+                {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                }).then(res => res.json()).then(data => {
+                console.log(data);
+                location.reload();
+            });
+        }
+    </script>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <script type="text/javascript">
     var parentWorkflowNames = [];

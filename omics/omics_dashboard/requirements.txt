@@ -42,9 +42,10 @@ redis
 scikit-learn
 dash>=1.0
 dash-daq>=0.0.3
-dash-bootstrap-components>=0.6.3
+dash-bootstrap-components>=0.7.0
 plotly>=3.10.0
 msgpack
 tables
 git+git://github.com/BiRG/pyopls.git
 psutil
+tabulate

@@ -2,7 +2,7 @@ import itertools
 import os
 import shutil
 import time as tm
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -18,7 +18,7 @@ from data_tools.access_wrappers.collections import get_collection_copy
 
 
 class MultivariateAnalysisData:
-    _redis_prefix = ''
+    redis_prefix = ''
     _empty_plot_data = {}
 
     def __init__(self, load_data=False):
@@ -74,7 +74,7 @@ class MultivariateAnalysisData:
     @classmethod
     def get_plot_data(cls) -> Dict[str, List[Dict[str, Any]]]:
         try:
-            plot_data = msgpack.loads(rds.get_value(f'{cls._redis_prefix}_plot_data'), raw=False)
+            plot_data = msgpack.loads(rds.get_value(f'{cls.redis_prefix}_plot_data'), raw=False)
         except Exception as e:
             plot_data = None
         if plot_data is None:
@@ -84,31 +84,31 @@ class MultivariateAnalysisData:
 
     @classmethod
     def set_plot_data(cls, plot_data: Dict[str, List[Dict[str, Any]]]) -> None:
-        rds.set_value(f'{cls._redis_prefix}_plot_data', msgpack.dumps(plot_data))
+        rds.set_value(f'{cls.redis_prefix}_plot_data', msgpack.dumps(plot_data))
 
     @classmethod
     def clear_plot_data(cls):
-        rds.delete_value(f'{cls._redis_prefix}_plot_data')
+        rds.delete_value(f'{cls.redis_prefix}_plot_data')
 
     def load_file_info(self):
-        data_frame_filename = rds.get_value(f'{self._redis_prefix}_dataframe_filename')
+        data_frame_filename = rds.get_value(f'{self.redis_prefix}_dataframe_filename')
         self._dataframe_filename = data_frame_filename.decode('utf-8') if data_frame_filename is not None else None
-        results_filename = rds.get_value(f'{self._redis_prefix}_results_filename')
+        results_filename = rds.get_value(f'{self.redis_prefix}_results_filename')
         self._results_filename = results_filename.decode('utf-8') if results_filename is not None else None
         if not self._dataframe_filename or not os.path.isfile(self._dataframe_filename):
-            rds.delete_value(f'{self._redis_prefix}_dataframe_filename')
-            rds.delete_value(f'{self._redis_prefix}_results_filename')
+            rds.delete_value(f'{self.redis_prefix}_dataframe_filename')
+            rds.delete_value(f'{self.redis_prefix}_results_filename')
             self._dataframe_filename = None
             self._results_filename = None
         try:
-            self._loaded_collection_ids = msgpack.loads(rds.get_value(f'{self._redis_prefix}_loaded_collection_ids'))
+            self._loaded_collection_ids = msgpack.loads(rds.get_value(f'{self.redis_prefix}_loaded_collection_ids'))
         except TypeError:
             self._loaded_collection_ids = []
 
     def set_file_info(self):
-        rds.set_value(f'{self._redis_prefix}_dataframe_filename', self._dataframe_filename.encode('utf-8'))
-        rds.set_value(f'{self._redis_prefix}_results_filename', self._results_filename.encode('utf-8'))
-        rds.set_value(f'{self._redis_prefix}_loaded_collection_ids', msgpack.dumps(self._loaded_collection_ids))
+        rds.set_value(f'{self.redis_prefix}_dataframe_filename', self._dataframe_filename.encode('utf-8'))
+        rds.set_value(f'{self.redis_prefix}_results_filename', self._results_filename.encode('utf-8'))
+        rds.set_value(f'{self.redis_prefix}_loaded_collection_ids', msgpack.dumps(self._loaded_collection_ids))
 
     def load_dataframes(self):
         self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
@@ -188,11 +188,13 @@ class MultivariateAnalysisData:
     def post_results(self, name, analysis_ids):
         raise NotImplementedError()
 
-    def get_collections(self, collection_ids: List[int]):
+    def get_collections(self, collection_ids: Union[List[int], int]):
         data_dir = os.path.dirname(self._dataframe_filename) if self._dataframe_filename is not None else None
         if data_dir is not None:
             shutil.rmtree(data_dir)
         self.clear_plot_data()
+        if not isinstance(collection_ids, list):
+            collection_ids = [collection_ids]
         collections = [get_collection_copy(current_user, collection_id) for collection_id in collection_ids]
         if len(collections) > 1:
             collections[0].merge(collections[1:])
@@ -323,7 +325,7 @@ class MultivariateAnalysisData:
             'pair_with': pair_with or '',
             'project_by': project_by or ''
         }
-        name = self._redis_prefix.upper()
+        name = self.redis_prefix.upper()
         if len(self._loaded_collection_ids) > 1:
             name += ' on collections ' + ','.join(str(collection_id) for collection_id in self._loaded_collection_ids)
         else:

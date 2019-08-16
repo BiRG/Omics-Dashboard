@@ -46,14 +46,11 @@ def interpolate(files: List[h5py.File], align_path: str, target_path: str, conca
 
 
 def make_2d(arr, dim_ind):
-    print(f'shape: {arr.shape}')
-    print(f'len(shape): {len(arr.shape)}')
     if len(arr.shape) < 2:
         # if dim_ind is 0, we want this to be a row vector
         # if dim_ind is 1, we want this to be a column vector
         new_shape = [arr.size, arr.size]
         new_shape[dim_ind] = 1
-        print(f'new_shape: {new_shape}')
         return np.reshape(arr, new_shape)
     return arr
 

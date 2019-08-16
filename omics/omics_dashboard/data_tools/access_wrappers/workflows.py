@@ -153,7 +153,6 @@ def create_workflow(user: User, data: Dict[str, Any]) -> Workflow:
     db.session.add(workflow)
     db.session.commit()
     workflow.filename = f'{DATADIR}/workflows/{workflow.id}.{workflow.workflow_language}'
-    print(workflow.filename)
     db.session.commit()
     if 'workflow_definition' not in data:
         data['workflow_definition'] = get_workflow_template(workflow.name,

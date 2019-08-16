@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: parsetxtxy
 baseCommand:
-  - batchparsetxtxy.py
+  - batch_parse_txtxy.py
 inputs:
   - id: input_files
     doc: Text files containing data.

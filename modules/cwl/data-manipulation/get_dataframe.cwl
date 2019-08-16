@@ -1,34 +1,34 @@
 class: CommandLineTool
 cwlVersion: v1.0
-id: getdataframe
+id: get_dataframe
 baseCommand:
-  - getdataframe.py
+  - get_dataframe.py
 inputs:
-  - id: inputFile
+  - id: input_file
     doc: A collection.
     type: File
     inputBinding:
       position: 0
-  - id: numericColumns
+  - id: numeric_columns
     doc: Whether the column names should be just the x value or Y_x
     type: boolean
     default: true
     inputBinding:
       position: 1
-  - id: includeLabels
+  - id: include_labels
     doc: Whether to include label columns
     type: boolean
     default: true
     inputBinding:
       position: 2
-  - id: includeOnlyLabels
+  - id: include_only_labels
     doc: Whether to only include label columns. Overrides includeLabels.
     type: boolean
     default: false
     inputBinding:
       position: 3
 outputs:
-  - id: csvFile
+  - id: csv_file
     doc: A CSV file containing a Pandas DataFrame.
     type: File
     outputBinding:

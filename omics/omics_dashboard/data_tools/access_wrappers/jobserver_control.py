@@ -89,7 +89,6 @@ class Job:
 
     def get_logs(self):
         log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
-        print(log_response.json())
         try:
             self.logs = {
                 key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()}
@@ -145,12 +144,12 @@ def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User,
     :param wf_type: Either 'upload' or 'analysis'
     :return:
     """
+    options = options or {}
     labels = labels or {}
     auth_token = get_jwt(owner)
     job_params['omics_auth_token'] = auth_token
     job_params['omics_url'] = OMICSSERVER
     labels.update({'owner_id': str(owner.id), 'type': wf_type})
-    print(json.dumps(options))
     files = {'workflowSource': StringIO(),
              'workflowInputs': StringIO(),
              'labels': json.dumps(labels),
@@ -165,10 +164,13 @@ def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User,
                         headers={'Authorization': auth_token},
                         data=params,
                         files=files)
+    res_text = ''
     try:
+        res_text = res.text
+        res.raise_for_status()
         return Job(res.json()['id'])
     except Exception:
-        raise RuntimeError('Invalid response from job server. Is the server running?')
+        raise RuntimeError(f'Invalid response from job server. Is the server running? \n Response: {res_text}')
 
 
 def cancel_job(user: User, job: Job) -> Dict[str, Any]:
@@ -181,7 +183,7 @@ def cancel_job(user: User, job: Job) -> Dict[str, Any]:
     job.refresh()
     if job.owner == user or user.admin:
         return job.cancel()
-    raise AuthException(f'User {user.email} is not authorized to resume job {job.id}')
+    raise AuthException(f'User {user.email} is not authorized to cancel job {job.id}')
 
 
 def resume_job(user: User, job: Job) -> Dict[str, Any]:

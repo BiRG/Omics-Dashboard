@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# python3 uploadsamples.py <input_filenames> metadata_filename collection_id_start auth_token
+# python3 upload_samples.py <input_filenames> metadata_filename collection_id_start auth_token
 
 import h5py
 import os

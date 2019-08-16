@@ -71,8 +71,6 @@ def get_sample(sample_id=None):
         if request.method == 'DELETE':
             return jsonify(dt.samples.delete_sample(user, dt.samples.get_sample(user, sample_id)))
     except Exception as e:
-        print(e)
-        print(e.__traceback__)
         return handle_exception(e)
 
 
@@ -122,7 +120,6 @@ def upload_sample():
         except:
             new_data.update(process_input_dict(request.form))
 
-        print(new_data)
         filename = os.path.join(UPLOADDIR, str(uuid.uuid4()))
         if 'file' not in new_data and 'file' not in request.files:
             raise ValueError('No file uploaded')

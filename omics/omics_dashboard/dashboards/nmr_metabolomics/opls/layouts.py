@@ -1,7 +1,6 @@
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_table
 from flask_login import current_user
 
 from dashboards.navbar import get_navbar
@@ -10,7 +9,7 @@ from data_tools.access_wrappers.collections import get_collections
 from .opls_data import OPLSData
 
 
-def get_save_results_form():
+def get_load_results_form():
     try:
         analysis_options = [
             {'label': f'{analysis.id}: {analysis.name}', 'value': analysis.id}
@@ -19,8 +18,59 @@ def get_save_results_form():
     except:
         analysis_options = []
 
+    try:
+        collection_options = [
+            {'label': f'{collection.id}: {collection.name}', 'value': collection.id}
+            for collection in get_collections(current_user, {'kind': 'results'})
+            if collection.get_attr('analysis_type', safe=True) == 'opls'
+        ]
+    except:
+        collection_options = []
+    try:
+        opls_data = OPLSData(load_data=True)
+        loaded_badges = opls_data.get_results_collection_badges()
+    except:
+        loaded_badges = [html.Span([dbc.Badge('None', className='badge-pill')])]
+
     return dbc.Form(
         [
+            html.H5('Load Results'),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Results Collection ID', html_for='results-collection-id'),
+                                    dcc.Dropdown(options=collection_options, id='results-collection-id', multi=False)
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Results collection'),
+                                    dcc.Loading(
+                                        [
+                                            dbc.InputGroup(
+                                                [
+                                                    dbc.Button('Get', id='get-results-collection',
+                                                               className='col-sm-2 btn-success'),
+                                                    html.H4(html.Div(loaded_badges, id='loaded-results-collection'),
+                                                            id='loaded-results-collection-wrapper',
+                                                            className='col-sm-10')
+                                                ], id='loaded-results-display'
+                                            )
+                                        ]
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            ),
             html.H5('Save Results'),
             dbc.Row(
                 [
@@ -154,7 +204,7 @@ def get_save_results_form():
             ),
             dcc.Loading(html.Small('', id='plot-download-message', className='form-text')),
             # will inject link when results posted
-            html.H5('Post Results'),
+            html.H5('Post transformed collection'),
             dbc.Row(
                 [
                     dbc.Col(
@@ -230,7 +280,7 @@ def get_opls_options_form():
                             dbc.FormGroup(
                                 [
                                     dbc.Label('Collection ID', html_for='collection-id'),
-                                    dcc.Dropdown(options=collection_options, id='collection-id', multi=True)
+                                    dcc.Dropdown(options=collection_options, id='collection-id', multi=False)
                                 ]
                             )
                         ]
@@ -622,69 +672,23 @@ def get_opls_options_form():
     )
 
 
-def get_feature_explorer():
-    return dbc.Row(
-        [
-            dbc.Col(
-                dash_table.DataTable(
-                    id='feature_table',
-                    columns=[
-                        {'name': 'Feature', 'id': 'feature'},
-                        {'name': 'Significance', 'id': 'significance'},
-                        {'name': 'p-value', 'id': 'p_value'}
-                    ],
-                    data={},
-                    editable=False,
-                    filter_action='native',
-                    sort_action='native',
-                    sort_mode='single',
-                    selected_rows=[],
-                    row_selectable='single'
-                )
-            ),
-            dbc.Col(
-                [],
-                id='significance_plot_wrapper'
-            )
-        ]
-    )
-
-
 def get_results_form():
-    return dbc.Tabs(
-        [
-            dbc.Tab(
-                dbc.Card(dbc.CardBody([], id='summary-card-body'), id='summary-card', className='row mt-3'),
-                id='summary-tab', label='Summary'
-            ),
-            dbc.Tab(
-                dbc.Card(dbc.CardBody([], id='quality-card-body'), id='quality-card', className='row mt-3'),
-                id='quality-tab', label='Quality Metrics'
-            ),
-            dbc.Tab(
-                dbc.Card(
-                    dbc.CardBody([
-                        dbc.Form(
-                            dbc.FormGroup(
-                                [
-                                    dbc.Label('Class pair', html_for='validator-selector'),
-                                    dcc.Dropdown(id='validator-selector')
-                                ]
-                            )
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col([
-                                    dash_table.DataTable(id='feature-table')
-                                ], width=4, id='feature-table-wrapper'),
-                                dbc.Col(id='kde-plot-wrapper')
-                            ]
-                        )
-                    ], id='significance-card-body'), id='variable-significance-card', className='row mt-3'
-                ), id='variable-significance-tab', label='Variable Significance'
-            )
-        ], id='results-tabs', className='text-white bg-primary'
-    )
+    # check if results are loaded
+    return [
+        dbc.CardHeader(
+            [
+                dbc.Tabs(
+                    [
+                        dbc.Tab(label='Summary', tab_id='summary-tab'),
+                        dbc.Tab(label='Quality Metrics', tab_id='quality-tab'),
+                        dbc.Tab(label='Metric Permutation Tests', tab_id='kde-tab'),
+                        dbc.Tab(label='Feature Permutation Tests', tab_id='feature-significance-tab')
+                    ], id='results-tabs', active_tab='summary-tab', card=True
+                ),
+            ]
+        ),
+        dcc.Loading(dbc.CardBody(id='results-content'))
+    ]
 
 
 def get_layout():
@@ -694,15 +698,14 @@ def get_layout():
             html.Br(),
             dbc.Container(
                 [
-                    html.H1('Orthogonal Projection to Latent Structures'),
-
+                    html.H2('Orthogonal Projection to Latent Structures'),
                     dbc.Tabs(
                         [
                             dbc.Tab(dbc.Card(dbc.CardBody(get_opls_options_form())),
                                     id='opls-options-tab', label='OPLS Options'),
-                            dbc.Tab(dbc.Card(dbc.CardBody(get_save_results_form())),
-                                    id='save-results-tab', label='Save Results'),
-                            dbc.Tab(dbc.Card(dbc.CardBody(get_results_form())),
+                            dbc.Tab(dbc.Card(dbc.CardBody(get_load_results_form())),
+                                    id='save-results-tab', label='Load/Export Results'),
+                            dbc.Tab(dbc.Card(get_results_form()),
                                     id='results-tab', label='Results')
                         ], id='tabs'
                     )
@@ -710,3 +713,4 @@ def get_layout():
             )
         ]
     )
+

@@ -4,6 +4,7 @@ import traceback
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from dash.exceptions import PreventUpdate
 
 from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from .layouts import get_layout
@@ -19,7 +20,7 @@ class OPLSDashboard(Dashboard):
     @staticmethod
     def _on_label_key_select(label_keys, op='=='):
         if not label_keys or None in label_keys:
-            raise ValueError('Callback triggered without action!')
+            raise PreventUpdate('Callback triggered without action!')
         label_keys = sorted(label_keys)
         opls_data = OPLSData()
         unique_values = [opls_data.unique_vals[val] for val in label_keys]
@@ -43,7 +44,7 @@ class OPLSDashboard(Dashboard):
             [Output('model-by-value', 'options')],
             [Input('model-by', 'value')]
         )
-        def update_filter_by_options(label_keys):
+        def update_model_by_options(label_keys):
             return OPLSDashboard._on_label_key_select(label_keys)
 
         @app.callback(
@@ -59,7 +60,7 @@ class OPLSDashboard(Dashboard):
         )
         def update_pair_with_options(label_keys):
             if not label_keys or None in label_keys:
-                raise ValueError('Callback triggered without action!')
+                raise PreventUpdate('Callback triggered without action!')
             return OPLSDashboard._on_label_key_select(label_keys)
 
         @app.callback(
@@ -76,7 +77,7 @@ class OPLSDashboard(Dashboard):
         )
         def get_collections(n_clicks, value):
             if not value or not n_clicks:
-                raise ValueError('Callback triggered without value')
+                raise PreventUpdate('Callback triggered without value')
             opls_data = OPLSData()
             opls_data.get_collections(value)
             label_data = opls_data.get_label_data()
@@ -93,12 +94,20 @@ class OPLSDashboard(Dashboard):
             )
 
         @app.callback(
+            [Output('loaded-results-collection', 'children')],
+            [Input('get-results-collection', 'n_clicks')],
+            [State('results-collection-id', 'value')]
+        )
+        def load_results(n_clicks, results_collection_id):
+            if not n_clicks:
+                raise PreventUpdate('Callback triggered without click.')
+            opls_data = OPLSData()
+            opls_data.get_results_collection(results_collection_id)
+            return opls_data.get_results_collection_badges()
+
+        @app.callback(
             [Output('message', 'children'),
-             Output('name-input', 'value'),
-             Output('summary-card-body', 'children'),
-             Output('quality-card-body', 'children'),
-             Output('validator-selector', 'options'),
-             Output('validator-selector', 'value')],
+             Output('loaded-results-collection-wrapper', 'children')],
             [Input('opls-button', 'n_clicks')],
             [State('scale-by-value', 'value'),
              State('model-by-value', 'value'),
@@ -132,7 +141,7 @@ class OPLSDashboard(Dashboard):
                          inner_permutations,
                          outer_permutations):
             if not n_clicks:
-                raise ValueError('Callback triggered without click.')
+                raise PreventUpdate('Callback triggered without click.')
             scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
             model_by = ' | '.join(model_by_queries) if model_by_queries and len(model_by_queries) else None
             ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
@@ -141,43 +150,53 @@ class OPLSDashboard(Dashboard):
                 pair_with_queries) and pair_on else None
             opls_data = OPLSData()
             try:
-                message, name, message_color = opls_data.perform_analysis(model_by,
-                                                                          ignore_by,
-                                                                          scale_by,
-                                                                          pair_on,
-                                                                          pair_with,
-                                                                          target=target,
-                                                                          regression_type=regression_type,
-                                                                          multiclass_behavior=multiclass_behavior,
-                                                                          min_n_components=min_n_components,
-                                                                          k=cross_val_k,
-                                                                          inner_alpha=inner_test_alpha,
-                                                                          outer_alpha=outer_test_alpha,
-                                                                          permutations=permutations,
-                                                                          inner_permutations=inner_permutations,
-                                                                          outer_permutations=outer_permutations)
-                theme = get_plot_theme()
-                print('get_plots()')
-                plots = opls_data.get_plots(theme)
-                print('get_summary_table()')
-                summary_table = opls_data.get_summary_table()
+                if target is None:
+                    raise ValueError('Please select a target variable (y).')
+                message, name, message_color = opls_data.submit_job(model_by,
+                                                                    ignore_by,
+                                                                    scale_by,
+                                                                    pair_on,
+                                                                    pair_with,
+                                                                    target,
+                                                                    regression_type,
+                                                                    multiclass_behavior,
+                                                                    min_n_components,
+                                                                    cross_val_k,
+                                                                    inner_test_alpha,
+                                                                    outer_test_alpha,
+                                                                    permutations,
+                                                                    inner_permutations,
+                                                                    outer_permutations)
+                badges = opls_data.get_results_collection_badges()
             except Exception as e:
                 message = [html.P([html.Strong('Error: '), f'{e}']),
                            html.Strong('Traceback:'),
                            html.P(html.Pre(traceback.format_exc(), className='text-white'))]
                 message_color = 'danger'
-                name = ''
-                summary_table = []
-                plots = []
+                badges = [html.Span([dbc.Badge('None', className='badge-pill', color='warning'), ' '])]
             return (
                 dbc.Alert(message, color=message_color, dismissable=True),
-                name,
-                summary_table,
-                plots,
-                [{'label': validator['description'], 'value': validator['name']} for validator in
-                 opls_data.validators_],
-                opls_data.validators_[0]['name']
+                html.Div(badges, id='loaded-results-collection')
             )
+
+        @app.callback([Output('results-content', 'children')],
+                      [Input('results-tabs', 'active_tab')])
+        def switch_results_tab(at):
+            try:
+                opls_data = OPLSData()
+                theme = get_plot_theme()
+                if at == 'summary-tab':
+                    return [dbc.Card(dbc.CardBody(opls_data.get_summary_tables(theme)))]
+                elif at == 'quality-tab':
+                    return [dbc.Card(dbc.CardBody(opls_data.get_quality_plots(theme)))]
+                elif at == 'kde-tab':
+                    return [dbc.Card(dbc.CardBody(opls_data.get_metric_kde_plots(theme)))]
+                elif at == 'feature-significance-tab':
+                    return [dbc.Card(dbc.CardBody(opls_data.get_loading_significance_tables(theme)))]
+                else:
+                    return [dbc.Card(dbc.CardBody(html.H6('Error occurred.')))]
+            except:
+                return [dbc.Card(dbc.CardBody([html.H6('Error occurred.'), html.Code(traceback.format_exc())]))]
 
     @staticmethod
     def _register_layout(app):

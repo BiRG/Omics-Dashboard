@@ -227,5 +227,4 @@ def create_placeholder_samples(user: User, data: Dict, count: int) -> List[Sampl
     :param count:
     :return:
     """
-    print(f'create_placeholder_samples: {data}, count: {count}')
     return [create_placeholder_sample(user, data) for _ in range(0, count)]
