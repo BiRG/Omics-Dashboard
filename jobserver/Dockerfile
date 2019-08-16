@@ -1,29 +1,28 @@
 FROM python:3.7-slim
 ARG MYSQL_PASSWORD
-ARG WWW_UID
+ARG OMICS_UID
+ARG OMICS_GID
 RUN mkdir -p /usr/share/man/man1
-RUN apt -y update && apt -y install wget openjdk-8-jre-headless 
-RUN apt -y update && apt -y install build-essential gcc gfortran
-RUN apt -y update && apt -y install mysql-client
+RUN apt -y update && apt -y install wget openjdk-8-jre-headless build-essential gcc gfortran mysql-client git \
+      && rm -rf /var/lib/apt/lists/*
 RUN pip install --upgrade pip
 ADD requirements.txt .
 RUN pip install -r requirements.txt
-#RUN pip install git+https://github.com/BiRG/cwltool.git
 
-RUN wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
-
-RUN wget --quiet https://get.docker.com/builds/Linux/x86_64/docker-1.13.1.tgz -O docker.tgz
-RUN tar xvf docker.tgz
-RUN ln -s /docker/docker /usr/bin/docker
-
-#ADD tools/*.py /usr/local/bin/
-#RUN chmod +x /usr/local/bin/*.py
 ADD cromwell.conf /
 RUN sed -ri "s|(password = )\"(.*)\"|\1\""$MYSQL_PASSWORD"\"|g" /cromwell.conf
-ADD entrypoint.sh /
-RUN chmod +x /entrypoint.sh
+RUN cat /cromwell.conf
 ENV PATH="/modules/sbin:/modules/bin:${PATH}"
-RUN groupmod -g $WWW_UID www-data
-RUN usermod -u $WWW_UID www-data
-USER www-data
+RUN groupadd -f -g $OMICS_GID omics
+RUN useradd -u $OMICS_UID -g omics omics
+
+ADD entrypoint.sh /
+ADD https://github.com/broadinstitute/cromwell/releases/download/44/cromwell-44.jar /usr/bin
+RUN chown omics:omics /entrypoint.sh /cromwell.conf /usr/bin/cromwell-44.jar && chmod +x /entrypoint.sh
+RUN touch /var/log/nvblas.log && chown omics:omics /var/log/nvblas.log
+
+ADD https://download.docker.com/linux/static/stable/x86_64/docker-19.03.1.tgz .
+RUN tar -C /usr/bin -xvf docker-19.03.1.tgz --strip 1 && rm docker-19.03.1.tgz
+
+USER omics
 ENTRYPOINT /entrypoint.sh

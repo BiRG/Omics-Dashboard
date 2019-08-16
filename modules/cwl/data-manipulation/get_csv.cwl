@@ -2,10 +2,10 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: getcsv
 baseCommand:
-  - getcsv.py
+  - get_csv.py
 inputs:
-  - id: collection
-    doc: A collection id.
+  - id: inputFile
+    doc: A collection file.
     type: File
     inputBinding:
       position: 0

@@ -1,22 +1,12 @@
 {% extends "base.html" %}
-{% from 'components/macros.html' import list_table %}
+{% from 'components/macros.html' import list_table_card %}
 {% block content %}
   {{ super() }}
   <div class="jumbotron">
     <h1 class="display-4">Hello {{ page_data.current_user.name }}!</h1>
     <p class="lead">Welcome to Omics Dashboard! For help <a href="{{ url_for('browser.render_help') }}">click here.</a></p>
   </div>
-  {{ list_table(page_data.analysis_table_data) }}
-  {{ list_table(page_data.collection_table_data) }}
-  {{ list_table(page_data.user_group_table_data) }}
-{% endblock %}
-{% block scripts %}
-  {{ super() }}
-  <script>
-  $(document).ready(() => {
-    $('#your-analyses-table').dataTable({ dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
-    $('#your-collections-table').dataTable({ dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
-    $('#your-user-groups-table').dataTable({dom: 'lBfrtip', order: [[0, 'desc']], buttons:['colvis']});
-  })
-  </script>
+    {{ list_table_card(page_data.analysis_table_data) }}
+    {{ list_table_card(page_data.collection_table_data) }}
+    {{ list_table_card(page_data.user_group_table_data) }}
 {% endblock %}

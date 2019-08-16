@@ -26,7 +26,7 @@ def get_collection_metadata(filename: str) -> Dict[str, Any]:
     dims = approximate_dims(filename)
     attrs['max_row_count'] = dims[0]
     attrs['max_col_count'] = dims[1]
-    return {key: (value.item() if hasattr(value, 'item') else value) for (key, value) in attrs.items()}
+    return attrs
 
 
 def get_collection_info(filename: str) -> Dict[str, Any]:
@@ -55,26 +55,15 @@ def get_csv(filename: str, path: str) -> str:
     """Get a string containing comma-separated values for a dataset"""
     with h5py.File(filename, 'r') as infile:
         dataset = infile[str(path)]
-    s = StringIO()
-    if dataset is not None:
-        for row in dataset:
-            s.write(convert_row(row))
-            s.write('\n')
+        s = StringIO()
+        if dataset is not None:
+            dataset = np.array(dataset)
+            if dataset.dtype.type is np.object_:
+                dataset = dataset.astype(str)
+                np.savetxt(s, dataset, delimiter=',', fmt='%s')
+            else:
+                np.savetxt(s, dataset, delimiter=',')
         return s.getvalue()
-    raise ValueError('File or path not found')
-
-
-def convert_row(row: np.array) -> str:
-    """Get a comma-separated string representation of a row of a dataset"""
-    if isinstance(row, bytes):
-        return row.decode('ascii')
-    else:
-        return ','.join([convert_cell(cell) for cell in row])
-
-
-def convert_cell(cell: Any) -> str:
-    """Convert an array cell to utf-8 string"""
-    return cell.decode('ascii') if isinstance(cell, bytes) else str(cell)
 
 
 def iterate_dataset_paths(group: h5py.Group, paths: List) -> None:
@@ -85,10 +74,14 @@ def iterate_dataset_paths(group: h5py.Group, paths: List) -> None:
 
 def get_group_info(group: h5py.Group) -> Dict[str, Any]:
     """Get the path, attributes, child groups and child datasets of a group"""
+
+    def process_value(value):
+        value = getattr(value, "tolist", lambda x=value: x)()
+        return value.decode('ascii') if isinstance(value, bytes) else value
+
     return {
         'path': group.name,
-        'attrs': {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
-                  for key, value in group.attrs.items()},
+        'attrs': {key: process_value(value) for key, value in group.attrs.items()},
         'groups': [get_group_info(group[key]) for key in group.keys() if isinstance(group[key], h5py.Group)],
         'datasets': [get_dataset_info(group[key]) for key in group.keys() if isinstance(group[key], h5py.Dataset)]
     }

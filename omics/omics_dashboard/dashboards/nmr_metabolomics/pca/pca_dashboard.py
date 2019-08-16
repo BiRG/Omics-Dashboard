@@ -4,11 +4,12 @@ import traceback
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from dash.exceptions import PreventUpdate
 from flask import url_for
 
-from dashboards.dashboard import Dashboard, StyledDash
+from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from .layouts import get_layout
-from .pca_data import get_plot_data, set_plot_data, PCAData, component_list
+from .pca_data import PCAData
 
 
 class PCADashboard(Dashboard):
@@ -20,7 +21,7 @@ class PCADashboard(Dashboard):
     @staticmethod
     def _on_label_key_select(label_keys, op='=='):
         if not label_keys or None in label_keys:
-            raise ValueError('Callback triggered without action!')
+            raise PreventUpdate('Callback triggered without action!')
         label_keys = sorted(label_keys)
         pca_data = PCAData()
         unique_values = [pca_data.unique_vals[val] for val in label_keys]
@@ -60,7 +61,14 @@ class PCADashboard(Dashboard):
         )
         def update_pair_with_options(label_keys):
             if not label_keys or None in label_keys:
-                raise ValueError('Callback triggered without action!')
+                raise PreventUpdate('Callback triggered without action!')
+            return PCADashboard._on_label_key_select(label_keys)
+
+        @app.callback(
+            [Output('project-by-value', 'options')],
+            [Input('project-by', 'value')]
+        )
+        def update_project_by_options(label_keys):
             return PCADashboard._on_label_key_select(label_keys)
 
         @app.callback(
@@ -69,6 +77,7 @@ class PCADashboard(Dashboard):
              Output('ignore-by', 'options'),
              Output('pair-on', 'options'),
              Output('pair-with', 'options'),
+             Output('project-by', 'options'),
              Output('color-by-select', 'options'),
              Output('label-by-select', 'options'),
              Output('loaded-collections', 'children'),
@@ -78,11 +87,12 @@ class PCADashboard(Dashboard):
         )
         def get_collections(n_clicks, value):
             if not value or not n_clicks:
-                raise ValueError('Callback triggered without value')
+                raise PreventUpdate('Callback triggered without value')
             pca_data = PCAData()
             pca_data.get_collections(value)
             label_data = pca_data.get_label_data()
             return (
+                label_data,
                 label_data,
                 label_data,
                 label_data,
@@ -96,11 +106,11 @@ class PCADashboard(Dashboard):
 
         @app.callback(
             [Output('message', 'children'),
-             Output('plot-button', 'disabled'),
              Output('abscissa-select', 'options'),
              Output('abscissa-select', 'value'),
              Output('ordinate-select', 'options'),
              Output('ordinate-select', 'value'),
+             Output('applicate-select', 'options'),
              Output('loading-select', 'options'),
              Output('loading-select', 'value'),
              Output('variance-select', 'options'),
@@ -111,24 +121,32 @@ class PCADashboard(Dashboard):
              State('model-by-value', 'value'),
              State('ignore-by-value', 'value'),
              State('pair-on', 'value'),
-             State('pair-with-value', 'value')]
+             State('pair-with-value', 'value'),
+             State('project-by-value', 'value')]
         )
         def perform_pca(n_clicks,
                         scale_by_queries,
                         model_by_queries,
                         ignore_by_queries,
-                        pair_on, pair_with_queries):
+                        pair_on, pair_with_queries,
+                        project_by_queries):
             if not n_clicks:
-                raise ValueError('Callback triggered without click.')
+                raise PreventUpdate('Callback triggered without click.')
             scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
             model_by = ' | '.join(model_by_queries) if model_by_queries and len(model_by_queries) else None
+            project_by = ' | '.join(project_by_queries) if project_by_queries and len(project_by_queries) else None
             ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
             pair_on = pair_on if pair_on and len(pair_on) else None
             pair_with = ' | '.join(pair_with_queries) if pair_with_queries and len(
                 pair_with_queries) and pair_on else None
             pca_data = PCAData()
             try:
-                message, name, message_color = pca_data.perform_pca(model_by, ignore_by, scale_by, pair_on, pair_with)
+                message, name, message_color = pca_data.perform_analysis(model_by,
+                                                                         ignore_by,
+                                                                         scale_by,
+                                                                         pair_on,
+                                                                         pair_with,
+                                                                         project_by)
                 pc_options = pca_data.get_pc_options()
                 all_pc_options = [option['value'] for option in pc_options]
                 ten_pc_options = [option['value'] for option in pc_options[:10]]
@@ -144,11 +162,11 @@ class PCADashboard(Dashboard):
 
             return (
                 dbc.Alert(message, color=message_color, dismissable=True),
-                False,
                 pc_options,
                 0,
                 pc_options,
                 1,
+                pc_options,
                 pc_options,
                 ten_pc_options,
                 pc_options,
@@ -162,6 +180,7 @@ class PCADashboard(Dashboard):
             [
                 State('abscissa-select', 'value'),
                 State('ordinate-select', 'value'),
+                State('applicate-select', 'value'),
                 State('color-by-select', 'value'),
                 State('label-by-select', 'value'),
                 State('db-index', 'checked'),
@@ -173,6 +192,7 @@ class PCADashboard(Dashboard):
         def add_score_plot(n_clicks,
                            abscissa_value,
                            ordinate_value,
+                           applicate_value,
                            color_by_value,
                            label_by_value,
                            include_db_index,
@@ -180,13 +200,17 @@ class PCADashboard(Dashboard):
                            include_medoid,
                            encircle_by_value):
             if not n_clicks:
-                raise ValueError('')
+                raise PreventUpdate('Callback triggered with no action.')
 
-            plot_data = get_plot_data()
+            plot_data = PCAData.get_plot_data()
+            if abscissa_value is None or ordinate_value is None:
+                return
+
             plot_data['score_plots'].append(
                 {
                     'ordinate': ordinate_value,
                     'abscissa': abscissa_value,
+                    'applicate': applicate_value,
                     'color_by': color_by_value,
                     'label_by': label_by_value,
                     'include_centroid': include_centroid,
@@ -195,12 +219,21 @@ class PCADashboard(Dashboard):
                     'include_db_index': include_db_index and color_by_value
                 }
             )
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
+
+            def _score_plot_info(plot):
+                description = f'PC{plot["applicate"] + 1} vs ' if plot['applicate'] is not None and plot[
+                    'applicate'] != -1 else ''
+                description += f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1}'
+                description += f' colored by {plot["color_by"]}' if plot['color_by'] is not None else ''
+                description += f' encircled by {plot["encircle_by"]}' if plot['encircle_by'] is not None else ''
+                description += f' with medoids' if plot['include_medoid'] else ''
+                description += f' with centroids' if plot['include_centroid'] else ''
+                description += f' with DB index table' if plot['include_db_index'] else ''
+                return description
 
             return [[
-                dbc.ListGroupItem(f'PC{plot["ordinate"] + 1} vs PC{plot["abscissa"] + 1} by {plot["color_by"]}' + (
-                    ' with DB Index' if plot['include_db_index'] else ''))
-                for plot in plot_data['score_plots']
+                dbc.ListGroupItem(_score_plot_info(plot)) for plot in plot_data['score_plots']
             ]]
 
         @app.callback(
@@ -210,16 +243,16 @@ class PCADashboard(Dashboard):
         )
         def add_loading_plot(n_clicks, loading_value):
             if not n_clicks:
-                raise ValueError('')
+                raise PreventUpdate('Callback triggered with no action.')
 
-            plot_data = get_plot_data()
+            plot_data = PCAData.get_plot_data()
             plot_data['loading_plots'].append(
                 {
                     'indices': loading_value
                 }
             )
-            set_plot_data(plot_data)
-            return [[dbc.ListGroupItem(component_list(plot['indices'])) for plot in plot_data['loading_plots']]]
+            PCAData.set_plot_data(plot_data)
+            return [[dbc.ListGroupItem(PCAData.component_list(plot['indices'])) for plot in plot_data['loading_plots']]]
 
         @app.callback(
             [Output('variance-plot-list', 'children')],
@@ -228,17 +261,17 @@ class PCADashboard(Dashboard):
         )
         def add_variance_plot(n_clicks, indices, scale_y):
             if not n_clicks:
-                raise ValueError('')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['variance_plots'].append(
                 {
                     'indices': indices,
                     'scale_y': scale_y
                 }
             )
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [[
-                dbc.ListGroupItem(component_list(plot['indices'])
+                dbc.ListGroupItem(PCAData.component_list(plot['indices'])
                                   + (' (scaled y-axis)' if plot['scale_y'] else ''))
                 for plot in plot_data['variance_plots']
             ]]
@@ -250,10 +283,10 @@ class PCADashboard(Dashboard):
         )
         def add_cumulative_variance_plot(n_clicks, threshold):
             if not n_clicks:
-                raise ValueError('')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['cumulative_variance_plots'].append({'threshold': float(threshold)})
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [[
                 dbc.ListGroupItem(
                     [
@@ -264,32 +297,15 @@ class PCADashboard(Dashboard):
             ]]
 
         @app.callback(
-            [Output('score-card-body', 'children'),
-             Output('loading-card-body', 'children'),
-             Output('variance-card-body', 'children'),
-             Output('cumulative-variance-card-body', 'children')],
-            [Input('plot-button', 'n_clicks')]
-        )
-        def update_figure(n_clicks):
-            if not n_clicks:
-                raise ValueError('Callback triggered without click.')
-            plot_data = get_plot_data()
-            pca_data = PCAData()
-            return pca_data.get_plots(plot_data['score_plots'],
-                                      plot_data['loading_plots'],
-                                      plot_data['variance_plots'],
-                                      plot_data['cumulative_variance_plots'])
-
-        @app.callback(
             [Output('score-plot-list-wrapper', 'children')],
             [Input('score-plot-clear-button', 'n_clicks')]
         )
         def clear_score_plots(n_clicks):
             if not n_clicks:
-                raise ValueError('no clicks!')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['score_plots'] = []
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [dbc.ListGroup([], id='score-plot-list')]
 
         @app.callback(
@@ -298,10 +314,10 @@ class PCADashboard(Dashboard):
         )
         def clear_loading_plots(n_clicks):
             if not n_clicks:
-                raise ValueError('no clicks!')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['loading_plots'] = []
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [dbc.ListGroup([], id='loading-plot-list')]
 
         @app.callback(
@@ -310,10 +326,10 @@ class PCADashboard(Dashboard):
         )
         def clear_variance_plots(n_clicks):
             if not n_clicks:
-                raise ValueError('no clicks!')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['variance_plots'] = []
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [dbc.ListGroup([], id='variance-plot-list')]
 
         @app.callback(
@@ -322,10 +338,10 @@ class PCADashboard(Dashboard):
         )
         def clear_variance_plots(n_clicks):
             if not n_clicks:
-                raise ValueError('no clicks!')
-            plot_data = get_plot_data()
+                raise PreventUpdate('Callback triggered with no action.')
+            plot_data = PCAData.get_plot_data()
             plot_data['cumulative_variance_plots'] = []
-            set_plot_data(plot_data)
+            PCAData.set_plot_data(plot_data)
             return [dbc.ListGroup([], id='cumulative-variance-plot-list')]
 
         @app.callback(
@@ -337,10 +353,10 @@ class PCADashboard(Dashboard):
              State('file-format-select', 'value')]
         )
         def prepare_results_file(n_clicks, results_values, file_format_values):
-            score_plot_data = get_plot_data()['score_plots']
+            score_plot_data = PCAData.get_plot_data()['score_plots']
             pca_data = PCAData()
             if not n_clicks:
-                raise ValueError('no clicks')
+                raise PreventUpdate('Callback triggered with no action.')
             if not pca_data.results_exist:
                 return '#', 'secondary', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
             try:
@@ -369,10 +385,10 @@ class PCADashboard(Dashboard):
             [State('plot-file-format-select', 'value')]
         )
         def prepare_plots_file(n_clicks, file_format_values):
-            plot_data = get_plot_data()
+            plot_data = PCAData.get_plot_data()
             pca_data = PCAData()
             if not n_clicks:
-                raise ValueError('no clicks')
+                raise PreventUpdate('Callback triggered with no action.')
             if not pca_data.results_exist:
                 return '#', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
             try:
@@ -399,7 +415,7 @@ class PCADashboard(Dashboard):
         )
         def post_results(n_clicks, name, analysis_ids):
             if not n_clicks:
-                raise ValueError('no clicks')
+                raise PreventUpdate('Callback triggered with no action.')
             pca_data = PCAData()
             try:
                 iter(analysis_ids)
@@ -412,6 +428,42 @@ class PCADashboard(Dashboard):
                                    html.Strong('Traceback:'),
                                    html.P(html.Pre(traceback.format_exc(), className='text-white'))],
                                   color='danger', dismissable=True)]
+
+        @app.callback(
+            [Output('plot-content', 'children')],
+            [Input('plot-tabs', 'active_tab')]
+        )
+        def switch_plot_tab(at):
+            pca_data = PCAData()
+            plot_data = pca_data.get_plot_data()
+            pca_data.load_results()
+            pca_data.load_labels()
+            theme = get_plot_theme()
+            if at == 'score-plot-tab':
+                score_plots = [pca_data.get_score_plot(plot['ordinate'],
+                                                       plot['abscissa'],
+                                                       plot['applicate'],
+                                                       plot['color_by'],
+                                                       plot['include_db_index'],
+                                                       plot['label_by'],
+                                                       plot['encircle_by'],
+                                                       plot['include_centroid'],
+                                                       plot['include_medoid'],
+                                                       theme=theme)
+                               for plot in plot_data['score_plots']]
+
+                return [dbc.Card(dbc.CardBody([item for pair in score_plots for item in pair]))]
+            elif at == 'loadings-plot-tab':
+                return [dbc.Card(dbc.CardBody(
+                    [pca_data.get_loading_plot(plot['indices'], theme=theme) for plot in plot_data['loading_plots']]))]
+            elif at == 'variance-plot-tab':
+                return [dbc.Card(dbc.CardBody([pca_data.get_variance_plot(plot['scale_y'], plot['indices'], theme=theme)
+                                               for plot in plot_data['variance_plots']]))]
+            elif at == 'cumulative-variance-plot-tab':
+                return [dbc.Card(dbc.CardBody([pca_data.get_cumulative_variance_plot(plot['threshold'], theme=theme)
+                                               for plot in plot_data['cumulative_variance_plots']]))]
+            else:
+                return [dbc.Card(dbc.CardBody(html.H6('This should never be reached.')))]
 
     @staticmethod
     def _register_layout(app):

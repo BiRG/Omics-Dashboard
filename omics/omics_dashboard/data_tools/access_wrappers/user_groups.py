@@ -131,11 +131,9 @@ def elevate_user(current_user: User, target_user: User, user_group: UserGroup) -
     """
     if is_user_group_admin(current_user, user_group):
         if not is_user_group_admin(target_user, user_group):
-            print(f'elevate {target_user.id} in group {user_group.id}')
             user_group.admins.append(target_user)
             if target_user not in user_group.members:
                 user_group.members.append(target_user)
-            print(user_group.to_dict())
             db.session.commit()
         return user_group
     raise AuthException(f'User{current_user.email} not authorized to modify group {user_group.id}')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# python3 uploadsamples.py <input_filenames> metadata_filename collection_id_start auth_token
+# python3 upload_samples.py <input_filenames> metadata_filename collection_id_start auth_token
 
 import h5py
 import os
@@ -32,6 +32,8 @@ metadata = json.load(open(metadata_file, 'r'))
 if 'name' in metadata:
     del metadata['name'] # preserve name set up in previous steps
 for output_filename, collection_id in zip(output_filenames, collection_ids):
+    with h5py.File(output_filename) as file:
+        metadata['name'] = file.attrs['name'].decode('ascii')
     url = f'{omics_url}/api/samples/{collection_id}'
     files = {'file': open(output_filename, 'rb')}
     res = post(url,

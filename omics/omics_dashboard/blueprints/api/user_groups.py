@@ -37,8 +37,6 @@ def get_user_group(user_group_id=None):
                 dt.user_groups.update_user_attachments(user, user_group, users)
             if 'admin_ids' in new_data:
                 admin_users = [dt.users.get_user(user, user_id) for user_id in new_data['admin_ids']]
-                print(new_data['admin_ids'])
-                print(admin_users)
                 dt.user_groups.update_admins(user, user_group, admin_users)
                 for admin_user in admin_users:
                     dt.user_groups.elevate_user(user, admin_user, user_group)

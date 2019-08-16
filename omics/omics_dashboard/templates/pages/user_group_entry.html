@@ -1,5 +1,5 @@
 {% extends 'entry.html' %}
-{% from 'components/macros.html' import list_table %}
+{% from 'components/macros.html' import list_table_tab_panel, list_table_tab %}
 {% block headline %}
   {{ super() }}
     {% if page_data.is_member %}
@@ -14,9 +14,13 @@
     {% endif %}
     {% endif %}
 {% endblock %}
-{% block content %}
+{% block tabnav %}
+    {{ super() }}
+    {{ list_table_tab(page_data.user_table_data) }}
+{% endblock %}
+{% block tabpanels %}
   {{ super() }}
-  {{ list_table(page_data.user_table_data) }}
+    {{ list_table_tab_panel(page_data.user_table_data) }}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

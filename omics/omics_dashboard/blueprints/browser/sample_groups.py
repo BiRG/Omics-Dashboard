@@ -38,9 +38,7 @@ def render_sample_group(sample_group_id=None):
         sample_group = get_sample_group(current_user, sample_group_id)
         if request.method == 'DELETE':
             samples_to_delete = [sample for sample in sample_group.samples if len(sample.sample_groups) < 2]
-            print(f'samples_to_delete: {samples_to_delete}')
             delete_sample_group(current_user, sample_group)
-            print(f'samples_to_delete: {samples_to_delete}')
             for sample in samples_to_delete:
                 try:
                     delete_sample(current_user, sample)

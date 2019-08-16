@@ -112,7 +112,7 @@ def create_sample_creation_workflow(user: User, input_filenames: List[str], meta
                 },
                 {
                     'id': 'update',
-                    'run': f'{MODULEDIR}/omics-service/uploadsamples.cwl',
+                    'run': f'{MODULEDIR}/omics-service/upload_samples.cwl',
                     'in':
                         [
                             {'id': 'input_files',

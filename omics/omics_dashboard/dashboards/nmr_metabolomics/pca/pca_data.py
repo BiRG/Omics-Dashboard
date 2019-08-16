@@ -1,15 +1,12 @@
-import itertools
 import os
 import shutil
-import time as tm
-from typing import List, Dict, Any, Union, Tuple
+from typing import List, Dict, Union, Tuple
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import h5py
-import msgpack
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
@@ -20,59 +17,32 @@ from flask_login import current_user
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 from sklearn.decomposition import PCA
 
-import data_tools.redis as rds
-from data_tools.access_wrappers.collections import get_collection_copy, upload_collection
+from data_tools.access_wrappers.collections import upload_collection
+from ..multivariate_analysis_data import MultivariateAnalysisData
 
 
-def component_list(val):
-    def _list_to_range(i):
-        for a, b in itertools.groupby(enumerate(i), lambda x: x[1] - x[0]):
-            b = list(b)
-            yield b[0][1], b[-1][1]
+class PCAData(MultivariateAnalysisData):
+    _empty_plot_data = {
+        'score_plots': [],
+        'loading_plots': [],
+        'variance_plots': [],
+        'cumulative_variance_plots': []
+    }
+    redis_prefix = 'pca'
 
-    return ','.join([f'PC{r[0]+1}–PC{r[1]+1}' if r[0] != r[1] else f'PC{r[0]+1}' for r in _list_to_range(val)])
-
-
-def get_plot_data() -> Dict[str, List[Dict[str, Any]]]:
-    try:
-        plot_data = msgpack.loads(rds.get_value('pca_plot_data'), raw=False)
-    except Exception as e:
-        plot_data = None
-    if plot_data is None:
-        plot_data = {
+    def __init__(self, load_data=False):
+        # any of these can be None
+        super().__init__(load_data)
+        self.redis_prefix = 'pca'
+        self._empty_plot_data = {
             'score_plots': [],
             'loading_plots': [],
             'variance_plots': [],
             'cumulative_variance_plots': []
         }
-    # warning: we don't validate any of this
-    return plot_data
-
-
-def set_plot_data(plot_data: Dict[str, List[Dict[str, Any]]]) -> None:
-    rds.set_value('pca_plot_data', msgpack.dumps(plot_data))
-
-
-def clear_plot_data():
-    rds.delete_value('pca_plot_data')
-
-
-class PCAData:
-    def __init__(self, load_data=False):
-        # any of these can be None
-        self._label_df = None
-        self._processed_label_df = None
-        self._numeric_df = None
         self._loadings = None
         self._scores = None
         self._explained_variance_ratio = None
-        self._x = None
-        self._x_min = None
-        self._x_max = None
-        self._loaded_collection_ids = []
-        self._dataframe_filename = None
-        self._results_filename = None
-        self._good_x_inds = None
         self.load_file_info()
         if load_data:
             try:
@@ -102,71 +72,9 @@ class PCAData:
         except:
             return False
 
-    def load_file_info(self):
-        data_frame_filename = rds.get_value('pca_dataframe_filename')
-        self._dataframe_filename = data_frame_filename.decode('utf-8') if data_frame_filename is not None else None
-        results_filename = rds.get_value('pca_results_filename')
-        self._results_filename = results_filename.decode('utf-8') if results_filename is not None else None
-        if not self._dataframe_filename or not os.path.isfile(self._dataframe_filename):
-            rds.delete_value('pca_dataframe_filename')
-            rds.delete_value('pca_results_filename')
-            self._dataframe_filename = None
-            self._results_filename = None
-        try:
-            self._loaded_collection_ids = msgpack.loads(rds.get_value('pca_loaded_collection_ids'))
-        except TypeError:
-            self._loaded_collection_ids = []
-
-    def set_file_info(self):
-        rds.set_value('pca_dataframe_filename', self._dataframe_filename.encode('utf-8'))
-        rds.set_value('pca_results_filename', self._results_filename.encode('utf-8'))
-        rds.set_value('pca_loaded_collection_ids', msgpack.dumps(self._loaded_collection_ids))
-
-    def load_dataframes(self):
-        self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
-        self._processed_label_df = pd.read_hdf(self._dataframe_filename, 'processed_label_df')
-        self._numeric_df = pd.read_hdf(self._dataframe_filename, 'numeric_df')
-        with h5py.File(self._dataframe_filename) as file:
-            self._x = np.array(file['x']) if 'x' in file else None
-            self._x_min = np.array(file['x_min']) if 'x_min' in file else None
-            self._x_max = np.array(file['x_max']) if 'x_max' in file else None
-
-    def save_dataframes(self):
-        self._label_df.to_hdf(self._dataframe_filename, 'label_df', mode='a')
-        self._processed_label_df.to_hdf(self._dataframe_filename, 'processed_label_df', mode='a')
-        self._numeric_df.to_hdf(self._dataframe_filename, 'numeric_df', mode='a')
-        with h5py.File(self._dataframe_filename, 'r+') as file:
-            if self._x is not None:
-                if 'x' in file:
-                    del file['x']
-                file['x'] = self._x
-            if self._x_min is not None:
-                if 'x_min' in file:
-                    del file['x_min']
-                file['x_min'] = self._x_min
-            if self._x_max is not None:
-                if 'x_max' in file:
-                    del file['x_max']
-                file['x_max'] = self._x_max
-
-    def load_labels(self):
-        self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
-        self._processed_label_df = pd.read_hdf(self._dataframe_filename, 'processed_label_df')
-
-    def save_labels(self):
-        self._label_df.to_hdf(self._dataframe_filename, 'label_df', mode='a')
-        self._processed_label_df.to_hdf(self._dataframe_filename, 'processed_label_df', mode='a')
-
     def load_results(self):
+        super().load_results()
         with h5py.File(self._results_filename, 'r') as file:
-            self._x = np.array(file['x'])
-            self._x.reshape((1, max(self._x.shape)))
-            self._x_min = np.array(file['x_min']) if 'x_min' in file else None
-            self._x_max = np.array(file['x_max']) if 'x_max' in file else None
-            if self._x_min is not None:
-                self._x_min.reshape((1, -1))
-            if self._x_max is not None:
-                self._x_max.reshape((1, -1))
             self._loadings = np.array(file['loadings'])
             self._scores = np.array(file['scores'])
             self._explained_variance_ratio = np.array(file['explained_variance_ratio'])
@@ -175,37 +83,17 @@ class PCAData:
     def save_results(self, filename=None, file_format='hdf5'):
         if not filename:
             filename = self._results_filename
-        with h5py.File(filename, 'w') as file:  # always create new because dimensions might change
+        super().save_results(filename, file_format)
+        with h5py.File(filename, 'r+') as file:  # always create new because dimensions might change
             file['loadings'] = self._loadings
             file['scores'] = self._scores
             file['explained_variance_ratio'] = self._explained_variance_ratio
-            file['x'] = self._x
-            if self._x_min is not None:
-                file['x_min'] = self._x_min
-            if self._x_max is not None:
-                file['x_max'] = self._x_max
-
-    def load_data(self):
-        self.load_results()
-        self.load_dataframes()
-
-    def set_file_metadata(self, attrs, filename=None):
-        """
-        Use to set things like description, name, parameters
-        :param attrs:
-        :param filename:
-        :return:
-        """
-        filename = filename or self._results_filename
-        with h5py.File(filename, 'r+') as file:
-            for key, value in attrs.items():
-                file.attrs[key] = value
 
     def post_results(self, name, analysis_ids):
         self.load_data()
-        score_plot_data = get_plot_data()['score_plots']
+        score_plot_data = self.get_plot_data()['score_plots']
         include_db_index = any([plot['include_db_index'] for plot in score_plot_data])
-        filename = self.download_results(file_formats=['hdf5'], score_plot_data=get_plot_data()['score_plots'],
+        filename = self.download_results(file_formats=['hdf5'], score_plot_data=score_plot_data,
                                          include_db_index=include_db_index)
         description = name
         with h5py.File(filename, 'r') as file:
@@ -231,7 +119,7 @@ class PCAData:
         self.load_results()
         scores_df = pd.DataFrame(data=self._scores,
                                  index=self._processed_label_df.index,
-                                 columns=[f'PC {i+1}' for i in range(0, len(self._scores))])
+                                 columns=[f'PC {i+1}' for i in range(self._scores.shape[1])])
         label_df = pd.DataFrame(data=label_values, columns=[category_label], index=self._processed_label_df.index)
 
         scores_df.reset_index()
@@ -330,25 +218,25 @@ class PCAData:
         def _save_scores(name, file_format):
             if file_format == 'csv':
                 scores_df = pd.DataFrame(data=self._scores,
-                                         columns=[f'PC{i+1}' for i in range(0, len(self._scores))],
+                                         columns=[f'PC{i + 1}' for i in range(self._scores.shape[1])],
                                          index=self._numeric_df.index)
                 scores_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
-                    if 'pca_scores' in file:
-                        del file['pca_scores']
-                    file['pca_scores'] = self._scores
+                    if 'scores' in file:
+                        del file['scores']
+                    file['scores'] = self._scores
 
         def _save_loadings(name, file_format):
             if file_format == 'csv':
                 loadings_df = pd.DataFrame(data=self._loadings,
                                            columns=np.ravel(self._x),
-                                           index=[f'PC{i+1}' for i in range(0, len(self._loadings))])
+                                           index=[f'PC{i + 1}' for i in range(self._loadings.shape[1])])
                 loadings_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
-                    if 'pca_loadings' in file:
-                        del file['pca_loadings']
+                    if 'loadings' in file:
+                        del file['loadings']
                     if 'x' in file:
                         del file['x']
                     if 'x_min' in file:
@@ -356,7 +244,7 @@ class PCAData:
                     if 'x_max' in file:
                         del file['x_max']
 
-                    file['pca_loadings'] = self._loadings
+                    file['loadings'] = self._loadings
                     file['x'] = self._x
                     if self._x_max is not None:
                         file['x_max'] = self._x_max
@@ -367,13 +255,13 @@ class PCAData:
             if file_format == 'csv':
                 variance_df = pd.DataFrame(data=self._explained_variance_ratio,
                                            columns=['explained_variance_ratio'],
-                                           index=[f'PC{i+1}' for i in range(0, len(self._explained_variance_ratio))])
+                                           index=[f'PC{i + 1}' for i in range(len(self._explained_variance_ratio))])
                 variance_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
-                    if 'pca_explained_variance_ratio' in file:
-                        del file['pca_explained_variance_ratio']
-                    file['pca_explained_variance_ratio'] = self._explained_variance_ratio
+                    if 'explained_variance_ratio' in file:
+                        del file['explained_variance_ratio']
+                    file['explained_variance_ratio'] = self._explained_variance_ratio
 
         def _save_davies_bouldin(path, file_format, score_plots):
             # calculate davis_bouldin for all active plots that use it.
@@ -430,6 +318,7 @@ class PCAData:
             with h5py.File(h5_filename, 'a') as current_file, h5py.File(self._results_filename) as results_file:
                 for key, value in results_file.attrs.items():
                     current_file.attrs[key] = value
+                current_file.attrs['analysis_type'] = 'pca'
             if include_scores:
                 _save_scores(h5_filename, 'hdf5')
             if include_loadings:
@@ -459,184 +348,36 @@ class PCAData:
                 if not create_archive:
                     return csv_filename
             if include_db_index:
-                get_plot_data()
+                self.get_plot_data()
                 csv_filenames = _save_davies_bouldin(f'{csv_prefix}/{filename}', 'csv', score_plot_data)
                 if not create_archive:
                     return csv_filenames[0]
         return shutil.make_archive(results_dir, 'zip', root_dir, filename)
 
-    def get_collections(self, collection_ids: List[int]):
-        data_dir = os.path.dirname(self._dataframe_filename) if self._dataframe_filename is not None else None
-        if data_dir is not None:
-            shutil.rmtree(data_dir)
-        clear_plot_data()
-        collections = [get_collection_copy(current_user, collection_id) for collection_id in collection_ids]
-        if len(collections) > 1:
-            collections[0].merge(collections[1:])
-            collection = collections[0]
-        elif len(collections) == 1:
-            collection = collections[0]
-        else:
-            collection = None
-        if collection is not None:
-            x = collection.get_dataset('x')
-            inds = np.argsort([float(val) for val in x.flatten()])
-            y = collection.get_dataset('Y')
-            collection.set_dataset('x', x[:, inds])
-            collection.set_dataset('Y', y[:, inds])
-            try:
-                x_min = collection.get_dataset('x_min')[:, inds]
-                collection.set_dataset('x_min', x_min)
-                self._x_min = x_min
-            except:
-                self._x_min = None
-            try:
-                x_max = collection.get_dataset('x_max')[:, inds]
-                collection.set_dataset('x_max', x_max)
-                self._x_max = x_max
-            except:
-                self._x_max = None
-            del y
-            data_dir = os.path.dirname(collection.filename)
-            self._results_filename = os.path.join(data_dir, 'results.h5')
-            self._dataframe_filename = os.path.join(data_dir, 'dataframes.h5')
-            self._loaded_collection_ids = collection_ids
-            self._label_df = collection.get_dataframe(include_only_labels=True)
-            self._numeric_df = collection.get_dataframe(numeric_columns=True, include_labels=False)
-            self._good_x_inds = np.where(self._numeric_df.isnull().sum() == 0)[0]
-            self._numeric_df = self._numeric_df[self._numeric_df.columns[self._good_x_inds]]
-            self._x = x[:, self._good_x_inds]
-            self._x_min = self._x_min[:, self._good_x_inds] if self._x_min is not None else None
-            self._x_max = self._x_max[:, self._good_x_inds] if self._x_max is not None else None
-            self._processed_label_df = self._label_df
-            os.remove(collection.filename)
-            self.set_file_info()
-            self.save_dataframes()
-
-    def perform_pca(self,
-                    model_by: str = None,
-                    ignore_by: str = None,
-                    scale_by: str = None,
-                    pair_on: List[str] = None,
-                    pair_with: str = None) -> (str, str, str):
-        data_load_start = tm.time()
-        self.load_dataframes()
-        label_df = self._label_df
-        numeric_df = self._numeric_df
-        data_load_end = tm.time()
-
-        if scale_by:
-            means = numeric_df.loc[label_df.query(scale_by).index].mean()
-            std_devs = numeric_df.loc[label_df.query(scale_by).index].std()
-            numeric_df = numeric_df.sub(means, axis=1).divide(std_devs, axis=1)  # do scaling before everything else
-
-        if ignore_by:
-            label_df = label_df.query(ignore_by)
-            numeric_df = numeric_df.loc[label_df.index]
-
-        warnings = []
-        message_color = 'success'
-        if pair_on and pair_with:
-            good_queries = []
-            for vals, idx, in label_df.groupby(pair_on).groups.items():
-                # find the pair conditions in the sub dataframe
-                if not isinstance(vals, list):
-                    vals = [vals]
-                try:
-                    target_rows = label_df.loc[idx].query(pair_with)
-                    numeric_df.loc[idx].sub(target_rows.mean(), axis=1)
-                except KeyError:
-                    target_rows = []
-                if not len(target_rows):
-                    warnings.append(f'No records matching {pair_with} for {pair_on}=={vals}! '
-                                    f'{pair_on}=={vals} excluded from analysis.')
-                    good_queries.append(
-                        '&'.join([f'{pair_on_i}!={vals_i}' for pair_on_i, vals_i in zip(pair_on, vals)]))
-                    message_color = 'warning'
-            if len(good_queries):
-                label_df = label_df.query('&'.join(good_queries))
-                numeric_df = numeric_df.loc[label_df.index]
-
-        if model_by:
-            model_numeric_df = numeric_df.loc[label_df.index]
-        else:
-            model_numeric_df = numeric_df
-
-        self._good_x_inds = np.where(model_numeric_df.isnull().sum() == 0)[0]
-        good_columns = model_numeric_df.columns[self._good_x_inds]
-        model_numeric_df = model_numeric_df[good_columns]
-        numeric_df = numeric_df[good_columns]
-        self._x = self._x[:, self._good_x_inds]
-        self._x_min = self._x_min[:, self._good_x_inds] if self._x_min is not None else None
-        self._x_max = self._x_max[:, self._good_x_inds] if self._x_max is not None else None
-        metadata = {
-            'model_by': model_by or '',
-            'ignore_by': ignore_by or '',
-            'scale_by': scale_by or '',
-            'pair_on': ','.join(pair_on) if pair_on else '',
-            'pair_with': pair_with or ''
-        }
-        name = f'PCA'
-        if len(self._loaded_collection_ids) > 1:
-            name += ' on collections ' + ','.join(str(collection_id) for collection_id in self._loaded_collection_ids)
-        else:
-            name += ' on collection ' + str(self._loaded_collection_ids[0])
-        description = name
-        if scale_by:
-            description += f' scaled by {scale_by}'
-        if model_by:
-            description += f' including {model_by}'
-        if ignore_by:
-            description += f' ignoring {ignore_by}'
-        if pair_on and pair_with:
-            description += f' paired on {pair_on} against {pair_with}'
-        metadata['name'] = name
-        metadata['description'] = description
-
-        self._processed_label_df = label_df
-        start_time = tm.time()
+    def fit(self,
+            numeric_df,
+            model_numeric_df,
+            model_label_df=None,
+            **kwargs):
         pca = PCA()
         pca.fit(model_numeric_df)
         self._scores = pca.transform(numeric_df)
-        end_time = tm.time()
         self._loadings = pca.components_
         self._explained_variance_ratio = pca.explained_variance_ratio_
-        self.save_dataframes()
-        self.save_results()
-        self.set_file_metadata(metadata)
-        save_end_time = tm.time()
 
-        if len(warnings):
-            message_children = [html.Strong('Warning:'), html.Br()]
-            for warning in warnings:
-                message_children.append(warning)
-                message_children.append(html.Br())
-        else:
-            message_children = []
-        message_children = message_children + [
-            html.Strong(f'Performed PCA in {(end_time-data_load_start):.3f} s.'),
-            html.Br(),
-            f'Loaded data in {(data_load_end-data_load_start):.3f} s.',
-            html.Br(),
-            f'Processed data in {(start_time-data_load_end):.3f} s.',
-            html.Br(),
-            f'Fitted PCA model in {(end_time - start_time):.3f} s.',
-            html.Br(),
-            f'Cached data in {(save_end_time - end_time):.3f} s.'
-        ]
-        return html.P(message_children), metadata['name'], message_color
-
-    def _get_score_plot(self,
-                        ordinate,
-                        abscissa,
-                        color_by_labels,
-                        include_db_index,
-                        label_by_labels,
-                        encircle_by,
-                        plot_centroid,
-                        plot_medoid,
-                        graph_only=False,
-                        theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+    def get_score_plot(self,
+                       ordinate,
+                       abscissa,
+                       applicate,
+                       color_by_labels,
+                       include_db_index,
+                       label_by_labels,
+                       encircle_by,
+                       plot_centroid,
+                       plot_medoid,
+                       graph_only=False,
+                       theme=None) -> Union[dcc.Graph, Tuple[dcc.Graph, Union[dash_table.DataTable, html.Div]]]:
+        is_3d = (applicate is not None) and (applicate != -1)
         theme = theme or 'plotly_white'
         color_by_labels = color_by_labels or []
         encircle_by = encircle_by or []
@@ -670,7 +411,20 @@ class PCAData:
                 name=color_label,
                 mode='markers',
                 marker={
-                    'opacity': 0
+                    'opacity': 0,
+                    'size': 0,
+                    'color': 'rgba(0,0,0,0)'
+                }
+            ) if not is_3d else go.Scatter3d(
+                x=[0],
+                y=[0],
+                z=[0],
+                name=color_label,
+                mode='markers',
+                marker={
+                    'opacity': 0,
+                    'size': 0,
+                    'color': 'rgba(0,0,0,0)'
                 }
             )
         ]
@@ -700,6 +454,20 @@ class PCAData:
                         'line': {'width': 0.5, 'color': 'white'},
                         'color': color
                     }
+                ) if not is_3d else go.Scatter3d(
+                    x=self._scores[inds, abscissa],
+                    y=self._scores[inds, ordinate],
+                    z=self._scores[inds, applicate],
+                    text=['<br>'.join([f'{label}: {label_df[label][ind]}' for label in
+                                       label_df.columns]) for ind in inds],
+                    name=name,
+                    mode='markers',
+                    marker={
+                        'size': 5,
+                        'opacity': 0.5,
+                        'line': {'width': 0.5, 'color': 'white'},
+                        'color': color
+                    }
                 )
             )
             if plot_centroid:
@@ -712,6 +480,20 @@ class PCAData:
                         mode='markers',
                         marker={
                             'size': 20,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'x'
+                        }
+                    ) if not is_3d else go.Scatter3d(
+                        x=[np.mean(self._scores[inds, abscissa])],
+                        y=[np.mean(self._scores[inds, ordinate])],
+                        z=[np.mean(self._scores[inds, applicate])],
+                        text=f'{name} centroid',
+                        name=f'{name} centroid',
+                        mode='markers',
+                        marker={
+                            'size': 5,
                             'opacity': 0.85,
                             'line': {'width': 0.5, 'color': 'white'},
                             'color': color,
@@ -734,10 +516,33 @@ class PCAData:
                             'color': color,
                             'symbol': 'cross'
                         }
+                    ) if not is_3d else go.Scatter3d(
+                        x=[np.median(self._scores[inds, abscissa])],
+                        y=[np.median(self._scores[inds, ordinate])],
+                        z=[np.median(self._scores[inds, applicate])],
+                        text=f'{name} medoid',
+                        name=f'{name} medoid',
+                        mode='markers',
+                        marker={
+                            'size': 5,
+                            'opacity': 0.85,
+                            'line': {'width': 0.5, 'color': 'white'},
+                            'color': color,
+                            'symbol': 'cross'
+                        }
                     )
                 )
             if label_labels is not None:
-                annotations = annotations + [
+                annotations += [
+                    {
+                        'x': self._scores[ind, abscissa],
+                        'y': self._scores[ind, ordinate],
+                        'xref': 'x',
+                        'yref': 'y',
+                        'text': label_labels[ind],
+                        'showarrow': False
+                    } for ind in inds
+                ] if not is_3d else [
                     {
                         'x': self._scores[ind, abscissa],
                         'y': self._scores[ind, ordinate],
@@ -747,104 +552,133 @@ class PCAData:
                         'showarrow': False
                     } for ind in inds
                 ]
-            for metric in encircle_by:
-                if metric[1:] == 'std':
-                    x_std = np.std(self._scores[inds, abscissa])
-                    y_std = np.std(self._scores[inds, ordinate])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x0 = x_mean - x_std * float(metric[0])
-                    x1 = x_mean + x_std * float(metric[0])
-                    y0 = y_mean - y_std * float(metric[0])
-                    y1 = y_mean + y_std * float(metric[0])
-                if metric[1:] == 'sem':
-                    x_sem = stats.sem(self._scores[inds, abscissa])
-                    y_sem = stats.sem(self._scores[inds, ordinate])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x0 = x_mean - x_sem * float(metric[0])
-                    x1 = x_mean + x_sem * float(metric[0])
-                    y0 = y_mean - y_sem * float(metric[0])
-                    y1 = y_mean + y_sem * float(metric[0])
-                elif metric == 'range':
-                    x0 = np.min(self._scores[inds, abscissa])
-                    x1 = np.max(self._scores[inds, abscissa])
-                    y0 = np.min(self._scores[inds, ordinate])
-                    y1 = np.max(self._scores[inds, ordinate])
-                elif metric == '95percentile':
-                    x_ptile = np.percentile(self._scores[inds, abscissa], 95)
-                    y_ptile = np.percentile(self._scores[inds, ordinate], 95)
-                    x_median = np.median(self._scores[inds, abscissa])
-                    y_median = np.median(self._scores[inds, ordinate])
-                    x0 = x_median - x_ptile
-                    x1 = x_median + x_ptile
-                    y0 = y_median - y_ptile
-                    y1 = y_median + y_ptile
-                elif metric[2:] == 'conf':
-                    conf = float(metric[:2]) / 100.0
-                    n = len(self._scores[inds, abscissa])
-                    x_mean = np.mean(self._scores[inds, abscissa])
-                    y_mean = np.mean(self._scores[inds, ordinate])
-                    x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
-                    y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
-                    x0 = x_mean - x_h
-                    x1 = x_mean + x_h
-                    y0 = y_mean - y_h
-                    y1 = y_mean + y_h
-                else:
-                    x0 = 0
-                    x1 = 0
-                    y0 = 0
-                    y1 = 0
+            if not is_3d:
+                for metric in encircle_by:
+                    if metric.endswith('std'):
+                        x_std = np.std(self._scores[inds, abscissa])
+                        y_std = np.std(self._scores[inds, ordinate])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x0 = x_mean - x_std * float(metric[0])
+                        x1 = x_mean + x_std * float(metric[0])
+                        y0 = y_mean - y_std * float(metric[0])
+                        y1 = y_mean + y_std * float(metric[0])
+                    if metric.endswith('sem'):
+                        x_sem = stats.sem(self._scores[inds, abscissa])
+                        y_sem = stats.sem(self._scores[inds, ordinate])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x0 = x_mean - x_sem * float(metric[0])
+                        x1 = x_mean + x_sem * float(metric[0])
+                        y0 = y_mean - y_sem * float(metric[0])
+                        y1 = y_mean + y_sem * float(metric[0])
+                    elif metric == 'range':
+                        x0 = np.min(self._scores[inds, abscissa])
+                        x1 = np.max(self._scores[inds, abscissa])
+                        y0 = np.min(self._scores[inds, ordinate])
+                        y1 = np.max(self._scores[inds, ordinate])
+                    elif metric == '95percentile':
+                        x_ptile = np.percentile(self._scores[inds, abscissa], 95)
+                        y_ptile = np.percentile(self._scores[inds, ordinate], 95)
+                        x_median = np.median(self._scores[inds, abscissa])
+                        y_median = np.median(self._scores[inds, ordinate])
+                        x0 = x_median - x_ptile
+                        x1 = x_median + x_ptile
+                        y0 = y_median - y_ptile
+                        y1 = y_median + y_ptile
+                    elif metric.endswith('conf'):
+                        conf = float(metric[:2]) / 100.0
+                        n = len(self._scores[inds, abscissa])
+                        x_mean = np.mean(self._scores[inds, abscissa])
+                        y_mean = np.mean(self._scores[inds, ordinate])
+                        x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        x0 = x_mean - x_h
+                        x1 = x_mean + x_h
+                        y0 = y_mean - y_h
+                        y1 = y_mean + y_h
+                    else:
+                        x0 = 0
+                        x1 = 0
+                        y0 = 0
+                        y1 = 0
 
-                shapes.append(
-                    {
-                        'type': 'circle',
-                        'xref': 'x',
-                        'yref': 'y',
-                        'x0': x0,
-                        'y0': y0,
-                        'x1': x1,
-                        'y1': y1,
-                        'opacity': 0.25,
-                        'fillcolor': color,
-                        'line': {'color': color}
-                    }
-                )
+                    shapes.append(
+                        {
+                            'type': 'circle',
+                            'xref': 'x',
+                            'yref': 'y',
+                            'x0': x0,
+                            'y0': y0,
+                            'x1': x1,
+                            'y1': y1,
+                            'opacity': 0.25,
+                            'fillcolor': color,
+                            'line': {'color': color}
+                        }
+                    )
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
-        graph = dcc.Graph(figure={
-            'data': graph_data,
-            'layout': go.Layout(
-                shapes=shapes,
-                annotations=annotations,
-                height=700,
-                template=theme,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                xaxis={
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
+        layout = go.Layout(
+            shapes=shapes,
+            annotations=annotations,
+            height=700,
+            font={'size': 16},
+            template=theme,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            xaxis={
+                'title': f'PC{abscissa + 1}',
+                **axis_line_style
+            },
+            yaxis={
+                'title': f'PC{ordinate + 1}',
+                **axis_line_style
+            }
+        ) if not is_3d else go.Layout(
+            annotations=annotations,
+            height=700,
+            font={'size': 14},
+            template=theme,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            scene={
+                'xaxis': {
                     'title': f'PC{abscissa + 1}',
                     **axis_line_style
                 },
-                yaxis={
+                'yaxis': {
                     'title': f'PC{ordinate + 1}',
                     **axis_line_style
+                },
+                'zaxis': {
+                    'title': f'PC{applicate + 1}',
+                    **axis_line_style
                 }
-            )
+            }
+        )
+        graph = dcc.Graph(figure={
+            'data': graph_data,
+            'layout': layout
         })
         if graph_only:
             return graph
         return graph, table
 
-    def _get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
+    def get_loading_plot(self, loadings, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
-
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         return dcc.Graph(figure={
             'data': [
                 go.Scatter(
@@ -865,20 +699,24 @@ class PCAData:
                     'title': 'PC Loading',
                     **axis_line_style
                 },
+                font={'size': 16},
                 template=theme,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_variance_plot(self, scale_y=False, indices=None, theme=None) -> dcc.Graph:
+    def get_variance_plot(self, scale_y=False, indices=None, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         all_indices = [i for i in range(0, len(self._explained_variance_ratio))]
         indices = list(set(all_indices).intersection(set(indices)))
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         xaxis = {'title': 'Principal Component', **axis_line_style}
         yaxis = {'title': '% Variance Explained', **axis_line_style}
         if not scale_y:
@@ -895,17 +733,21 @@ class PCAData:
                 xaxis=xaxis,
                 yaxis=yaxis,
                 template=theme,
+                font={'size': 16},
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
         })
 
-    def _get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
+    def get_cumulative_variance_plot(self, threshold, theme=None) -> dcc.Graph:
         theme = theme or 'plotly_white'
         axis_line_style = {
-            'zerolinecolor': '#9FA8B2',
-            'gridcolor': '#444444',
-        } if theme == 'plotly_dark' else {}
+            'zerolinecolor': '#375A7F',  # darkly primary
+            'gridcolor': '#444444'  # darkly secondary
+        } if theme == 'plotly_dark' else {
+            'zerolinecolor': '#2C3E50',  # flatly primary
+            'gridcolor': '#95A5A6'  # flatly secondary
+        }
         cumulative = 100 * np.cumsum(self._explained_variance_ratio)
         first_index = np.argwhere(cumulative > threshold).flatten()[0]
         line_x = first_index + 1
@@ -924,6 +766,7 @@ class PCAData:
                 template=theme,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
+                font={'size': 16},
                 shapes=[
                     {
                         'type': 'line',
@@ -970,29 +813,30 @@ class PCAData:
         self.load_results()
         from dashboards.dashboard import get_plot_theme
         theme = get_plot_theme()
-        score_plots = [self._get_score_plot(plot['ordinate'],
-                                            plot['abscissa'],
-                                            plot['color_by'],
-                                            include_db_index_tables and plot['include_db_index'],
-                                            plot['label_by'],
-                                            plot['encircle_by'],
-                                            plot['include_centroid'],
-                                            plot['include_medoid'],
-                                            theme=theme)
+        score_plots = [self.get_score_plot(plot['ordinate'],
+                                           plot['abscissa'],
+                                           plot['applicate'],
+                                           plot['color_by'],
+                                           include_db_index_tables and plot['include_db_index'],
+                                           plot['label_by'],
+                                           plot['encircle_by'],
+                                           plot['include_centroid'],
+                                           plot['include_medoid'],
+                                           theme=theme)
                        for plot in score_plot_data]
         return (
             [
                 item for pair in score_plots for item in pair
             ] if include_db_index_tables else [pair[0] for pair in score_plots],
             [
-                self._get_loading_plot(plot['indices'], theme=theme) for plot in loading_plot_data
+                self.get_loading_plot(plot['indices'], theme=theme) for plot in loading_plot_data
             ],
             [
-                self._get_variance_plot(plot['scale_y'], plot['indices'], theme=theme) for plot in variance_plot_data
+                self.get_variance_plot(plot['scale_y'], plot['indices'], theme=theme) for plot in variance_plot_data
             ],
             [
-                self._get_cumulative_variance_plot(plot['threshold'],
-                                                   theme=theme) for plot in cumulative_variance_plot_data
+                self.get_cumulative_variance_plot(plot['threshold'],
+                                                  theme=theme) for plot in cumulative_variance_plot_data
             ]
         )
 
@@ -1020,48 +864,35 @@ class PCAData:
             format_dir = os.path.join(plot_dir, file_format)
             os.mkdir(format_dir)
             for plot_info in score_plot_data:
-                plot = self._get_score_plot(plot_info['ordinate'],
-                                            plot_info['abscissa'],
-                                            plot_info['color_by'],
-                                            False,
-                                            plot_info['label_by'],
-                                            plot_info['encircle_by'],
-                                            plot_info['include_centroid'],
-                                            plot_info['include_medoid'],
-                                            True)
+                plot = self.get_score_plot(plot_info['ordinate'],
+                                           plot_info['abscissa'],
+                                           plot_info['color_by'],
+                                           False,
+                                           plot_info['label_by'],
+                                           plot_info['encircle_by'],
+                                           plot_info['include_centroid'],
+                                           plot_info['include_medoid'],
+                                           True)
                 filename = f'{base_filename}_scores_{plot_info["ordinate"]+1}_vs_{plot_info["abscissa"]+1}'
                 if plot_info['color_by']:
                     filename += '_by_' + ','.join(plot_info['color_by'])
                 filename = os.path.join(format_dir, f'{filename}.{file_format}')
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in loading_plot_data:
-                plot = self._get_loading_plot(plot_info['indices'])
-                components = component_list(plot_info['indices']).replace('–', '-')
+                plot = self.get_loading_plot(plot_info['indices'])
+                components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_loadings_{components}.{file_format}"
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in variance_plot_data:
-                plot = self._get_variance_plot(plot_info['scale_y'], plot_info['indices'])
-                components = component_list(plot_info['indices']).replace('–', '-')
+                plot = self.get_variance_plot(plot_info['scale_y'], plot_info['indices'])
+                components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_variance_{components}.{file_format}"
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
             for plot_info in cumulative_variance_plot_data:
-                plot = self._get_cumulative_variance_plot(plot_info['threshold'])
+                plot = self.get_cumulative_variance_plot(plot_info['threshold'])
                 filename = f'{format_dir}/{base_filename}_cumulative_variance_{plot_info["threshold"]}.{file_format}'
                 pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
         return shutil.make_archive(plot_dir, 'zip', root_dir, f"{base_filename}_plots")
-
-    def get_collection_badges(self) -> List[html.Span]:
-        return [
-            html.Span([dbc.Badge(f'{collection_id}', className='badge-pill', color='primary'), ' '])
-            for collection_id in self._loaded_collection_ids
-        ] if self._loaded_collection_ids else [html.Span([dbc.Badge('None', className='badge-pill')])]
-
-    def get_collection_load_info(self) -> str:
-        return f'Collections loaded in {os.path.dirname(self._dataframe_filename)}'
-
-    def get_label_data(self) -> List[Dict[str, str]]:
-        self.load_dataframes()
-        return [{'label': label, 'value': label} for label in self.labels]
 
     def get_pc_options(self) -> List[Dict[str, Union[str, int]]]:
         self.load_results()

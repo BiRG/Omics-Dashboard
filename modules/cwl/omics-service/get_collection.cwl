@@ -1,11 +1,11 @@
 class: CommandLineTool
 cwlVersion: v1.0
-id: postcollections
+id: getcollection
 baseCommand:
-  - postcollections.py
+  - get_collection.py
 inputs:
-  - id: input_files
-    type: File[]
+  - id: collection_id
+    type: int
     inputBinding:
       position: 0
   - id: omics_url
@@ -13,11 +13,13 @@ inputs:
     inputBinding:
       position: 1
   - id: omics_auth_token
-    type: String
+    type: string
     inputBinding:
       position: 2
 outputs:
-  - id: responses
-    type: stdout
-label: Post Collections(s)
-doc: Upload an HDF5 file as a new collection.
+  - id: collection_file
+    type: File
+    outputBinding:
+      glob: '*.h5'
+label: Get Collection
+doc: Get a collection as an HDF5 file.

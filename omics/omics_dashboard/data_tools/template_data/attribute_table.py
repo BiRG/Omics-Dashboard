@@ -119,11 +119,12 @@ class AttributeTableData(PageData):
             self.values['Path'] = AttributeTableRow('filename', record.filename)
             self.values['File Type'] = AttributeTableRow('file_type', record.file_type)
             file_info = record.get_file_info()
-            size_mb = file_info['st_size'] / (1024 * 1024.0)
-            self.values['Size'] = AttributeTableRow('file_size', f'{size_mb:.3f} MB')
-            self.values['File Modified'] = AttributeTableRow('file_mtime',
-                                                             datetime.fromtimestamp(file_info['st_mtime']).strftime(
-                                                                 '%-d %b %Y %H:%M'))
+            if file_info is not None:
+                size_mb = file_info['st_size'] / (1024 * 1024.0)
+                self.values['Size'] = AttributeTableRow('file_size', f'{size_mb:.3f} MB')
+                self.values['File Modified'] = AttributeTableRow('file_mtime',
+                                                                 datetime.fromtimestamp(file_info['st_mtime']).strftime(
+                                                                     '%-d %b %Y %H:%M'))
         if isinstance(record, Base):
             self.values['Date Created'] = AttributeTableRow('created_on', record.created_on.strftime('%-d %b %Y %H:%M'))
             self.values['Date Modified'] = AttributeTableRow('updated_on',

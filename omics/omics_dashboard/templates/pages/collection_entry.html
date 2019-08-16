@@ -1,6 +1,6 @@
 {% extends 'pages/file_entry.html' %}
-{% from 'components/file_label_column_editor.html' import file_label_column_editor, file_label_column_editor_script with context %}
-{% from 'components/macros.html' import list_table, download_dropdown with context %}
+{% from 'components/file_label_column_editor.html' import file_label_column_editor, file_label_column_editor_tab, file_label_column_editor_script with context %}
+{% from 'components/macros.html' import list_table_tab, list_table_tab_panel, download_dropdown with context %}
 {% block headline %}
   {{ super() }}
   <br>
@@ -9,11 +9,17 @@
     {{ download_dropdown(page_data.download_url) }}
   </div>
 {% endblock %}
-{% block content %}
+{% block tabnav %}
+    {{ super() }}
+    {{ file_label_column_editor_tab() }}
+    {{ list_table_tab(page_data.analysis_table_data) }}
+    {{ list_table_tab(page_data.child_table_data) }}
+{% endblock %}
+{% block tabpanels %}
   {{ super() }}
   {{ file_label_column_editor(page_data.label_column_table_data) }}
-  {{ list_table(page_data.analysis_table_data) }}
-  {{ list_table(page_data.child_table_data) }}
+    {{ list_table_tab_panel(page_data.analysis_table_data) }}
+    {{ list_table_tab_panel(page_data.child_table_data) }}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

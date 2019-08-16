@@ -1,15 +1,62 @@
+{% macro job_chart_tab() %}
+    <li class="nav-item">
+        <a class="nav-link" id="job-chart-tab" data-toggle="tab" href="#job-chart-tab-panel" role="tab"
+           aria-controls="job-chart-tab-panel" aria-selected="false">Progress</a>
+    </li>
+{% endmacro %}
 {% macro job_chart() %}
-  <div class="row mt-3">
+    <div class="tab-pane fade" id="job-chart-tab-panel" role="tabpanel" aria-labelledby="job-chart-tab">
     <div class="card w-100">
-      <h4 class="card-header text-white bg-primary">Progress</h4>
       <div class="card-body">
-        <div id="chart_div"></div>
+          <div class="row mb-4">
+              <button class="btn btn-success" onclick="drawChart();"><i class="fas fa-sync"></i> Refresh</button>
+          </div>
+          <div id="chart_div" class="row" style="height: 350px;"></div>
+          <div class="row">
+              <button type="button" class="btn btn-danger" data-target="#cancelModal" data-toggle="modal">Cancel Job
+              </button>
+          </div>
       </div>
     </div>
   </div>
 {% endmacro %}
 
-{% macro job_chart_script(chart_data_url) %}
+{% macro job_cancel_modal() %}
+    <div class="modal fade" id="cancelModal" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Confirm Cancel</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true"><i class="far fa-window-close"></i></span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to cancel this job?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="cancelJob();">Cancel Job</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro job_chart_script(chart_data_url, update_url) %}
+    <script>
+        function cancelJob() {
+            fetch('{{ update_url }}?action=cancel',
+                {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                }).then(res => res.json()).then(data => {
+                console.log(data);
+                location.reload();
+            });
+        }
+    </script>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <script type="text/javascript">
     var parentWorkflowNames = [];
@@ -101,7 +148,7 @@
                         if (callEnd > finalEventEnd) addDataTableRow(dataTable, callFqn, "cromwell final overhead", finalEventEnd, callEnd, ancestry);
                     }
                 } else if (callList[callIndex].executionStatus == "Running" || callList[callIndex].executionStatus == "QueuedInCromwell" || callList[callIndex].executionStatus == "Starting") {
-                    var status = callList[callIndex].executionStatus
+                    var status = callList[callIndex].executionStatus;
                     executionCallsCount++;
                     var endDate = workflowEnd;
                     if(endDate == null) {
@@ -134,9 +181,9 @@
                 timeline: {
                     avoidOverlappingGridLines: false,
                     showBarLabels: false,
-                    rowLabelStyle: { fontName: 'Arimo', fontSize: 16, color: '#212529' },
+                    rowLabelStyle: {fontSize: 16, color: '#212529'},
                     // Although bar labels are unshown, they still affect the height of each row. So make it small.
-                    barLabelStyle: { fontName: 'Helvetica', fontSize: 12, color: '#212529' }
+                    barLabelStyle: {fontSize: 12, color: '#212529'}
                 },
                 tooltip: {isHtml: true}
             };
@@ -193,6 +240,15 @@
         view.hideRows(dt.getFilteredRows([{column: 0, test: filterFunction}]));
         return view;
     }
+
+    $(window).resize(function () {
+        drawChart();
+    });
+    $(document).ready(() => {
+        $('#job-chart-tab').on('shown.bs.tab', function (e) {
+            drawChart();
+        });
+    })
 </script>
 
 {% endmacro %}

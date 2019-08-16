@@ -60,6 +60,8 @@ def get_update_url(record):
         return url_for('users_api.get_user', user_id=record.id)
     elif isinstance(record, dt.db_models.ExternalFile):
         return url_for('external_files_api.get_external_file', external_file_id=record.id)
+    elif isinstance(record, dt.jobserver_control.Job):
+        return url_for('jobs_api.get_job', job_id=record.id)
     return '#'
 
 
@@ -167,7 +169,11 @@ def process_input_dict(input_dict, set_permissions=False):
         'all_can_read',
         'all_can_write',
         'group_can_read',
-        'group_can_write'
+        'group_can_write',
+        '_all_can_read',
+        '_all_can_write',
+        '_group_can_read',
+        '_group_can_write'
     }
     # If a blank is passed from <select> for one of these, we want to set it to None
     id_keys = {
@@ -175,7 +181,12 @@ def process_input_dict(input_dict, set_permissions=False):
         'primary_user_group_id',
         'sample_ids',
         'collection_ids',
-        'analysis_ids'
+        'analysis_ids',
+        '_user_group_id',
+        '_primary_user_group_id',
+        '_sample_ids',
+        '_collection_ids',
+        '_analysis_ids'
     }
     new_dict = {
         key: (False if value.lower() == 'false' else True) if isinstance(value, str) and key in boolean_keys

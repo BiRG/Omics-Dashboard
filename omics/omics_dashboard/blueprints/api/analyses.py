@@ -11,13 +11,9 @@ analyses_api = Blueprint('analyses_api', __name__, url_prefix='/api/analyses')
 @login_required
 def list_analyses():
     try:
-        print('list_analyses')
         user = get_current_user()
-        print(request.method)
         if request.method == 'POST':
-            print('POST')
             new_data = request.get_json(force=True)
-            print(new_data)
             if 'collection_ids' in new_data:
                 collections = [dt.collections.get_collection(user, collection_id)
                                for collection_id in new_data['collection_ids']]
@@ -62,8 +58,6 @@ def get_analysis(analysis_id=None):
             return jsonify(analysis.to_dict())
         if request.method == 'POST':
             analysis = dt.analyses.get_analysis(user, analysis_id)
-            print(f'req_body: {request.get_json(force=True)}')
-            print(f'analysis: {analysis.to_dict()}')
             return jsonify(dt.analyses.update_analysis(user, analysis, request.get_json(force=True)).to_dict())
         if request.method == 'DELETE':
             analysis = dt.analyses.get_analysis(user, analysis_id)

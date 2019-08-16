@@ -1,3 +1,5 @@
+{% from 'components/macros.html' import selector with context %}
+
 {% macro form_checkbox_entry(entry_data) %}
   <div class="form-group form-check">
     <input type="checkbox" class="form-check-input" id="{{ entry_data.id | make_valid_tag }}" name="{{ entry_data.name }}" value="true" {{ 'checked' if entry_data.value }}>
@@ -31,7 +33,7 @@
         {{ form_file_entry(entry_data) }}
     {% else %}
         <div class="form-group">
-          <label for="{{ entry_data.id }}">{{ entry_data.label }}</label>
+            <label for="{{ entry_data.id | make_valid_tag }}">{{ entry_data.label }}</label>
           <input type="{{ entry_data.input_type }}" class="form-control" name="{{ entry_data.name }}" id="{{ entry_data.id | make_valid_tag }}" placeholder="{{ entry_data.value }}">
         </div>
     {% endif %}
@@ -67,10 +69,88 @@
   </div>
 {% endmacro %}
 
+{% macro create_form_tab(label, active) %}
+    <li class="nav-item">
+        <a class="nav-link{% if active %} active{% endif %}" id="{{ label | make_tag_from_name }}-tab" data-toggle="tab"
+           href="#{{ label | make_tag_from_name }}-tab-pane" role="tab"
+           aria-controls="{{ label | make_tag_from_name }}-tab-pane"
+           aria-selected="{% if active %}true{% else %}false{% endif %}">{{ label }}</a>
+    </li>
+{% endmacro %}
+
+{% macro create_form_tab_panel(entries, label, error=none, msg=none, active=false) %}
+    <div class="tab-pane fade {% if active %}show active{% endif %}" id="{{ label | make_tag_from_name }}-tab-pane"
+         role="tabpanel" aria-labelledby="{{ label | make_tag_from_name }}-tab">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% for entry_data in entries %}
+                        {{ form_entry(entry_data) }}
+                    {%- endfor %}
+                    <div class="form-group">
+                        <input type="submit" class="btn btn-primary btn-block form-control" value="Submit">
+                    </div>
+                </form>
+                {% if error %}
+                    <div class="alert alert-danger alert-dismissable" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                                aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+                        <strong>Error:</strong> {{ error }}
+                    </div>
+                {%- endif %}
+                {% if msg %}
+                    <div class="alert alert-primary alert-dismissable" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                                aria-hidden="true"><span class="fas fa-window-close"></span></span></button>
+                        {{ msg }}
+                    </div>
+                {%- endif %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
 {% macro create_form_script() %}
   <script>
     $('.file').fileinput({
         theme: "fas"
     });
   </script>
+{% endmacro %}
+
+{% macro create_inivitation_form(user_group_entry) %}
+    <div class="tab-pane fade" id="create-invitation-tab-panel" role="tabpanel" aria-labelledby="create-invitation-tab">
+        <div class="card">
+            <div class="card-body">
+                <form id="invitationForm">
+                    {{ selector(user_group_entry) }}
+                    <div class="form-group">
+                        <label for="invitation-group">Invite URL</label>
+                        <div class="input-group" name="invitation-group">
+                            <input title="Invitation" type="text" name="invitation" id="invitation" class="form-control"
+                                   value="Placeholder" readonly>
+                            <span class="input-group-btn">
+                  <button id="copy-button" class="btn btn-outline-secondary" data-toggle="tooltip"
+                          data-placement="right" title="Copy to clipboard" type="button"
+                          data-clipboard-target="#invitation">
+                    <i class="fas fa-clipboard"></i>
+                  </button>
+                </span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input id="generateInvitationButton" type="button" role="button"
+                               class="btn btn-primary form-control" value="Generate" onclick="generateInvitation()">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro create_invitation_form_tab() %}
+    <li class="nav-item">
+        <a class="nav-link" id="create-invitation-tab" data-toggle="tab" href="#create-invitation-tab-panel" role="tab"
+           aria-controls="create-invitation-tab-panel" aria-selected="false">Generate Invitation Link</a>
+    </li>
 {% endmacro %}

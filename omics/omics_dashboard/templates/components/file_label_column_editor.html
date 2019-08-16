@@ -1,8 +1,15 @@
+{% macro file_label_column_editor_tab() %}
+    <li class="nav-item">
+        <a class="nav-link" id="file-coluimn-editor-tab" data-toggle="tab" href="#file-column-editor-tab-pane"
+           role="tab" aria-controls="file-column-editor-tab-pane" aria-selected="false">Labels</a>
+    </li>
+{% endmacro %}
+
 {% macro file_label_column_editor(column_data) %}
   <!-- Column editor -->
-  <div class="row mt-3">
+    <div class="tab-pane fade" id="file-column-editor-tab-pane" role="tabpanel"
+         aria-labelledby="file-column-editor-tab">
     <div class="card w-100">
-    <h4 class="card-header text-white bg-primary">Labels</h4>
       <div class="card-body">
         <div class="container">
           <table id="labelColumnTable" class="table table-striped table-bordered" cellspacing="0" width="auto">
@@ -79,7 +86,7 @@
   <script>
     const changedLabels = {};
     function saveLabelColumnChanges() {
-        const changedRows = []
+        const changedRows = [];
         for (const [path, rows] of Object.entries(changedLabels)){
             for (const [row, value] of Object.entries(rows)){
                 changedRows.push({

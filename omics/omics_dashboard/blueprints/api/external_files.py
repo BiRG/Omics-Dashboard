@@ -1,6 +1,7 @@
 import base64
 import os
 import uuid
+from pathlib import Path
 
 from flask import request, jsonify, Blueprint, send_from_directory
 from flask_login import login_required
@@ -23,6 +24,10 @@ def list_external_files():
                 [external_file.to_dict() for external_file in dt.external_files.get_external_files(current_user)])
         if request.method == 'POST':
             # this will only create a record. the "upload" route should be used to both create the record and upload
+            data = request.get_json(force=True)
+            if not os.path.isfile(data['filename']) and not request.files.get('file'):
+                Path(data[
+                         'filename']).touch()  # should be reachable, trust API users more than browser users to know this
             return jsonify(dt.external_files.create_external_file(current_user, request.get_json(force=True)).to_dict())
     except Exception as e:
         return handle_exception(e)
@@ -103,7 +108,6 @@ def upload_external_file():
         if 'file' in request.files:
             if request.files['file'].filename == '':
                 raise ValueError('No file uploaded')
-            print('file in request.files')
             request.files['file'].save(filename)
         else:
             with open(filename, 'wb') as file:

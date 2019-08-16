@@ -1,7 +1,12 @@
 {% extends 'entry.html' %}
-{% from 'components/file_metadata_editor.html' import file_metadata_editor, file_metadata_editor_script with context %}
-{% from 'components/dataset_summary_table.html' import dataset_summary_table, dataset_summary_table_script with context %}
-{% block content %}
+{% from 'components/file_metadata_editor.html' import file_metadata_editor, file_metadata_editor_tab, file_metadata_editor_script with context %}
+{% from 'components/dataset_summary_table.html' import dataset_summary_table, dataset_summary_table_tab, dataset_summary_table_script with context %}
+{% block tabnav %}
+    {{ super() }}
+    {{ file_metadata_editor_tab() }}
+    {{ dataset_summary_table_tab() }}
+{% endblock %}
+{% block tabpanels %}
   {{ super() }}
   {{ file_metadata_editor(page_data.file_attribute_table_data) }}
   {{ dataset_summary_table(page_data.dataset_summary_table_data) }}

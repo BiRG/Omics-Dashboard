@@ -113,13 +113,16 @@ def update_collection(user: User, collection: Collection, new_data: Dict[str, An
         # verify write permissions on analyses to attach to or detach from
         if 'analysis_ids' in new_data:
             new_analyses = [get_analysis(user, analysis_id) for analysis_id in new_data['analysis_ids']]
-            remove_analyses = [analysis for analysis in collection.analyses if analysis.id not in new_data['analysis_ids']]
+            remove_analyses = [analysis for analysis in collection.analyses
+                               if analysis.id not in new_data['analysis_ids']]
             for analysis in new_analyses:
                 if not is_write_permitted(user, analysis):
-                    raise AuthException(f'User {user.email} is not permitted to attach collection {collection.id} to analysis {analysis.id}')
+                    raise AuthException(f'User {user.email} is not permitted to attach collection {collection.id} '
+                                        f'to analysis {analysis.id}')
             for analysis in remove_analyses:
                 if not is_write_permitted(user, analysis):
-                    raise AuthException(f'User {user.email} is not permitted to detach collection {collection.id} from analysis {analysis.id}')
+                    raise AuthException(f'User {user.email} is not permitted to detach collection {collection.id} '
+                                        f'from analysis {analysis.id}')
             collection.analyses = new_analyses
         collection.update(new_data)
         if filename is not None:
@@ -262,8 +265,10 @@ def create_collection(user: User,
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'
     db.session.commit()
-    h5_merge(filenames, new_collection.filename, orientation='vert', reserved_paths=['/x'], align_at='/x',
-             sort_by=sort_by, merge_attributes=True)
+    if len(filenames):
+        new_collection.merge_samples(samples, sort_by)
+    else:
+        new_collection.create_empty_file()
     update_collection(user, new_collection, data)
     return new_collection
 
@@ -288,7 +293,8 @@ def copy_collection(user: User, collection: Collection) -> Collection:
                                 all_can_write=collection.all_can_write,
                                 owner=user,
                                 creator=user,
-                                last_editor=user)
+                                last_editor=user,
+                                parent_id=collection.id)
     db.session.add(new_collection)
     db.session.commit()
     new_collection.filename = f'{DATADIR}/collections/{new_collection.id}.h5'

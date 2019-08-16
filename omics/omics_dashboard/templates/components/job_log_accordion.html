@@ -1,0 +1,40 @@
+{% macro job_log_accordion_tab() %}
+    <li class="nav-item">
+        <a class="nav-link" id="job-log-tab" data-toggle="tab" href="#job-log-tab-pane" role="tab"
+           aria-controls="job-log-tab-pane" aria-selected="false">Logs</a>
+    </li>
+{% endmacro %}
+{% macro job_log_accordion(page_data) %}
+    <div class="tab-pane fade" id="job-log-tab-pane" role="tabpanel" aria-labelledby="job-log-tab">
+        <div class="card w-100">
+            <div class="card-body">
+                <div id="log-accordion">
+                    {% for log_id, log_text in page_data.logs.items() %}
+                        <div class="card">
+                            <div class="card-header" id="{{ log_id | make_valid_tag }}-heading">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link collapsed" data-toggle="collapse"
+                                            data-target="#{{ log_id | make_valid_tag }}" aria-expanded="false"
+                                            aria-controls="{{ log_id | make_valid_tag }}">
+                                        {{ log_id }}
+                                    </button>
+                                </h5>
+                            </div>
+
+                            <div id="{{ log_id | make_valid_tag }}" class="collapse"
+                                 aria-labelledby="{{ log_id | make_valid_tag }}-heading" data-parent="#log-accordion">
+                                <div class="card-body">
+                  <pre>
+                    <code>
+                      {{ log_text }}
+                    </code>
+                  </pre>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

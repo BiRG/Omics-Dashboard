@@ -7,8 +7,12 @@ We have to use the factory pattern because the flask app has to be initialized b
 from typing import List, Type
 
 from dashboards.dashboard import Dashboard
+from dashboards.nmr_metabolomics.opls import OPLSDashboard
 from dashboards.nmr_metabolomics.pca import PCADashboard
+from dashboards.nmr_metabolomics.visualization import VisualizationDashboard
 
 dashboard_list: List[Type[Dashboard]] = [
-    PCADashboard
+    PCADashboard,
+    OPLSDashboard,
+    VisualizationDashboard
 ]

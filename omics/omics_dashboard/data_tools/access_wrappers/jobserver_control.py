@@ -1,15 +1,18 @@
 import json
 import os
 import uuid
+from datetime import datetime
 from io import StringIO
+from pathlib import Path
 from typing import Dict, Any, List
 
 import requests
 from ruamel import yaml as yaml
 
+from data_tools.access_wrappers.external_files import create_external_file
 from data_tools.access_wrappers.users import get_jwt
 from data_tools.db_models import JobserverToken, User, db
-from data_tools.util import AuthException, COMPUTESERVER, TMPDIR, NotFoundException
+from data_tools.util import AuthException, COMPUTESERVER, TMPDIR, NotFoundException, OMICSSERVER, DATADIR
 
 
 class Job:
@@ -24,9 +27,9 @@ class Job:
         self.owner = None
         self.user_group = None
         self.type = None
-        self.submission = None
-        self.start = None
-        self.end = None
+        self.submission = datetime.utcfromtimestamp(0)
+        self.start = datetime.utcfromtimestamp(0)
+        self.end = datetime.utcfromtimestamp(0)
         self.status = None
         self.all_can_read = True
         self.all_can_write = False
@@ -51,9 +54,10 @@ class Job:
         self.owner = User.query.filter_by(id=job_data['owner_id']).first() if 'owner_id' in job_data else None
         self.user_group = self.owner.primary_user_group if 'owner_id' in job_data else None
         self.type = job_data['type'] if 'type' in job_data else None
-        self.submission = job_data['submission'] if 'submission' in job_data else None
-        self.start = job_data['start'] if 'start' in job_data else None
-        self.end = job_data['end'] if 'end' in job_data else None
+        self.submission = datetime.strptime(job_data['submission'],
+                                            '%Y-%m-%dT%H:%M:%S.%fZ') if 'submission' in job_data else None
+        self.start = datetime.strptime(job_data['start'], '%Y-%m-%dT%H:%M:%S.%fZ') if 'start' in job_data else None
+        self.end = datetime.strptime(job_data['end'], '%Y-%m-%dT%H:%M:%S.%fZ') if 'end' in job_data else None
         self.status = job_data['status'] if 'status' in job_data else None
         self.active = True
 
@@ -85,7 +89,6 @@ class Job:
 
     def get_logs(self):
         log_response = requests.get(f'{COMPUTESERVER}/api/workflows/v1/{self.id}/logs')
-        print(log_response.json())
         try:
             self.logs = {
                 key: {'stderr': open(value[0]['stderr']).read(), 'stdout': open(value[0]['stdout']).read()}
@@ -131,7 +134,8 @@ def get_job(job_id: str) -> Job:
     return Job(job_id)  # can throw not found
 
 
-def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User, wf_type='upload') -> Job:
+def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User, wf_type='upload', labels=None,
+              options=None) -> Job:
     """
     Start a new job on the Cromwell job server
     :param workflow:
@@ -140,12 +144,16 @@ def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User,
     :param wf_type: Either 'upload' or 'analysis'
     :return:
     """
+    options = options or {}
+    labels = labels or {}
     auth_token = get_jwt(owner)
-    job_params['authToken'] = auth_token
-    labels = json.dumps({'owner_id': str(owner.id), 'type': wf_type})
+    job_params['omics_auth_token'] = auth_token
+    job_params['omics_url'] = OMICSSERVER
+    labels.update({'owner_id': str(owner.id), 'type': wf_type})
     files = {'workflowSource': StringIO(),
              'workflowInputs': StringIO(),
-             'labels': labels}
+             'labels': json.dumps(labels),
+             'workflowOptions': json.dumps(options)}
     yaml.safe_dump(workflow, files['workflowSource'])
     yaml.safe_dump(job_params, files['workflowInputs'])
     files['workflowInputs'].seek(0)
@@ -156,10 +164,13 @@ def start_job(workflow: Dict[str, Any], job_params: Dict[str, Any], owner: User,
                         headers={'Authorization': auth_token},
                         data=params,
                         files=files)
+    res_text = ''
     try:
+        res_text = res.text
+        res.raise_for_status()
         return Job(res.json()['id'])
     except Exception:
-        raise RuntimeError('Invalid response from job server. Is the server running?')
+        raise RuntimeError(f'Invalid response from job server. Is the server running? \n Response: {res_text}')
 
 
 def cancel_job(user: User, job: Job) -> Dict[str, Any]:
@@ -172,7 +183,7 @@ def cancel_job(user: User, job: Job) -> Dict[str, Any]:
     job.refresh()
     if job.owner == user or user.admin:
         return job.cancel()
-    raise AuthException(f'User {user.email} is not authorized to resume job {job.id}')
+    raise AuthException(f'User {user.email} is not authorized to cancel job {job.id}')
 
 
 def resume_job(user: User, job: Job) -> Dict[str, Any]:
@@ -223,20 +234,86 @@ def get_job_chart_metadata(job: Job) -> str:
     return job.get_chart_metadata()
 
 
-def prepare_workflow(workflow: Dict[str, any]) -> Dict[str, any]:
+def prepare_job_params(workflow_data, form_data, current_user, workflow_id):
     """
     Insert server-related parameters to workflow job
-    :param workflow:
-    :return:
+    :param workflow_data: The CWL workflow definition
+    :param form_data: data to use as inputs.
+    :param current_user: current user to own created external files
+    :param workflow_id: id of the workflow (used for file naming purposes)
+    :return: form_data, but corrected.
     """
-    workflow['inputs'].append(
-        {
-            'id': 'omics_auth_token',
-            'type': 'string'
-        },
-        {
-            'id': 'omics_url',
-            'type': 'string'
+    form_data = form_data.copy()
+    workflow_data = workflow_data.copy()
+
+    # outputs will create external files if they are files.
+    def process_bool(val):
+        return val.lower() == 'true'
+
+    def token_with_escape(a):
+        result = []
+        token = ''
+        state = 0
+        for c in a:
+            if state == 0:
+                if c == '\\':
+                    state = 1
+                elif c == ',':
+                    result.append(token)
+                    token = ''
+                else:
+                    token += c
+            elif state == 1:
+                token += c
+                state = 0
+        result.append(token)
+        return result
+
+    def process_multiple(value, value_type):
+        if value_type == str:
+            return token_with_escape(value)
+        return [value_type(val) for val in value.split(',')]
+
+    for wf_input in workflow_data['inputs']:
+        if wf_input['id'] == 'omics_url':
+            form_data['omics_url'] = None  # set by job submission function
+        elif wf_input['id'] == 'omics_auth_token':
+            form_data['omics_auth_token'] = None
+        elif wf_input['type'].endswith('[]') and not (
+                wf_input['type'].startswith('File') or wf_input['type'].startswith('Directory')):
+            if wf_input['type'].startswith('boolean'):
+                type_ = process_bool
+            elif wf_input['type'].startswith('float') or wf_input['type'].startswith('double'):
+                type_ = float
+            elif wf_input['type'].startswith('int') or wf_input['type'].startswith('long'):
+                type_ = int
+            else:
+                type_ = str
+            form_data[wf_input['id']] = process_multiple(form_data[wf_input['id']], type_)
+    labels = {}
+    # create an external file record for all the outputs
+    if 'outputs' in workflow_data and len(workflow_data['outputs']):
+        metadata_keys = ['analysis_ids', 'name', 'description', 'user_group_id', 'all_can_read', 'group_can_read',
+                         'all_can_write', 'group_can_write']
+        output_dir = os.path.join(DATADIR, 'external', f'workflow_{workflow_id}', str(uuid.uuid4()))
+        Path(output_dir).mkdir(parents=True)
+        file_metadata = {'filename': output_dir}
+        for key in metadata_keys:
+            if f'_{key}' in form_data:
+                file_metadata[key] = form_data[f'_{key}']
+                del form_data[f'_{key}']
+        external_file = create_external_file(current_user, file_metadata)
+        labels['output_file_record_id'] = str(external_file.id)
+        form_data['outputs'] = {}
+        for wf_output in workflow_data['outputs']:
+            if 'outputSource' in wf_output:
+                if isinstance(wf_output['outputSource'], list):
+                    wf_output['outputSource'] = wf_output['outputSource'][0]
+            form_data['outputs'][wf_output['id']] = {'outputDir': output_dir}
+        options = {
+            'final_workflow_outputs_dir': f'file://{output_dir}',
+            'use_relative_output_paths': True
         }
-    )
-    # TODO: do it
+    else:
+        options = {}
+    return form_data, workflow_data, labels, options

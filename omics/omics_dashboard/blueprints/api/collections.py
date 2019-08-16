@@ -55,7 +55,6 @@ def get_collection(collection_id=None):
 
         if request.method == 'POST':
             if 'file' in request.files or 'file' in new_data:
-                print('file in request')
                 filename = os.path.join(UPLOADDIR, secure_filename(str(uuid.uuid4())))
                 if 'file' in request.files:
                     if request.files['file'].filename == '':
@@ -67,9 +66,9 @@ def get_collection(collection_id=None):
                         file.write(collection_file_data)
                         del new_data['file']
                 if dt.util.validate_file(filename):
-                    return jsonify(dt.collections.update_collection(user, collection, new_data, filename).to_dict())
-            return jsonify(
-                dt.collections.update_collection(user, collection, new_data).to_dict())
+                    collection = dt.collections.update_collection(user, collection, new_data, filename)
+                    return jsonify(collection.to_dict())
+            return jsonify(dt.collections.update_collection(user, collection, new_data).to_dict())
 
         if request.method == 'PATCH':
             # We can have requests to change values in arrays here contents of request will be {path, i, j, new_value}

@@ -1,12 +1,16 @@
 {% extends 'pages/file_entry.html' %}
-{% from 'components/macros.html' import list_table, download_button with context %}
+{% from 'components/macros.html' import list_table_tab, list_table_tab_panel, download_button with context %}
 {% block headline %}
   {{ super() }}
   <p>
     {{ download_button(page_data.download_url) }}
   </p>
 {% endblock %}
-{% block content %}
+{% block tabnav %}
     {{ super() }}
-    {{ list_table(page_data.sample_group_table_data) }}
+    {{ list_table_tab(page_data.sample_group_table_data) }}
+{% endblock %}
+{% block tabpanels %}
+    {{ super() }}
+    {{ list_table_tab_panel(page_data.sample_group_table_data) }}
 {% endblock %}
