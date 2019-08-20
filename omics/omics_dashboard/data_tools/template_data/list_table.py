@@ -53,8 +53,8 @@ class ListTableRow:
         if isinstance(record, Job):
             self.values['Date Started'] = ListTableCell(record.start.strftime('%-d %b %Y %H:%M'),
                                                         order_value=record.start.timestamp())
-            self.values['Date Ended'] = ListTableCell(record.end.strftime('%-d %b %Y %H:%M'),
-                                                      order_value=record.end.timestamp())
+            self.values['Date Ended'] = ListTableCell(record.end.strftime('%-d %b %Y %H:%M') if record.end is not None else '',
+                                                      order_value=record.end.timestamp() if record.end is not None else '')
             self.values['Date Submitted'] = ListTableCell(record.submission.strftime('%-d %b %Y %H:%M'),
                                                           order_value=record.submission.timestamp())
 
