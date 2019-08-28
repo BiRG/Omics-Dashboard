@@ -315,7 +315,8 @@ class FileRecordMixin(OmicsRecordMixin):
 
     @staticmethod
     def synchronize_filename(target, value, oldvalue, initiator):
-        target.filename = f'{target.data_path}/{value}.{target.file_ext}'
+        if value != oldvalue:
+            target.filename = f'{target.data_path}/{value}.{target.file_ext}'
 
     @classmethod
     def register_listeners(cls):
