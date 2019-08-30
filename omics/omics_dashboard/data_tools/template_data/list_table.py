@@ -1,7 +1,7 @@
 from typing import Any, Union, List, Type
 
 from dashboards import Dashboard
-from data_tools.access_wrappers.jobserver_control import Job
+from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
 from data_tools.access_wrappers.users import is_write_permitted
 from data_tools.access_wrappers.workflows import WorkflowModule
 from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
@@ -10,11 +10,13 @@ from helpers import get_item_link
 
 
 class ListTableCell:
-    def __init__(self, value, href: str = None, editable: bool = False, order_value: Any=None):
+    def __init__(self, value, href: str = None, editable: bool = False, order_value: Any = None,
+                 badge_class: str = None):
         self.value = value
         self.href = href
         self.editable = editable
         self.order_value = order_value
+        self.badge_class = badge_class
         if isinstance(value, bool):
             self.order_value = int(value)
 
@@ -45,18 +47,20 @@ class ListTableRow:
         if special_val_heading is not None and special_val is not None:
             self.values[special_val_heading] = ListTableCell(special_val)
         if isinstance(record, WorkflowModule):
-            if 'ID' in self.values: self.values.pop('ID')
+            if 'ID' in self.values:
+                self.values.pop('ID')
             self.values['Package'] = ListTableCell(record.package_name)
             self.values['Subpackage'] = ListTableCell(record.subpackage_name)
         if isinstance(record, ExternalFile):
             self.values['Path'] = ListTableCell(record.filename)
         if isinstance(record, Job):
+            self.values['Status'] = ListTableCell(record.status, badge_class=get_badge_class(record.status))
+            self.values['Date Submitted'] = ListTableCell(record.submission.strftime('%-d %b %Y %H:%M'),
+                                                          order_value=record.submission.timestamp())
             self.values['Date Started'] = ListTableCell(record.start.strftime('%-d %b %Y %H:%M'),
                                                         order_value=record.start.timestamp())
             self.values['Date Ended'] = ListTableCell(record.end.strftime('%-d %b %Y %H:%M') if record.end is not None else '',
                                                       order_value=record.end.timestamp() if record.end is not None else '')
-            self.values['Date Submitted'] = ListTableCell(record.submission.strftime('%-d %b %Y %H:%M'),
-                                                          order_value=record.submission.timestamp())
 
 
 class FileListTableRow:

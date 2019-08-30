@@ -317,3 +317,18 @@ def prepare_job_params(workflow_data, form_data, current_user, workflow_id):
     else:
         options = {}
     return form_data, workflow_data, labels, options
+
+
+def get_badge_class(status):
+    if status is None or status == 'Submitted':
+        return 'badge-info'
+    elif status == 'Succeeded':
+        return 'badge-success'
+    elif status == 'Failed':
+        return 'badge-danger'
+    elif status == 'Aborted':
+        return 'badge-warning'
+    elif status == 'Running':
+        return 'badge-primary'
+    else:
+        return 'badge-secondary'

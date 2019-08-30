@@ -3,7 +3,7 @@ from typing import Union
 from flask import url_for
 
 from data_tools.access_wrappers.collections import get_collections
-from data_tools.access_wrappers.jobserver_control import Job
+from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
 from data_tools.access_wrappers.samples import get_samples
 from data_tools.access_wrappers.users import is_write_permitted, get_read_permitted_records
 from data_tools.access_wrappers.workflows import WorkflowModule
@@ -101,6 +101,8 @@ class JobPageData(EntryPageData):
         super(JobPageData, self).__init__(current_user, job, 'Job')
         self.job_chart_url = url_for('jobs_api.get_chart_metadata', job_id=job.id)
         self.logs = job.get_flattened_logs()
+        self.status = job.status
+        self.status_badge_class = get_badge_class(job.status)
 
 
 class WorkflowPageData(EntryPageData):
