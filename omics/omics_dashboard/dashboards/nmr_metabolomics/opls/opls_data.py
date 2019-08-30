@@ -576,8 +576,8 @@ class OPLSData(MultivariateAnalysisData):
         ]
         if is_discrimination:
             index += [
-                'DQ\u00B2Y',
                 'DR\u00B2Y',
+                'DQ\u00B2Y',
                 'Accuracy',
                 'ROC Area Under Curve',
                 'Positive Value',
