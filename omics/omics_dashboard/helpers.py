@@ -153,6 +153,13 @@ def log_exception(status, e, tb=""):
             log_file.write(f'Traceback: \n{tb}\n')
 
 
+def log_internal_exception(e):
+    with open(log_file_name, 'a+') as log_file:
+        log_file.write(datetime.datetime.utcnow().isoformat() + '\n')
+        traceback.print_exception(type(e), e, e.__traceback__, file=log_file)
+        log_file.write('\n')
+
+
 def process_input_dict(input_dict, set_permissions=False):
     """
     Turn string values from checkboxes into booleans

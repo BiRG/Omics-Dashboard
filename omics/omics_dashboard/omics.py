@@ -111,7 +111,7 @@ with app.app_context():
     db.init_app(app)
     db.create_all()
     if User.query.filter_by(admin=True).first() is None:
-        new_user = User(email='admin@admin.admin', name='Addison Minh', admin=True, active=True)
+        new_user = User(email='admin@admin.admin', name='Default Admin (!)', admin=True, active=True)
         new_user.set_password('password')
         db.session.add(new_user)
         db.session.commit()
