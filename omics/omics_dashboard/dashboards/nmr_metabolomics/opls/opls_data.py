@@ -906,7 +906,7 @@ class OPLSData(MultivariateAnalysisData):
 
     def get_bin_options(self, group_key):
         try:
-            with h5py.File(self.results_filename) as file:
+            with h5py.File(self.results_filename, 'r') as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
@@ -1012,9 +1012,21 @@ class OPLSData(MultivariateAnalysisData):
                 feature_labels = np.array(file[group_key]['feature_labels'])
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
+                base_collection_id = file.attrs['input_collection_id'] if 'input_collection_id' in file.attrs else None
+            x_min = x_max = None
+            if base_collection_id is not None:
+                try:
+                    base_collection = get_collection(current_user, int(base_collection_id))
+                    x_min = base_collection.get_dataset('/x_min').ravel().tolist()
+                    x_max = base_collection.get_dataset('/x_max').ravel().tolist()
+                except Exception as e:
+                    x_min = x_max = None
             is_significant = p_values < alpha
             df = pd.DataFrame()
             df['Bin'] = feature_labels
+            if x_min is not None and x_max is not None:
+                df['Bin Max'] = x_max
+                df['Bin Min'] = x_min
             df['p Value'] = p_values
             df['Significant'] = ['*' if s else '' for s in is_significant]
             df = df.sort_values(['Significant', 'Bin'], ascending=[False, True])
@@ -1022,9 +1034,15 @@ class OPLSData(MultivariateAnalysisData):
             # format table for better display in browser
             df['p Value'] = df['p Value'].round(7).apply(lambda x: f'{x:.7f}')
             df['Bin'] = df['Bin'].round(4).apply(lambda x: f'{x:.4f}')
+            if x_min is not None and x_max is not None:
+                df['Bin Max'] = df['Bin Max'].round(4).apply(lambda x: f'{x:.4f}')
+                df['Bin Min'] = df['Bin Min'].round(4).apply(lambda x: f'{x:.4f}')
             del df['Significant']
             df['Index'] = [str(i) for i in df.index]
-            df = df[['Index', 'Bin', 'p Value']]
+            if x_min is not None and x_max is not None:
+                df = df[['Index', 'Bin Max', 'Bin', 'Bin Min', 'p Value']]
+            else:
+                df = df[['Index', 'Bin', 'p Value']]
             style_data_conditional = [
                 {
                     'if': {'filter_query': f'{{p Value}} < {alpha}'},
@@ -1041,7 +1059,7 @@ class OPLSData(MultivariateAnalysisData):
                                          style_table={
                                              'height': '500px',
                                              'overflowY': 'scroll',
-                                             'width': '300px'
+                                             'width': '500px'
                                          },
                                          fixed_rows={
                                              'headers': True,
@@ -1055,6 +1073,10 @@ class OPLSData(MultivariateAnalysisData):
                                              {'if': {'column_id': 'Index'},
                                               'width': f'{df.Index.str.len().max() + 2}ch'},
                                              {'if': {'column_id': 'Bin'},
+                                              'width': f'{df.Bin.str.len().max() + 2}ch'},
+                                             {'if': {'column_id': 'Bin Max'},
+                                              'width': f'{df.Bin.str.len().max() + 2}ch'},
+                                             {'if': {'column_id': 'Bin Min'},
                                               'width': f'{df.Bin.str.len().max() + 2}ch'},
                                              {'if': {'column_id': 'p Value'},
                                               'width': '12ch'},
