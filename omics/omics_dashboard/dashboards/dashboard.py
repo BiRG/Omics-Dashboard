@@ -1,4 +1,5 @@
 from dash import Dash
+from dash.exceptions import PreventUpdate
 from dash_bootstrap_components.themes import FLATLY, DARKLY
 from flask_login import current_user
 
@@ -16,6 +17,16 @@ class Dashboard:
         :return:
         """
         raise NotImplementedError('')
+
+    @staticmethod
+    def check_clicks(n_clicks):
+        if not n_clicks:
+            raise PreventUpdate('Callback triggered without action!')
+
+    @staticmethod
+    def check_dropdown(value):
+        if not value or None in value:
+            raise PreventUpdate('Callback triggered without action!')
 
 
 class StyledDash(Dash):
