@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 import jwt
 from xkcdpass import xkcd_password as xp
 
-from data_tools.db_models import User, UserGroup, UserInvitation, db
+from data_tools.db_models import User, UserGroup, UserInvitation, db, OmicsRecordMixin
 from data_tools.util import AuthException, NotFoundException
 
 
@@ -324,10 +324,22 @@ def get_all_read_permitted_records(user: User, model: db.Model, filter_by: Dict[
     :return:
     """
     query = model.query.filter_by(**filter_by) if filter_by is not None else model.query
-
-    return query.filter((model.owner_id == user.id) | model.all_can_read |
-                        (model.group_can_read & model.user_group_id.in_(
-                            [user_group.id for user_group in user.user_groups])))
+    if issubclass(model, OmicsRecordMixin):
+        return query.filter((model.owner_id == user.id) | model.all_can_read |
+                            (model.group_can_read & model.user_group_id.in_(
+                                [user_group.id for user_group in user.user_groups])))
+    else:
+        # argh ORMs
+        # query database (all_can_read is a property of User and UserGroup classes, not a table)
+        entries = query.filter((model.owner_id == user.id) | model.all_can_read |
+                               (model.user_group_id.in_([user_group.id for user_group in user.user_groups])))
+        # filter results
+        return [
+            entry for entry in entries
+            if (entry.owner_id == user.id
+                or entry.all_can_read
+                or (entry.group_can_read and entry.user_group_id in [user_group.id for user_group in user.user_groups]))
+        ]
 
 
 def get_user_name(user: User):
