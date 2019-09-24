@@ -27,5 +27,6 @@ USER omics
 
 ENV NVBLAS_CONFIG_FILE /usr/local/cuda/nvblas.conf
 ENV LD_PRELOAD /usr/lib/x86_64-linux-gnu/libnvblas.so.10
+ENV H5PY_DEFAULT_READONLY 1
 
 ENTRYPOINT ["/entrypoint.sh"]

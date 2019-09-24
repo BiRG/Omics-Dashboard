@@ -22,4 +22,7 @@ RUN chown omics:omics /entrypoint.sh && chmod +x /entrypoint.sh
 ADD omics_dashboard /omics_dashboard/
 RUN chown -R omics:omics /omics_dashboard 
 USER omics
+
+ENV H5PY_DEFAULT_READONLY 1
+
 ENTRYPOINT ["/entrypoint.sh"]
