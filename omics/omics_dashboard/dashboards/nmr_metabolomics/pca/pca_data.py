@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 from typing import List, Dict, Union, Tuple
@@ -16,6 +17,7 @@ from flask import url_for
 from flask_login import current_user
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 from sklearn.decomposition import PCA
+from sklearn.metrics import davies_bouldin_score, silhouette_score
 
 from data_tools.access_wrappers.collections import upload_collection
 from ..multivariate_analysis_data import MultivariateAnalysisData
@@ -113,7 +115,7 @@ class PCAData(MultivariateAnalysisData):
                           dismissable=True,
                           color='success')]
 
-    def _davies_bouldin(self, category_label, label_values, for_display=False) -> pd.DataFrame:
+    def _get_scores(self, category_label, label_values, for_display=False) -> pd.DataFrame:
         # this is calculated as part of plotting scores.
         self.load_labels()
         self.load_results()
@@ -124,56 +126,41 @@ class PCAData(MultivariateAnalysisData):
 
         scores_df.reset_index()
         label_df.reset_index()
-        categories = pd.unique(label_df[category_label].dropna())
 
-        def _calculate_intercluster_distance():
-            distances = {}
-            for cat1 in categories:
-                distances[cat1] = {}
-                for cat2 in categories:
-                    centroid1 = scores_df[label_df[category_label] == cat1].mean()
-                    centroid2 = scores_df[label_df[category_label] == cat2].mean()
-                    distances[cat1][cat2] = np.linalg.norm(centroid1 - centroid2)
-            return distances
+        data = [
+            [
+                'Overall',
+                davies_bouldin_score(scores_df, label_df[category_label]),
+                silhouette_score(scores_df, label_df[category_label])
+            ]
+        ]
+        if len(pd.unique(label_df[category_label])) > 2:
+            for unique_val in pd.unique(label_df[category_label]):
+                labels = label_df.copy()
+                labels[labels[category_label] != unique_val] = f'not {unique_val}'
+                data.append(
+                    [
+                        f'{unique_val} vs. all',
+                        davies_bouldin_score(scores_df, labels[category_label]),
+                        silhouette_score(scores_df, labels[category_label])
 
-        def _calculate_intracluster_distance():
-            distances = {}
-            for category in categories:
-                centroid = scores_df[label_df[category_label] == category].mean()
-                point_distances = scores_df[label_df[category_label] == category].apply(
-                    lambda row: np.linalg.norm(row - centroid), axis=1)
-                distances[category] = pow(sum(point_distances), 0.5) / len(point_distances)
-            return distances
+                    ])
 
-        def _calculate_r(within, between):
-            r_val = {}
-            for cat1 in within.keys():
-                r_val[cat1] = {}
-                for cat2 in within.keys():
-                    r_val[cat1][cat2] = (within[cat1] + within[cat2]) / between[cat1][cat2] \
-                        if between[cat1][cat2] else None
-            return r_val
+            for first, second in itertools.combinations(pd.unique(label_df[category_label]), 2):
+                labels = label_df[(label_df[category_label] == first)
+                                  | (label_df[category_label] == second)][category_label]
+                scores = scores_df[(label_df[category_label] == first) | (label_df[category_label] == second)]
+                data.append([
+                    f'{first} vs. {second}',
+                    davies_bouldin_score(scores, labels),
+                    silhouette_score(scores, labels)
+                ])
 
-        between_distances = _calculate_intercluster_distance()
-        within_distances = _calculate_intracluster_distance()
-        r = _calculate_r(within_distances, between_distances)
-        d = {cat1: max([r[cat1][cat2] for cat2 in categories if cat1 != cat2]) for cat1 in categories}
-        db_ind = {cat: d[cat] / len(categories) for cat in categories}
-        results = pd.DataFrame(index=[f'{category_label}={cat}' for cat in categories])
-        results.rename_axis(category_label)
-        results['S'] = [within_distances[cat] for cat in categories]
-        for cat1 in categories:
-            results[f'M_{cat1}'] = [between_distances[cat1][cat2] for cat2 in categories]
-        for cat1 in categories:
-            results[f'R_{cat1}'] = [r[cat1][cat2] for cat2 in categories]
-        results['DB'] = [db_ind[cat] for cat in categories]
-
+        results = pd.DataFrame(data=data, columns=[category_label, 'Davies-Bouldin', 'Silhouette'])
         if for_display:
-            results = results.applymap('{:.5f}'.format)
-        results[category_label] = categories
-        columns = [category_label, 'DB'] + [column for column in results.columns if
-                                            column not in {category_label, 'DB'}]
-        return results[columns]
+            results['Davies-Bouldin'] = results['Davies-Bouldin'].apply(lambda row: f'{row:.5f}')
+            results['Silhouette'] = results['Silhouette'].apply(lambda row: f'{row:.5f}')
+        return results
 
     def _get_db_index_dataframe(self, color_by_labels):
         color_by_labels = color_by_labels or []
@@ -183,7 +170,7 @@ class PCAData(MultivariateAnalysisData):
                                                        axis=1) if color_by_labels else pd.Series(
             ['All' for _ in range(0, len(label_df))])
 
-        return self._davies_bouldin(color_label, color_labels, True)
+        return self._get_scores(color_label, color_labels, True)
 
     def _get_scores_dataframe(self):
         return pd.DataFrame(data=self._scores,
@@ -274,7 +261,7 @@ class PCAData(MultivariateAnalysisData):
                     color_labels = label_df[color_by_labels].apply(lambda x: ','.join(x.apply(str)),
                                                                    axis=1) if color_by_labels else pd.Series(
                         ['All' for _ in range(0, len(label_df))])
-                    db_dfs[','.join(plot['color_by'])] = self._davies_bouldin(color_label, color_labels)
+                    db_dfs[','.join(plot['color_by'])] = self._get_scores(color_label, color_labels)
             if file_format == 'csv':
                 for name, db_df in db_dfs.items():
                     db_df.to_csv(f'{path}_{name}_db_index.csv')
@@ -393,7 +380,7 @@ class PCAData(MultivariateAnalysisData):
             else None
 
         if len(color_names) > 1 and include_db_index:
-            db_df = self._davies_bouldin(color_label, color_labels, True)
+            db_df = self._get_scores(color_label, color_labels, True)
             style_header = {'backgroundColor': '#303030'} if theme == 'plotly_dark' else {}
             style_cell = {'backgroundColor': '#444444'} if theme == 'plotly_dark' else {}
             table = dash_table.DataTable(columns=[{'name': val, 'id': val} for val in db_df.columns],

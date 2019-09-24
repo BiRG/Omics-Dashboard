@@ -1,8 +1,18 @@
 {% extends 'entry.html' %}
 {% from 'components/job_chart.html' import job_chart, job_chart_tab, job_chart_script, job_cancel_modal with context %}
 {% from 'components/job_log_accordion.html' import job_log_accordion, job_log_accordion_tab %}
+{% block title %}
+    {{ super() }} ({{ page_data.status }})
+{% endblock %}
 {% block headline %}
-  <h1 class="display-4">{{ page_data.name }}</h1>
+    <h2>
+        {{ page_data.name }}
+    </h2>
+    <h3>
+      <span class="badge badge-pill {{ page_data.status_badge_class }}">
+          {{ page_data.status }}
+      </span>
+    </h3>
 {% endblock %}
 {% block tabnav %}
     {{ super() }}

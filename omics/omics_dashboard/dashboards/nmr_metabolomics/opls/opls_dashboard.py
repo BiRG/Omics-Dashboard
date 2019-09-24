@@ -4,9 +4,9 @@ import traceback
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
-from dash.exceptions import PreventUpdate
 
 from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
+from helpers import log_internal_exception
 from .layouts import get_layout
 from .opls_data import OPLSData
 
@@ -19,8 +19,7 @@ class OPLSDashboard(Dashboard):
 
     @staticmethod
     def _on_label_key_select(label_keys, op='=='):
-        if not label_keys or None in label_keys:
-            raise PreventUpdate('Callback triggered without action!')
+        OPLSDashboard.check_dropdown(label_keys)
         label_keys = sorted(label_keys)
         opls_data = OPLSData()
         unique_values = [opls_data.unique_vals[val] for val in label_keys]
@@ -59,8 +58,7 @@ class OPLSDashboard(Dashboard):
             [Input('pair-with', 'value')]
         )
         def update_pair_with_options(label_keys):
-            if not label_keys or None in label_keys:
-                raise PreventUpdate('Callback triggered without action!')
+            OPLSDashboard.check_dropdown(label_keys)
             return OPLSDashboard._on_label_key_select(label_keys)
 
         @app.callback(
@@ -76,8 +74,7 @@ class OPLSDashboard(Dashboard):
             [State('collection-id', 'value')],
         )
         def get_collections(n_clicks, value):
-            if not value or not n_clicks:
-                raise PreventUpdate('Callback triggered without value')
+            OPLSDashboard.check_clicks(n_clicks)
             opls_data = OPLSData()
             opls_data.get_collections(value)
             label_data = opls_data.get_label_data()
@@ -99,8 +96,7 @@ class OPLSDashboard(Dashboard):
             [State('results-collection-id', 'value')]
         )
         def load_results(n_clicks, results_collection_id):
-            if not n_clicks:
-                raise PreventUpdate('Callback triggered without click.')
+            OPLSDashboard.check_clicks(n_clicks)
             opls_data = OPLSData()
             opls_data.get_results_collection(results_collection_id)
             return opls_data.get_results_collection_badges()
@@ -140,8 +136,7 @@ class OPLSDashboard(Dashboard):
                          permutations,
                          inner_permutations,
                          outer_permutations):
-            if not n_clicks:
-                raise PreventUpdate('Callback triggered without click.')
+            OPLSDashboard.check_clicks(n_clicks)
             scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
             model_by = ' | '.join(model_by_queries) if model_by_queries and len(model_by_queries) else None
             ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
@@ -169,6 +164,7 @@ class OPLSDashboard(Dashboard):
                                                                     outer_permutations)
                 badges = opls_data.get_results_collection_badges()
             except Exception as e:
+                log_internal_exception(e)
                 message = [html.P([html.Strong('Error: '), f'{e}']),
                            html.Strong('Traceback:'),
                            html.P(html.Pre(traceback.format_exc(), className='text-white'))]
@@ -195,7 +191,8 @@ class OPLSDashboard(Dashboard):
                     return [dbc.Card(dbc.CardBody(opls_data.get_loading_significance_tables(theme)))]
                 else:
                     return [dbc.Card(dbc.CardBody(html.H6('Error occurred.')))]
-            except:
+            except Exception as e:
+                log_internal_exception(e)
                 return [dbc.Card(dbc.CardBody([html.H6('Error occurred.'), html.Code(traceback.format_exc())]))]
 
     @staticmethod

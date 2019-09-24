@@ -57,6 +57,12 @@ class Base(Model):
             if hasattr(self, key) and not invalid(key):
                 self.__setattr__(key, value)
 
+    def read_permitted(self, user):
+        raise NotImplementedError('read_permitted not implemented in base model.')
+
+    def write_permitted(self, user):
+        raise NotImplementedError('write_permitted not implemented in base model.')
+
 
 db = SQLAlchemy(model_class=Base)
 
@@ -202,6 +208,13 @@ class User(db.Model, UserMixin):
     def reset_redis_hash(mapper, connection, target):
         clear_user_hash(target.id)
 
+    def read_permitted(self, user):
+        return user.admin or user is self or self.all_can_read or (
+                self.group_can_read and user in self.primary_user_group.members)
+
+    def write_permitted(self, user):
+        return user.admin or user is self
+
 
 class UserGroup(db.Model):
     __tablename__ = 'user_group'
@@ -239,6 +252,12 @@ class UserGroup(db.Model):
             'created_on': self.created_on.isoformat(),
             'updated_on': self.updated_on.isoformat()
         }
+
+    def read_permitted(self, user: User):
+        return user.admin or user is self.owner or self.all_can_read or user in self.admins or user in self.members
+
+    def write_permitted(self, user: User):
+        return user.admin or user is self.owner or self.all_can_write or user in self.admins
 
 
 class OmicsRecordMixin(object):
@@ -282,6 +301,14 @@ class OmicsRecordMixin(object):
         'last_editor_id'
     }
 
+    def read_permitted(self, user: User):
+        return user.admin or user is self.owner or self.all_can_read or (
+                self.group_can_read and user in self.user_group.members)
+
+    def write_permitted(self, user: User):
+        return user.admin or user is self.owner or self.all_can_write or (
+                self.group_can_write and user in self.user_group.members)
+
 
 class FileRecordMixin(OmicsRecordMixin):
     filename = db.Column(db.String)
@@ -315,7 +342,8 @@ class FileRecordMixin(OmicsRecordMixin):
 
     @staticmethod
     def synchronize_filename(target, value, oldvalue, initiator):
-        target.filename = f'{target.data_path}/{value}.{target.file_ext}'
+        if value != oldvalue:
+            target.filename = f'{target.data_path}/{value}.{target.file_ext}'
 
     @classmethod
     def register_listeners(cls):

@@ -74,7 +74,7 @@ def get_plot_options_form():
                                     dcc.Dropdown(options=label_options, id='group-by', multi=True)
                                 ]
                             )
-                        ], className='col-3'
+                        ]
                     ),
                     dbc.Col(
                         [
@@ -84,7 +84,7 @@ def get_plot_options_form():
                                     dcc.Dropdown(options=[], id='group-by-value', multi=True)
                                 ]
                             )
-                        ], className='col-4'
+                        ]
                     ),
                     dbc.Col(
                         [
@@ -94,13 +94,41 @@ def get_plot_options_form():
                                     dcc.Dropdown(options=label_options, id='label-by', multi=True)
                                 ]
                             )
-                        ], className='col-3'
+                        ]
+                    )
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Show Bins From', html_for='bin-collection'),
+                                    dcc.Dropdown(options=collection_options, id='bin-collection', multi=False)
+                                ]
+                            )
+                        ], className='col-6'
                     ),
                     dbc.Col(
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Update Plot', html_for='plot-button-group'),
+                                    dbc.Label('Legend Style', html_for='legend-style-select'),
+                                    dcc.Dropdown(options=[
+                                        {'label': 'Full', 'value': 'full'},
+                                        {'label': 'Groups', 'value': 'groups'},
+                                        {'label': 'None', 'value': 'none'}
+                                    ], value='full', id='legend-style-select')
+                                ]
+                            )
+                        ], className='col-4'
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Plot', html_for='plot-button-group'),
                                     dbc.InputGroup(
                                         [
                                             dbc.Button('Plot', color='primary', id='plot-button')
@@ -109,9 +137,59 @@ def get_plot_options_form():
                                 ]
                             )
                         ], className='col-2'
+                    ),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('File Format', html_for='file-format-select'),
+                                    dcc.Dropdown(options=[
+                                        {'label': 'SVG', 'value': 'svg'},
+                                        {'label': 'PNG', 'value': 'png'},
+                                        {'label': 'JPEG', 'value': 'jpg'}
+                                    ], value='png', id='file-format-select')
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Assemble results', html_for='download-button-group'),
+                                    dbc.FormGroup(
+                                        [
+                                            dbc.Button([html.I(className='fas fa-cogs'), ' Prepare'],
+                                                       id='download-button',
+                                                       className='btn btn-info')
+                                        ], id='download-button-group'
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Download', html_for='download-link-group'),
+                                    dbc.FormGroup(
+                                        [
+                                            html.A([html.I(className='fas fa-download'), ' Download'],
+                                                   id='download-link', className='btn btn-secondary disabled')
+                                        ], id='download-link-group'
+                                    )
+                                ]
+                            )
+                        ]
                     )
                 ]
             ),
+            dbc.Row(dcc.Loading(html.Small('', id='download-message', className='form-text'))),
         ]
     )
 
@@ -129,6 +207,9 @@ def get_layout():
                     ),
                     dbc.Card(
                         dbc.CardBody(dcc.Loading(html.Div(dcc.Graph(id='main-plot'), id='plot-wrapper')))
+                    ),
+                    dbc.Card(
+                        dbc.CardBody(id='summary-table-wrapper')
                     )
                 ]
             )

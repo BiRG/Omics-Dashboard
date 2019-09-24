@@ -310,7 +310,7 @@ def get_read_permitted_records(user: User, records: List[Any]) -> List[Any]:
     :param records:
     :return:
     """
-    return [record for record in records if is_read_permitted(user, record)]
+    return [record for record in records if record.read_permitted(user)]
 
 
 def get_all_read_permitted_records(user: User, model: db.Model, filter_by: Dict[str, Any] = None):
@@ -323,15 +323,11 @@ def get_all_read_permitted_records(user: User, model: db.Model, filter_by: Dict[
     :param filter_by: A dictionary to filter on.
     :return:
     """
-    if user.admin:
-        if filter_by:
-            return model.query.filter_by(**filter_by).all()
-        return model.query.all()
-    else:
-        if filter_by:
-            return model.query.filter_by(**filter_by).filter(
-                model.all_can_read or (model.group_can_read and user.in_(model.user_group.members))).all()
-        return model.query.filter(model.all_can_read or (model.group_can_read and user.in_(model.user_group.members))).all()
+    query = model.query.filter_by(**filter_by) if filter_by is not None else model.query
+
+    return query.filter((model.owner_id == user.id) | model.all_can_read |
+                        (model.group_can_read & model.user_group_id.in_(
+                            [user_group.id for user_group in user.user_groups])))
 
 
 def get_user_name(user: User):

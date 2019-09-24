@@ -547,26 +547,7 @@ class OPLSData(MultivariateAnalysisData):
     def get_summary_table(self, group_key, theme=None):
         is_discrimination = 'accuracy' in h5py.File(self.results_filename)[group_key].attrs
         description = h5py.File(self.results_filename)[group_key].attrs['description']
-
-        theme = theme or 'plotly_white'
-        style_header = {
-            'font-family': 'sans',
-            'font-weight': 'bold',
-            'backgroundColor': '#375A7F',
-            'color': 'white'
-        } if theme == 'plotly_dark' else {
-            'font-family': 'sans',
-            'font-weight': 'bold',
-            'backgroundColor': '#2C3E50',
-            'color': 'white'
-        }
-        style_cell = {
-            'backgroundColor': '#303030',
-            'color': 'white'
-        } if theme == 'plotly_dark' else {
-            'backgroundColor': 'white',
-            'color': '#212529'
-        }
+        theme, style_header, style_cell = self._get_table_styles(theme)
 
         index = [
             'Components',
@@ -576,8 +557,8 @@ class OPLSData(MultivariateAnalysisData):
         ]
         if is_discrimination:
             index += [
-                'DQ\u00B2Y',
                 'DR\u00B2Y',
+                'DQ\u00B2Y',
                 'Accuracy',
                 'ROC Area Under Curve',
                 'Positive Value',
@@ -925,7 +906,7 @@ class OPLSData(MultivariateAnalysisData):
 
     def get_bin_options(self, group_key):
         try:
-            with h5py.File(self.results_filename) as file:
+            with h5py.File(self.results_filename, 'r') as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
@@ -944,6 +925,7 @@ class OPLSData(MultivariateAnalysisData):
         arr_range = arr.max() - arr.min()
         x = np.linspace(arr.min() - 0.5 * arr_range, arr.max() + 0.5 * arr_range, 2 * arr.size)
         kernel = gaussian_kde(np.ravel(arr))
+        # noinspection PyArgumentList
         return x, kernel(x), kernel(true_value).item()
 
     def _get_loading_kde(self, group_key, feature_ind):
@@ -1025,32 +1007,26 @@ class OPLSData(MultivariateAnalysisData):
     def get_loading_significance_table(self, group_key, theme=None, wrap=True):
         description = h5py.File(self.results_filename)[group_key].attrs['description']
         if self.results_file_ready:
-            theme = theme or 'plotly_white'
-            style_header = {
-                'font-family': 'sans',
-                'font-weight': 'bold',
-                'backgroundColor': '#375A7F',
-                'color': 'white'
-            } if theme == 'plotly_dark' else {
-                'font-family': 'sans',
-                'font-weight': 'bold',
-                'backgroundColor': '#2C3E50',
-                'color': 'white'
-            }
-            style_cell = {
-                'backgroundColor': '#303030',
-                'color': 'white'
-            } if theme == 'plotly_dark' else {
-                'backgroundColor': 'white',
-                'color': '#212529'
-            }
+            theme, style_header, style_cell = self._get_table_styles(theme)
             with h5py.File(self.results_filename) as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
+                base_collection_id = file.attrs['input_collection_id'] if 'input_collection_id' in file.attrs else None
+            x_min = x_max = None
+            if base_collection_id is not None:
+                try:
+                    base_collection = get_collection(current_user, int(base_collection_id))
+                    x_min = base_collection.get_dataset('/x_min').ravel().tolist()
+                    x_max = base_collection.get_dataset('/x_max').ravel().tolist()
+                except Exception as e:
+                    x_min = x_max = None
             is_significant = p_values < alpha
             df = pd.DataFrame()
             df['Bin'] = feature_labels
+            if x_min is not None and x_max is not None:
+                df['Bin Max'] = x_max
+                df['Bin Min'] = x_min
             df['p Value'] = p_values
             df['Significant'] = ['*' if s else '' for s in is_significant]
             df = df.sort_values(['Significant', 'Bin'], ascending=[False, True])
@@ -1058,9 +1034,15 @@ class OPLSData(MultivariateAnalysisData):
             # format table for better display in browser
             df['p Value'] = df['p Value'].round(7).apply(lambda x: f'{x:.7f}')
             df['Bin'] = df['Bin'].round(4).apply(lambda x: f'{x:.4f}')
+            if x_min is not None and x_max is not None:
+                df['Bin Max'] = df['Bin Max'].round(4).apply(lambda x: f'{x:.4f}')
+                df['Bin Min'] = df['Bin Min'].round(4).apply(lambda x: f'{x:.4f}')
             del df['Significant']
             df['Index'] = [str(i) for i in df.index]
-            df = df[['Index', 'Bin', 'p Value']]
+            if x_min is not None and x_max is not None:
+                df = df[['Index', 'Bin Max', 'Bin', 'Bin Min', 'p Value']]
+            else:
+                df = df[['Index', 'Bin', 'p Value']]
             style_data_conditional = [
                 {
                     'if': {'filter_query': f'{{p Value}} < {alpha}'},
@@ -1077,7 +1059,7 @@ class OPLSData(MultivariateAnalysisData):
                                          style_table={
                                              'height': '500px',
                                              'overflowY': 'scroll',
-                                             'width': '300px'
+                                             'width': '500px'
                                          },
                                          fixed_rows={
                                              'headers': True,
@@ -1091,6 +1073,10 @@ class OPLSData(MultivariateAnalysisData):
                                              {'if': {'column_id': 'Index'},
                                               'width': f'{df.Index.str.len().max() + 2}ch'},
                                              {'if': {'column_id': 'Bin'},
+                                              'width': f'{df.Bin.str.len().max() + 2}ch'},
+                                             {'if': {'column_id': 'Bin Max'},
+                                              'width': f'{df.Bin.str.len().max() + 2}ch'},
+                                             {'if': {'column_id': 'Bin Min'},
                                               'width': f'{df.Bin.str.len().max() + 2}ch'},
                                              {'if': {'column_id': 'p Value'},
                                               'width': '12ch'},
@@ -1140,25 +1126,23 @@ class OPLSData(MultivariateAnalysisData):
                             accuracy_graph = roc_auc_graph = None
                     for file_format in file_formats:
                         format_dir = os.path.join(plot_dir, file_format)
-                        pio.write_image(quality_graph.to_plotly_json()['props']['figure'],
-                                        os.path.join(format_dir, f'quality_metrics.{file_format}'))
-                        pio.write_image(score_graph.to_plotly_json()['props']['figure'],
-                                        os.path.join(format_dir, f'scores.{file_format}'))
-                        pio.write_image(r_squared_Y_graph.to_plotly_json()['props']['figure'],
-                                        os.path.join(format_dir, f'r_squared_Y_kde.{file_format}'))
-                        pio.write_image(r_squared_X_graph.to_plotly_json()['props']['figure'],
-                                        os.path.join(format_dir, f'r_squared_X_kde.{file_format}'))
-                        pio.write_image(q_squared_graph.to_plotly_json()['props']['figure'],
-                                        os.path.join(format_dir, f'q_squared_kde.{file_format}'))
+                        to_write = {
+                            'quality_metrics': quality_graph,
+                            'scores': score_graph,
+                            'r_squared_Y_kde': r_squared_Y_graph,
+                            'r_squared_X_kde': r_squared_X_graph,
+                            'q_squared_kde': q_squared_graph
+                        }
                         if is_discrimination:
-                            pio.write_image(discriminant_r_squared_graph.to_plotly_json()['props']['figure'],
-                                            os.path.join(format_dir, f'discriminant_r_squared_kde.{file_format}'))
-                            pio.write_image(discriminant_q_squared_graph.to_plotly_json()['props']['figure'],
-                                            os.path.join(format_dir, f'discriminant_q_squared_kde.{file_format}'))
-                            pio.write_image(accuracy_graph.to_plotly_json()['props']['figure'],
-                                            os.path.join(format_dir, f'accuracy_kde.{file_format}'))
-                            pio.write_image(roc_auc_graph.to_plotly_json()['props']['figure'],
-                                            os.path.join(format_dir, f'roc_auc_kde.{file_format}'))
+                            to_write.update({
+                                'discriminant_r_squared_kde': discriminant_r_squared_graph,
+                                'discriminant_q_squared_kde': discriminant_q_squared_graph,
+                                'accuracy_kde': accuracy_graph,
+                                'roc_auc_kde': roc_auc_graph
+                            })
+                        for graph_name, graph in to_write.items():
+                            filename = os.path.join(format_dir, f'{graph_name}.{file_format}')
+                            self._save_plot(graph, filename)
             return shutil.make_archive(plot_dir, 'zip', root_dir, f'{base_filename}_plots')
         raise RuntimeError('Plots not ready!')
 
@@ -1177,3 +1161,30 @@ class OPLSData(MultivariateAnalysisData):
             return [html.Span([dbc.Badge(f'{self.results_collection_id}', className='badge-pill', color=color), ' '])]
         else:
             return [html.Span([dbc.Badge('None', className='badge-pill')])]
+
+    @staticmethod
+    def _get_table_styles(theme):
+        theme = theme or 'plotly_white'
+        style_header = {
+            'font-family': 'sans',
+            'font-weight': 'bold',
+            'backgroundColor': '#375A7F',
+            'color': 'white'
+        } if theme == 'plotly_dark' else {
+            'font-family': 'sans',
+            'font-weight': 'bold',
+            'backgroundColor': '#2C3E50',
+            'color': 'white'
+        }
+        style_cell = {
+            'backgroundColor': '#303030',
+            'color': 'white'
+        } if theme == 'plotly_dark' else {
+            'backgroundColor': 'white',
+            'color': '#212529'
+        }
+        return theme, style_header, style_cell
+
+    @staticmethod
+    def _save_plot(plot, filename):
+        pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
