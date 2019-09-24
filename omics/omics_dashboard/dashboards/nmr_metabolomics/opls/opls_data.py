@@ -1010,6 +1010,7 @@ class OPLSData(MultivariateAnalysisData):
             theme, style_header, style_cell = self._get_table_styles(theme)
             with h5py.File(self.results_filename) as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
+                loadings = np.array(file[group_key]['opls']['x_loadings']).ravel()
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
                 base_collection_id = file.attrs['input_collection_id'] if 'input_collection_id' in file.attrs else None
@@ -1017,14 +1018,20 @@ class OPLSData(MultivariateAnalysisData):
             if base_collection_id is not None:
                 try:
                     base_collection = get_collection(current_user, int(base_collection_id))
-                    x_min = base_collection.get_dataset('/x_min').ravel().tolist()
-                    x_max = base_collection.get_dataset('/x_max').ravel().tolist()
+                    x = base_collection.get_dataset('/x').ravel()
+                    x_min = base_collection.get_dataset('/x_min').ravel()
+                    x_max = base_collection.get_dataset('/x_max').ravel()
+                    x_min = x_min[np.in1d(x, feature_labels)]
+                    x_max = x_max[np.in1d(x, feature_labels)]
                 except Exception as e:
                     x_min = x_max = None
-            valid_bin_boundaries = (x_min is not None) and (x_max is not None) and (len(x_max) == len(x_min) == feature_labels.shape[0])
+            valid_bin_boundaries = (x_min is not None
+                                    and x_max is not None
+                                    and x_max.shape[0] == x_min.shape[0] == feature_labels.shape[0])
             is_significant = p_values < alpha
             df = pd.DataFrame()
             df['Bin'] = feature_labels
+            df['Loading'] = loadings
             if valid_bin_boundaries:
                 df['Bin Max'] = x_max
                 df['Bin Min'] = x_min
@@ -1033,17 +1040,18 @@ class OPLSData(MultivariateAnalysisData):
             df = df.sort_values(['Significant', 'Bin'], ascending=[False, True])
 
             # format table for better display in browser
-            df['p Value'] = df['p Value'].round(7).apply(lambda x: f'{x:.7f}')
-            df['Bin'] = df['Bin'].round(4).apply(lambda x: f'{x:.4f}')
+            df['p Value'] = df['p Value'].round(7).apply(lambda val: f'{val:.7f}')
+            df['Bin'] = df['Bin'].round(4).apply(lambda val: f'{val:.4f}')
+            df['Loading'] = df['Loading'].round(5).apply(lambda val: f'{val:.5f}')
             if valid_bin_boundaries:
-                df['Bin Max'] = df['Bin Max'].round(4).apply(lambda x: f'{x:.4f}')
-                df['Bin Min'] = df['Bin Min'].round(4).apply(lambda x: f'{x:.4f}')
+                df['Bin Max'] = df['Bin Max'].round(4).apply(lambda val: f'{val:.4f}')
+                df['Bin Min'] = df['Bin Min'].round(4).apply(lambda val: f'{val:.4f}')
             del df['Significant']
             df['Index'] = [str(i) for i in df.index]
             if valid_bin_boundaries:
-                df = df[['Index', 'Bin Max', 'Bin', 'Bin Min', 'p Value']]
+                df = df[['Index', 'Bin Max', 'Bin', 'Bin Min', 'Loading', 'p Value']]
             else:
-                df = df[['Index', 'Bin', 'p Value']]
+                df = df[['Index', 'Bin', 'Loading', 'p Value']]
             style_data_conditional = [
                 {
                     'if': {'filter_query': f'{{p Value}} < {alpha}'},
@@ -1059,8 +1067,7 @@ class OPLSData(MultivariateAnalysisData):
                                          data=df.to_dict('records'),
                                          style_table={
                                              'height': '500px',
-                                             'overflowY': 'scroll',
-                                             'width': '500px'
+                                             'overflowY': 'scroll'
                                          },
                                          fixed_rows={
                                              'headers': True,
@@ -1072,7 +1079,7 @@ class OPLSData(MultivariateAnalysisData):
                                          style_cell=style_cell,
                                          style_cell_conditional=[
                                              {'if': {'column_id': 'Index'},
-                                              'width': f'{df.Index.str.len().max() + 2}ch'},
+                                              'width': f'{max(df.Index.str.len().max(), 5) + 2}ch'},
                                              {'if': {'column_id': 'Bin'},
                                               'width': f'{df.Bin.str.len().max() + 2}ch'},
                                              {'if': {'column_id': 'Bin Max'},
