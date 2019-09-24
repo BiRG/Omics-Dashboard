@@ -1021,10 +1021,11 @@ class OPLSData(MultivariateAnalysisData):
                     x_max = base_collection.get_dataset('/x_max').ravel().tolist()
                 except Exception as e:
                     x_min = x_max = None
+            valid_bin_boundaries = (x_min is not None) and (x_max is not None) and (len(x_max) == len(x_min) == feature_labels.shape[0])
             is_significant = p_values < alpha
             df = pd.DataFrame()
             df['Bin'] = feature_labels
-            if x_min is not None and x_max is not None:
+            if valid_bin_boundaries:
                 df['Bin Max'] = x_max
                 df['Bin Min'] = x_min
             df['p Value'] = p_values
@@ -1034,12 +1035,12 @@ class OPLSData(MultivariateAnalysisData):
             # format table for better display in browser
             df['p Value'] = df['p Value'].round(7).apply(lambda x: f'{x:.7f}')
             df['Bin'] = df['Bin'].round(4).apply(lambda x: f'{x:.4f}')
-            if x_min is not None and x_max is not None:
+            if valid_bin_boundaries:
                 df['Bin Max'] = df['Bin Max'].round(4).apply(lambda x: f'{x:.4f}')
                 df['Bin Min'] = df['Bin Min'].round(4).apply(lambda x: f'{x:.4f}')
             del df['Significant']
             df['Index'] = [str(i) for i in df.index]
-            if x_min is not None and x_max is not None:
+            if valid_bin_boundaries:
                 df = df[['Index', 'Bin Max', 'Bin', 'Bin Min', 'p Value']]
             else:
                 df = df[['Index', 'Bin', 'p Value']]
