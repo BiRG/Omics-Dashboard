@@ -104,6 +104,16 @@ class ListTableData(PageData):
                 self.headings = ['ID'] + self.headings
 
 
+class UserListTableData(ListTableData):
+    """
+    Stores data passed to the generic list table
+    """
+
+    def __init__(self, current_user: User, records: List[Any], mailto):
+        super(UserListTableData, self).__init__(current_user, records, 'Users')
+        self.mailto = mailto
+
+
 class DashboardListTableData(PageData):
     def __init__(self, current_user: User, dashboards: List[Type[Dashboard]]):
         super(DashboardListTableData, self).__init__(current_user)

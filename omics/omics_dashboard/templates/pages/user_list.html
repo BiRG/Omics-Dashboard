@@ -1,0 +1,10 @@
+{% extends 'pages/list.html' %}
+{% block content %}
+    <div class="row">
+        {% if page_data.mailto is not none %}
+            <a href="{{ page_data.mailto }}" class="btn btn-info"><i class="fas fa-envelope"></i> Email All Users</a>
+        {% endif %}
+    </div>
+    <br>
+    {{ super() }}
+{% endblock %}

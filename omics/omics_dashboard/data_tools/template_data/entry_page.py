@@ -5,7 +5,7 @@ from flask import url_for
 from data_tools.access_wrappers.collections import get_collections
 from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
 from data_tools.access_wrappers.samples import get_samples
-from data_tools.access_wrappers.users import is_write_permitted, get_read_permitted_records
+from data_tools.access_wrappers.users import is_write_permitted, get_read_permitted_records, get_mailto_group
 from data_tools.access_wrappers.workflows import WorkflowModule
 from data_tools.db_models import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
     ExternalFile
@@ -140,6 +140,7 @@ class UserGroupPageData(EntryPageData):
         self.is_member = current_user in members
         self.is_primary = user_group == current_user.primary_user_group
         self.user_update_url = url_for('users_api.get_user', user_id=current_user.id)
+        self.mailto = get_mailto_group(user_group)
 
 
 class DashboardPageData(PageData):

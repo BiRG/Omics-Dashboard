@@ -344,3 +344,15 @@ def get_all_read_permitted_records(user: User, model: db.Model, filter_by: Dict[
 
 def get_user_name(user: User):
     return user.name
+
+
+def get_mailto(users: List[User]):
+    return f'mailto:{",".join([user.email for user in users])}'
+
+
+def get_mailto_all():
+    return get_mailto([user for user in User.query.all()])
+
+
+def get_mailto_group(user_group: UserGroup):
+    return get_mailto([user for user in user_group.members])
