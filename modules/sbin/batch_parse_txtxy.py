@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys
-import textparsers as tp
+import text_parsers as tp
 import os
 infilenames = sys.argv[1:len(sys.argv)-1]
 nameprefix = sys.argv[len(sys.argv)-1]

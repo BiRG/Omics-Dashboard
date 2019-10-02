@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: 31PNMR
 baseCommand:
-  - batchprocessNMR.py
+  - batch_process_NMR.py
 inputs:
   - id: input_files
     type: File[]
