@@ -2,7 +2,7 @@
 import numpy as np
 import shutil
 import sys
-from .NMR_processing import scale
+from NMR_processing import scale
 import os
 
 frequency = np.float64(sys.argv[len(sys.argv) - 1])
