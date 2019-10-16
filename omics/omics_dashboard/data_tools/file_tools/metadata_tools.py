@@ -8,7 +8,7 @@ import numpy as np
 
 def get_file_attributes(filename: str) -> Dict[str, Any]:
     with h5py.File(filename, 'r') as infile:
-        return {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
+        return {key: (value.decode('utf-8', errors='ignore') if isinstance(value, bytes) else value)
                 for key, value in infile.attrs.items()}
 
 
@@ -20,7 +20,7 @@ def get_file_attribute_dtypes(filename: str) -> Dict[str, str]:
 def get_collection_metadata(filename: str) -> Dict[str, Any]:
     """Get attributes of a hdf5 file, its last modified date, and the sizes of its largest datasets"""
     with h5py.File(filename, 'r') as infile:
-        attrs = {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
+        attrs = {key: (value.decode('utf-8', errors='ignore') if isinstance(value, bytes) else value)
                  for key, value in infile.attrs.items()}
     attrs['date_modified'] = int(os.path.getmtime(filename))
     dims = approximate_dims(filename)
@@ -77,7 +77,7 @@ def get_group_info(group: h5py.Group) -> Dict[str, Any]:
 
     def process_value(value):
         value = getattr(value, "tolist", lambda x=value: x)()
-        return value.decode('ascii') if isinstance(value, bytes) else value
+        return value.decode('utf-8', errors='ignore') if isinstance(value, bytes) else value
 
     return {
         'path': group.name,
@@ -99,7 +99,7 @@ def get_dataset_info(dataset: h5py.Dataset) -> Dict[str, Any]:
         cols = dataset.shape[1]
     return {
         'path': dataset.name,
-        'attrs': {key: (value.decode('UTF-8') if isinstance(value, bytes) else value)
+        'attrs': {key: (value.decode('utf-8', errors='ignore') if isinstance(value, bytes) else value)
                   for key, value in dataset.attrs.items()},
         'rows': rows,
         'cols': cols,
