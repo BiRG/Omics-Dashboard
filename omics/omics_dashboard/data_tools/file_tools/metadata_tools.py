@@ -77,7 +77,7 @@ def get_group_info(group: h5py.Group) -> Dict[str, Any]:
 
     def process_value(value):
         value = getattr(value, "tolist", lambda x=value: x)()
-        return value.decode('ascii') if isinstance(value, bytes) else value
+        return value.decode('utf-8') if isinstance(value, bytes) else value
 
     return {
         'path': group.name,
