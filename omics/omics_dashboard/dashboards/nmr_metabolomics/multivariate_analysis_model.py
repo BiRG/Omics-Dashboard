@@ -1,6 +1,5 @@
 import itertools
 import os
-import shutil
 import time as tm
 from typing import List, Dict, Any, Union
 
@@ -10,13 +9,10 @@ import h5py
 import msgpack
 import numpy as np
 import pandas as pd
-from flask_login import current_user
-from sklearn.utils.multiclass import type_of_target
 
-import data_tools.redis_config as rds
+import config.redis_config as rds
 
 from dashboards.dashboard_model import DashboardModel
-from data_tools.access_wrappers.collections import get_collection_copy
 
 
 class MultivariateAnalysisModel(DashboardModel):

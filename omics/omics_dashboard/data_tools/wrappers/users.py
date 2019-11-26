@@ -126,7 +126,7 @@ def update_user(current_user: User, target_user: User, new_data: Dict[str, Any])
             if email_count:
                 raise ValueError('This email is already in use!')
         if 'user_group_ids' in new_data:
-            from data_tools.access_wrappers.user_groups import get_user_group
+            from data_tools.wrappers.user_groups import get_user_group
             new_data['user_group_ids'] = [int(user_group_id) for user_group_id in new_data['user_group_ids']]
             new_user_groups = [get_user_group(current_user, user_group_id) for user_group_id in
                                new_data['user_group_ids']]

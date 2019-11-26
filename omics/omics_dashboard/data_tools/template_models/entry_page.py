@@ -2,19 +2,19 @@ from typing import Union
 
 from flask import url_for
 
-from data_tools.access_wrappers.collections import get_collections
-from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
-from data_tools.access_wrappers.samples import get_samples
-from data_tools.access_wrappers.users import is_write_permitted, get_read_permitted_records, get_mailto_group
-from data_tools.access_wrappers.workflows import WorkflowModule
+from data_tools.wrappers.collections import get_collections
+from data_tools.wrappers.jobserver_control import Job, get_badge_class
+from data_tools.wrappers.samples import get_samples
+from data_tools.wrappers.users import is_write_permitted, get_read_permitted_records, get_mailto_group
+from data_tools.wrappers.workflows import WorkflowModule
 from data_tools.db_models import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
     ExternalFile
-from data_tools.template_data.attribute_table import AttributeTableData, FileAttributeTableData, \
+from data_tools.template_models.attribute_table import AttributeTableData, FileAttributeTableData, \
     WorkflowModuleAttributeTableData, DatasetSummaryTableData
-from data_tools.template_data.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
-from data_tools.template_data.label_column_table import LabelColumnTableData
-from data_tools.template_data.list_table import ListTableData, FileListTableData
-from data_tools.template_data.page import PageData
+from data_tools.template_models.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
+from data_tools.template_models.label_column_table import LabelColumnTableData
+from data_tools.template_models.list_table import ListTableData, FileListTableData
+from data_tools.template_models.page import PageData
 from helpers import get_update_url, get_list_url, get_download_url
 
 

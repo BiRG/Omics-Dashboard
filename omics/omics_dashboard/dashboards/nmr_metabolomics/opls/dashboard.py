@@ -11,7 +11,7 @@ from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from helpers import log_internal_exception
 from .layouts import get_layout
 from .model import OPLSModel
-import data_tools.redis_config as rds
+import config.redis_config as rds
 
 
 class OPLSDashboard(Dashboard):

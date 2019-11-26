@@ -8,7 +8,7 @@ from plotly import graph_objs as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 
 from dashboards.dashboard_model import DashboardModel
-from data_tools.access_wrappers.collections import get_collection
+from data_tools.wrappers.collections import get_collection
 
 
 class VisualizationModel(DashboardModel):

@@ -19,13 +19,12 @@ from pyopls import OPLSValidator, OPLS
 from scipy.stats import gaussian_kde
 from sklearn.utils.multiclass import type_of_target
 
-import data_tools.redis_config as rds
+import config.redis_config as rds
 from dashboards.dashboard_model import save_figures
-from data_tools.access_wrappers.collections import get_collection, create_collection
-from data_tools.access_wrappers.jobserver_control import start_job
-from data_tools.config import TMPDIR
+from data_tools.wrappers.collections import get_collection, create_collection
+from data_tools.wrappers.jobserver_control import start_job
+from config.config import TMPDIR
 from helpers import get_item_link
-from rq import Queue
 from .workflow import workflow
 from ..multivariate_analysis_model import MultivariateAnalysisModel
 

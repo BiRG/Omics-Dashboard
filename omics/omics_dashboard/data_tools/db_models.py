@@ -23,8 +23,8 @@ from sqlalchemy.ext.declarative import declared_attr
 import data_tools.file_tools.collection_tools as ct
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.file_tools.h5_merge import h5_merge
-from data_tools.redis_config import clear_user_hash
-from data_tools.config import DATADIR
+from config.redis_config import clear_user_hash
+from config.config import DATADIR
 
 
 class Base(Model):

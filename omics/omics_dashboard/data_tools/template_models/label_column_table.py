@@ -1,7 +1,7 @@
-from data_tools.access_wrappers.users import is_write_permitted
+from data_tools.wrappers.users import is_write_permitted
 from data_tools.db_models import User, Collection
 from data_tools.file_tools.collection_tools import get_dataset
-from data_tools.template_data.page import PageData
+from data_tools.template_models.page import PageData
 
 
 class LabelColumnTableData(PageData):

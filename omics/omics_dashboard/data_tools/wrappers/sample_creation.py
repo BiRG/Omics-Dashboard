@@ -2,12 +2,12 @@ import json
 import os
 from typing import List, Dict, Any
 
-from data_tools.access_wrappers.jobserver_control import create_jobserver_token
-from data_tools.access_wrappers.samples import create_placeholder_samples
-from data_tools.access_wrappers.users import get_jwt
-from data_tools.access_wrappers.workflows import get_modules, WorkflowModule
+from data_tools.wrappers.jobserver_control import create_jobserver_token
+from data_tools.wrappers.samples import create_placeholder_samples
+from data_tools.wrappers.users import get_jwt
+from data_tools.wrappers.workflows import get_modules, WorkflowModule
 from data_tools.db_models import User
-from data_tools.config import TMPDIR, DATADIR, MODULEDIR
+from config.config import TMPDIR, DATADIR, MODULEDIR
 
 
 def create_sample_creation_workflow(user: User, input_filenames: List[str], metadata: Dict[str, Any]):

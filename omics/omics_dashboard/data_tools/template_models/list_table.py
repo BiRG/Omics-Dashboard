@@ -1,12 +1,12 @@
 from typing import Any, Union, List, Type
 
 from dashboards import Dashboard
-from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
-from data_tools.access_wrappers.users import is_write_permitted
-from data_tools.access_wrappers.workflows import WorkflowModule
+from data_tools.wrappers.jobserver_control import Job, get_badge_class
+from data_tools.wrappers.users import is_write_permitted
+from data_tools.wrappers.workflows import WorkflowModule
 from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile, \
     Notification
-from data_tools.template_data.page import PageData
+from data_tools.template_models.page import PageData
 from helpers import get_item_link
 
 

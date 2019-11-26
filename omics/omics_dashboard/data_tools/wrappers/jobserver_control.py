@@ -9,11 +9,11 @@ from typing import Dict, Any, List
 import requests
 from ruamel import yaml as yaml
 
-from data_tools.access_wrappers.external_files import create_external_file
-from data_tools.access_wrappers.users import get_jwt
+from data_tools.wrappers.external_files import create_external_file
+from data_tools.wrappers.users import get_jwt
 from data_tools.db_models import JobserverToken, User, db
 from data_tools.util import AuthException, NotFoundException
-from data_tools.config import COMPUTESERVER, TMPDIR, OMICSSERVER, DATADIR
+from config.config import COMPUTESERVER, TMPDIR, OMICSSERVER, DATADIR
 
 
 class Job:

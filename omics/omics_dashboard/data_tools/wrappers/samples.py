@@ -4,11 +4,11 @@ import shutil
 from typing import Dict, List, Any
 
 import data_tools.file_tools.metadata_tools as mdt
-from data_tools.access_wrappers.sample_groups import get_sample_group
-from data_tools.access_wrappers.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
+from data_tools.wrappers.sample_groups import get_sample_group
+from data_tools.wrappers.users import is_read_permitted, is_write_permitted, get_all_read_permitted_records
 from data_tools.db_models import Sample, User, db
 from data_tools.util import AuthException, NotFoundException, validate_file
-from data_tools.config import DATADIR
+from config.config import DATADIR
 
 
 def get_all_samples(filter_by: Dict[str, Any] = None) -> List[Sample]:

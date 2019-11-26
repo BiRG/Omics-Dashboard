@@ -1,11 +1,11 @@
 from flask import render_template, Blueprint, request, redirect, url_for
 from flask_login import login_required
 
-from data_tools.access_wrappers.jobserver_control import get_jobs, get_job, start_job, prepare_job_params
-from data_tools.access_wrappers.workflows import get_workflow
-from data_tools.template_data.entry_page import JobPageData
-from data_tools.template_data.form import SubmitFormData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.wrappers.jobserver_control import get_jobs, get_job, start_job, prepare_job_params
+from data_tools.wrappers.workflows import get_workflow
+from data_tools.template_models.entry_page import JobPageData
+from data_tools.template_models.form import SubmitFormData
+from data_tools.template_models.list_table import ListTableData
 from data_tools.util import NotFoundException
 from helpers import get_current_user, process_input_dict
 from helpers import handle_exception_browser

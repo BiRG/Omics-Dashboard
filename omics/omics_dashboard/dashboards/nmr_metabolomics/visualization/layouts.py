@@ -5,7 +5,7 @@ from flask_login import current_user
 
 from dashboards.navbar import get_navbar
 from dashboards.nmr_metabolomics.visualization.model import VisualizationModel
-from data_tools.access_wrappers.collections import get_collections
+from data_tools.wrappers.collections import get_collections
 
 
 def get_plot_options_form():

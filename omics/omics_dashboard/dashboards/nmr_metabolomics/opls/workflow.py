@@ -1,6 +1,6 @@
 import os
 
-from data_tools.config import MODULEDIR
+from config.config import MODULEDIR
 
 workflow = {
     'class': 'Workflow',

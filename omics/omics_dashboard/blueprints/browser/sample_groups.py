@@ -4,17 +4,17 @@ from flask import render_template, Blueprint, request, redirect, url_for
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from data_tools.access_wrappers.jobserver_control import start_job
-from data_tools.access_wrappers.sample_creation import create_sample_creation_workflow
-from data_tools.access_wrappers.sample_groups import get_sample_group, get_sample_groups, update_sample_group, \
+from data_tools.wrappers.jobserver_control import start_job
+from data_tools.wrappers.sample_creation import create_sample_creation_workflow
+from data_tools.wrappers.sample_groups import get_sample_group, get_sample_groups, update_sample_group, \
     delete_sample_group, \
     create_sample_group
-from data_tools.access_wrappers.samples import get_sample, delete_sample
-from data_tools.template_data.entry_page import SampleGroupPageData
-from data_tools.template_data.form import SampleCreateFormData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.wrappers.samples import get_sample, delete_sample
+from data_tools.template_models.entry_page import SampleGroupPageData
+from data_tools.template_models.form import SampleCreateFormData
+from data_tools.template_models.list_table import ListTableData
 from data_tools.util import AuthException
-from data_tools.config import UPLOADDIR
+from config.config import UPLOADDIR
 from helpers import handle_exception_browser, get_current_user, process_input_dict
 
 sample_groups = Blueprint('sample_groups', __name__, url_prefix='/sample_groups')

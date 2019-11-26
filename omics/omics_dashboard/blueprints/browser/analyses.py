@@ -2,12 +2,12 @@ from flask import render_template, request, redirect, url_for, Blueprint
 from flask_login import login_required
 
 import data_tools as dt
-from data_tools.access_wrappers.analyses import get_analyses, get_analysis
-from data_tools.socket_config import send_message
+from data_tools.wrappers.analyses import get_analyses, get_analysis
+from config.socket_config import send_message
 from data_tools.db_models import Collection
-from data_tools.template_data.entry_page import AnalysisPageData
-from data_tools.template_data.form import AnalysisCreateFormData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.template_models.entry_page import AnalysisPageData
+from data_tools.template_models.form import AnalysisCreateFormData
+from data_tools.template_models.list_table import ListTableData
 from helpers import get_current_user, handle_exception_browser, process_input_dict
 
 analyses = Blueprint('analyses', __name__, url_prefix='/analyses')

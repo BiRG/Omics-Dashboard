@@ -4,9 +4,9 @@ from flask_login import login_user, logout_user, login_required, fresh_login_req
 import data_tools as dt
 from dashboards import dashboard_list
 from data_tools.db_models import db
-from data_tools.template_data.entry_page import DashboardPageData, SettingsPageData
-from data_tools.template_data.form import RegisterFormData, LoginFormData
-from data_tools.template_data.list_table import DashboardListTableData, NotificationListTableData
+from data_tools.template_models.entry_page import DashboardPageData, SettingsPageData
+from data_tools.template_models.form import RegisterFormData, LoginFormData
+from data_tools.template_models.list_table import DashboardListTableData, NotificationListTableData
 from data_tools.util import LoginError
 from helpers import get_current_user, handle_exception_browser
 from login_manager import authenticate_user
@@ -59,7 +59,7 @@ def browser_login(msg=None, error=None):
 @browser.route('/logout', methods=['GET'])
 @login_required
 def browser_logout():
-    dt.redis_config.clear_user_hash(get_current_user().id)
+    config.redis_config.clear_user_hash(get_current_user().id)
     logout_user()
     return redirect(url_for('browser.browser_login'))
 

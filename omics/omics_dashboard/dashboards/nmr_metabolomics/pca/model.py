@@ -19,7 +19,7 @@ from plotly.colors import DEFAULT_PLOTLY_COLORS
 from sklearn.decomposition import PCA
 from sklearn.metrics import davies_bouldin_score, silhouette_score
 
-from data_tools.access_wrappers.collections import upload_collection
+from data_tools.wrappers.collections import upload_collection
 from ..multivariate_analysis_model import MultivariateAnalysisModel
 
 

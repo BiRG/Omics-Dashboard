@@ -7,7 +7,7 @@ from flask_login import current_user
 
 import data_tools as dt
 from data_tools.util import LoginError
-from data_tools.config import DATADIR
+from config.config import DATADIR
 
 log_file_name = f'{DATADIR}/logs/omics.log'
 

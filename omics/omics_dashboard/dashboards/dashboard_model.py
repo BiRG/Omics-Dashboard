@@ -15,10 +15,10 @@ import pandas as pd
 import numpy as np
 from sklearn.utils.multiclass import type_of_target
 
-import data_tools.redis_config as rds
-from data_tools.rq_config import rq
-from data_tools.access_wrappers.collections import get_collection_copy
-from data_tools.config import TMPDIR
+import config.redis_config as rds
+from config.rq_config import rq
+from data_tools.wrappers.collections import get_collection_copy
+from config.config import TMPDIR
 
 
 class DashboardModel:

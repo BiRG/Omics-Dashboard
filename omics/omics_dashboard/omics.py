@@ -8,11 +8,11 @@ from blueprints.browser import browser_blueprints
 from blueprints.api import api_blueprints
 from dashboards import dashboard_list
 from data_tools.db_models import db, User
-from data_tools.config import DATADIR, UPLOADDIR, REDIS_URL
+from config.config import DATADIR, UPLOADDIR, REDIS_URL
 from helpers import log_exception, make_valid_tag, make_tag_from_name
 from login_manager import login_manager
-from data_tools.socket_config import socketio
-from data_tools.rq_config import rq
+from config.socket_config import socketio
+from config.rq_config import rq
 
 
 app = Flask(__name__)

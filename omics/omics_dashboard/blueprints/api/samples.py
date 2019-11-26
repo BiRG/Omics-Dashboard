@@ -7,7 +7,7 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.config import UPLOADDIR
+from config.config import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
 samples_api = Blueprint('samples_api', __name__, url_prefix='/api/samples')
