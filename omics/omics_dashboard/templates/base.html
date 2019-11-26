@@ -1,3 +1,4 @@
+{% from 'components/navbar.html' import navbar %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -24,125 +25,8 @@
      {%- endblock %}
   </head>
   <body>
-{% block navbar %}
-    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-primary pb-2">
-        <a class="navbar-brand" href="{{ url_for('browser.render_home') }}">
-        Omics Dashboard @ {{ BRAND }}
-      </a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav d-flex mx-auto">
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="sampleDropdown" role="button"
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Samples
-            </a>
-            <div class="dropdown-menu" aria-labelledby="sampleDropdown">
-              <a class="dropdown-item" href="{{ url_for('samples.render_sample_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Samples</a>
-              <a class="dropdown-item" href="{{ url_for('sample_groups.render_sample_group_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Sample Groups</a>
-              <a class="dropdown-item" href="{{ url_for('sample_groups.render_upload_sample_group') }}"><i class="fas fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
-            </div>
-          </li>
-
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="collectionDropdown" role="button"
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Collections
-            </a>
-            <div class="dropdown-menu" aria-labelledby="collectionDropdown">
-              <a class="dropdown-item" href="{{ url_for('collections.render_collection_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
-              <a class="dropdown-item" href="{{ url_for('collections.render_create_collection') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
-            </div>
-          </li>
-
-
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="analysisDropdown" role="button"
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Analyses
-            </a>
-            <div class="dropdown-menu" aria-labelledby="analysisDropdown">
-              <a class="dropdown-item" href="{{ url_for('analyses.render_analysis_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
-              <a class="dropdown-item" href="{{ url_for('analyses.render_create_analysis') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
-            </div>
-          </li>
-
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="analysisDropdown" role="button"
-                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Dashboards
-                </a>
-                <div class="dropdown-menu" aria-labelledby="analysisDropdown">
-                    <a class="dropdown-item" href="{{ url_for('browser.render_dashboard_list') }}"><i
-                            class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
-                </div>
-            </li>
-
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="workflowDropdown" role="button"
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Workflows
-            </a>
-            <div class="dropdown-menu" aria-labelledby="workflowDropdown">
-              <a class="dropdown-item" href="{{ url_for('workflows.render_workflow_list') }}"><i class="fas fa-list" aria-hidden="true"></i> List</a>
-              <a class="dropdown-item" href="{{ url_for('workflows.render_create_workflow') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
-              <a class="dropdown-item" href="{{ url_for('workflows.render_workflow_module_list') }}"><i class="fas fa-plug fa-fw" aria-hidden="true"></i>Modules</a>
-                <a class="dropdown-item" href="{{ url_for('jobs.render_job_list') }}"><i class="fas fa-tasks fa-fw"
-                                                                                         aria-hidden="true"></i>Jobs</a>
-            </div>
-          </li>
-
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="externalFileDropdown" role="button"
-                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    External Files
-                </a>
-                <div class="dropdown-menu" aria-labelledby="externalFileDropdown">
-                    <a class="dropdown-item" href="{{ url_for('external_files.render_external_file_list') }}"><i
-                            class="fas fa-list" aria-hidden="true"></i> List</a>
-                    <a class="dropdown-item" href="{{ url_for('external_files.render_create_external_file') }}"><i
-                            class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
-                </div>
-            </li>
-
-
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Users
-                </a>
-                <div class="dropdown-menu" aria-labelledby="userDropdown">
-                    <a class="dropdown-item" href="{{ url_for('users.render_user_list') }}"><i class="fas fa-user"
-                                                                                               aria-hidden="true"></i>
-                        Users</a>
-                    <a class="dropdown-item" href="{{ url_for('user_groups.render_user_group_list') }}"><i
-                            class="fas fa-users" aria-hidden="true"></i> User Groups</a>
-                    <a class="dropdown-item" href="{{ url_for('user_groups.render_create_user_group') }}"><i
-                            class="fas fa-plus-square fa-fw" aria-hidden="true"></i> Create User Group</a>
-                </div>
-          </li>
-          <li class="nav-item">
-          </li>
-
-
-        </ul>
-        <ul class="navbar-nav d-flex mr-auto">
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button"
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                {{ current_user.name }}
-            </a>
-            <div class="dropdown-menu" aria-labelledby="profileDropdown">
-              <a class="dropdown-item" href="{{ url_for('browser.render_settings') }}"><i class="fas fa-cog" aria-hidden="true"></i> Settings</a>
-              <a class="dropdown-item" href="{{ url_for('browser.browser_logout') }}"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout</a>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </nav>
+  {% block navbar %}
+      {{ navbar() }}
   {%- endblock %}
   {% block precontent %}
   {%- endblock %}
@@ -171,6 +55,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.5.2/js/fileinput.min.js" integrity="sha256-A8siB/BVo/zePp8oaRIaeZPPlqKmhVjfUuOQpW8YgAI=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.5.2/themes/fas/theme.min.js" integrity="sha256-iGiji8zeffG0Z8unS5aQwiBXX0LLXwtq4S0VfGQm/yk=" crossorigin="anonymous"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/dt-1.10.18/af-2.3.2/b-1.5.4/b-colvis-1.5.4/b-html5-1.5.4/cr-1.5.0/fc-3.2.5/fh-3.1.4/kt-2.5.0/r-2.2.2/rg-1.1.0/rr-1.2.4/sc-1.5.0/sl-1.2.6/datatables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo=" crossorigin="anonymous"></script>
     <script>
       $(document).ready(() => {
         $('.selectpicker').selectpicker();
@@ -185,6 +70,14 @@
           });
       });
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha256-bQmrZe4yPnQrLTY+1gYylfNMBuGfnT/HKsCGX+9Xuqo=" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        const socket = io('ws://' + location.host + '/omics/notifications',
+            {reconnection: false, path: '/omics/socket.io'});
+        socket.on('response', function(msg) {
+            console.log(msg.meta);
+        });
+</script>
   {%- endblock %}
   </body>
 </html>

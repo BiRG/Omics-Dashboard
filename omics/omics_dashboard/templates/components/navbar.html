@@ -1,0 +1,129 @@
+{% macro navbar() %}
+    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-primary pb-2">
+        <a class="navbar-brand" href="{{ url_for('browser.render_home') }}">
+            Omics Dashboard @ {{ BRAND }}
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav d-flex mx-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="sampleDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Samples
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="sampleDropdown">
+                        <a class="dropdown-item" href="{{ url_for('samples.render_sample_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Samples</a>
+                        <a class="dropdown-item" href="{{ url_for('sample_groups.render_sample_group_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List Sample Groups</a>
+                        <a class="dropdown-item" href="{{ url_for('sample_groups.render_upload_sample_group') }}"><i class="fas fa-upload fa-fw" aria-hidden="true"></i>Upload</a>
+                    </div>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="collectionDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Collections
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="collectionDropdown">
+                        <a class="dropdown-item" href="{{ url_for('collections.render_collection_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+                        <a class="dropdown-item" href="{{ url_for('collections.render_create_collection') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+                    </div>
+                </li>
+
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="analysisDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Analyses
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="analysisDropdown">
+                        <a class="dropdown-item" href="{{ url_for('analyses.render_analysis_list') }}"><i class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+                        <a class="dropdown-item" href="{{ url_for('analyses.render_create_analysis') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+                    </div>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="analysisDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Dashboards
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="analysisDropdown">
+                        <a class="dropdown-item" href="{{ url_for('browser.render_dashboard_list') }}"><i
+                                class="fas fa-list fa-fw" aria-hidden="true"></i>List</a>
+                    </div>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="workflowDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Workflows
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="workflowDropdown">
+                        <a class="dropdown-item" href="{{ url_for('workflows.render_workflow_list') }}"><i class="fas fa-list" aria-hidden="true"></i> List</a>
+                        <a class="dropdown-item" href="{{ url_for('workflows.render_create_workflow') }}"><i class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+                        <a class="dropdown-item" href="{{ url_for('workflows.render_workflow_module_list') }}"><i class="fas fa-plug fa-fw" aria-hidden="true"></i>Modules</a>
+                        <a class="dropdown-item" href="{{ url_for('jobs.render_job_list') }}"><i class="fas fa-tasks fa-fw"
+                                                                                                 aria-hidden="true"></i>Jobs</a>
+                    </div>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="externalFileDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        External Files
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="externalFileDropdown">
+                        <a class="dropdown-item" href="{{ url_for('external_files.render_external_file_list') }}"><i
+                                class="fas fa-list" aria-hidden="true"></i> List</a>
+                        <a class="dropdown-item" href="{{ url_for('external_files.render_create_external_file') }}"><i
+                                class="fas fa-plus-square fa-fw" aria-hidden="true"></i>Create</a>
+                    </div>
+                </li>
+
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Users
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="{{ url_for('users.render_user_list') }}"><i class="fas fa-user"
+                                                                                                   aria-hidden="true"></i>
+                            Users</a>
+                        <a class="dropdown-item" href="{{ url_for('user_groups.render_user_group_list') }}"><i
+                                class="fas fa-users" aria-hidden="true"></i> User Groups</a>
+                        <a class="dropdown-item" href="{{ url_for('user_groups.render_create_user_group') }}"><i
+                                class="fas fa-plus-square fa-fw" aria-hidden="true"></i> Create User Group</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                </li>
+
+
+            </ul>
+            <ul class="navbar-nav d-flex mr-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button"
+                       data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-user" aria-hidden="true"></i>&nbsp;{{ current_user.name }}
+                        {% if current_user.unread_notification_count %}
+                        <span id="notification-badge" class="badge badge-light notification-badge">{{ current_user.unread_notification_count }}</span>
+                        {% endif %}
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="profileDropdown">
+                        <a class="dropdown-item" href="{{ url_for('browser.render_notifications') }}"><i class="fas fa-bell"></i> Notifications
+                            {% if current_user.unread_notification_count %}
+                            <span id="menu-notification-badge" class="badge badge-dark notification-badge">{{ current_user.unread_notification_count }}</span>
+                            {% endif %}
+                        </a>
+                        <a class="dropdown-item" href="{{ url_for('browser.render_settings') }}"><i class="fas fa-cog" aria-hidden="true"></i> Settings</a>
+                        <a class="dropdown-item" href="{{ url_for('browser.browser_logout') }}"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endmacro %}
+{{ navbar() }}

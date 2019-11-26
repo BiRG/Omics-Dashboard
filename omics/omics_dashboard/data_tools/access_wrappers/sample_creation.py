@@ -7,7 +7,7 @@ from data_tools.access_wrappers.samples import create_placeholder_samples
 from data_tools.access_wrappers.users import get_jwt
 from data_tools.access_wrappers.workflows import get_modules, WorkflowModule
 from data_tools.db_models import User
-from data_tools.util import TMPDIR, DATADIR, MODULEDIR
+from data_tools.config import TMPDIR, DATADIR, MODULEDIR
 
 
 def create_sample_creation_workflow(user: User, input_filenames: List[str], metadata: Dict[str, Any]):

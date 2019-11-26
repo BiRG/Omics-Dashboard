@@ -13,7 +13,8 @@ from data_tools.access_wrappers.samples import get_sample, delete_sample
 from data_tools.template_data.entry_page import SampleGroupPageData
 from data_tools.template_data.form import SampleCreateFormData
 from data_tools.template_data.list_table import ListTableData
-from data_tools.util import UPLOADDIR, AuthException
+from data_tools.util import AuthException
+from data_tools.config import UPLOADDIR
 from helpers import handle_exception_browser, get_current_user, process_input_dict
 
 sample_groups = Blueprint('sample_groups', __name__, url_prefix='/sample_groups')

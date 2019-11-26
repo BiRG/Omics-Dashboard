@@ -3,6 +3,7 @@ from flask_login import login_required
 
 import data_tools as dt
 from data_tools.access_wrappers.analyses import get_analyses, get_analysis
+from data_tools.socket_config import send_message
 from data_tools.db_models import Collection
 from data_tools.template_data.entry_page import AnalysisPageData
 from data_tools.template_data.form import AnalysisCreateFormData
@@ -17,6 +18,7 @@ analyses = Blueprint('analyses', __name__, url_prefix='/analyses')
 def render_analysis_list():
     try:
         current_user = get_current_user()
+        send_message(current_user, 'You visited the analysis list page.')
         return render_template('pages/list.html',
                                page_data=ListTableData(current_user, get_analyses(current_user), 'Analyses'))
     except Exception as e:

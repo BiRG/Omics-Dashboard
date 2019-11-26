@@ -9,5 +9,5 @@ import data_tools.access_wrappers.user_groups as user_groups
 import data_tools.access_wrappers.users as users
 import data_tools.access_wrappers.workflows as workflows
 import data_tools.db_models as db
-import data_tools.redis as redis
+import data_tools.redis_config as redis
 import data_tools.util as util

@@ -19,15 +19,18 @@ from pyopls import OPLSValidator, OPLS
 from scipy.stats import gaussian_kde
 from sklearn.utils.multiclass import type_of_target
 
-import data_tools.redis as rds
+import data_tools.redis_config as rds
+from dashboards.dashboard_model import save_figures
 from data_tools.access_wrappers.collections import get_collection, create_collection
 from data_tools.access_wrappers.jobserver_control import start_job
+from data_tools.config import TMPDIR
 from helpers import get_item_link
-from .opls_workflow import workflow
-from ..multivariate_analysis_data import MultivariateAnalysisData
+from rq import Queue
+from .workflow import workflow
+from ..multivariate_analysis_model import MultivariateAnalysisModel
 
 
-class OPLSData(MultivariateAnalysisData):
+class OPLSModel(MultivariateAnalysisModel):
     _empty_plot_data = {
         'score_plots': [],
     }
@@ -68,6 +71,13 @@ class OPLSData(MultivariateAnalysisData):
     @job_id.setter
     def job_id(self, value):
         rds.set_value(f'{self.redis_prefix}_job_id', value)
+
+    @property
+    def root_dir(self):
+        try:
+            return os.path.dirname(self.results_filename)
+        except:
+            return TMPDIR
 
     @property
     def results_file_ready(self):
@@ -1107,21 +1117,23 @@ class OPLSData(MultivariateAnalysisData):
         else:
             return html.H6('Analysis results not ready.')
 
-    def download_plots(self, file_formats=None):
+    def download_plots(self, file_formats, width, height, units, dpi):
+        rds.set_value(f'{self.redis_prefix}_image_save_progress', 0)
+        rds.set_value(f'{self.redis_prefix}_image_save_label', 'Starting job')
+        rds.set_value(f'{self.redis_prefix}_image_save_progress_fraction', f'0/0')
         if self.results_file_ready:
             base_filename = f'opls_results_{self.results_collection_id}'
             root_dir = tempfile.mkdtemp()
             plot_dir = os.path.join(root_dir, f'{base_filename}_plots')
+            os.mkdir(plot_dir)
             file_formats = file_formats or []
-            for file_format in file_formats:
-                format_dir = os.path.join(plot_dir, file_format)
-                os.mkdir(format_dir)
-            pio.orca.config.use_xvfb = True
             if self.results_file_ready:
                 groups = h5py.File(self.results_filename).keys()
+                figure_data = {}
                 for group in groups:
+                    print(group)
                     is_discrimination = 'accuracy' in h5py.File(self.results_filename)[group].attrs
-                    quality_graph, score_graph = self.get_quality_plot(group, 'plotly-white', False)
+                    quality_graph, score_graph = self.get_quality_plot(group, 'plotly_white', False)
                     if is_discrimination:
                         (
                             r_squared_Y_graph, r_squared_X_graph, q_squared_graph,
@@ -1132,26 +1144,22 @@ class OPLSData(MultivariateAnalysisData):
                          q_squared_graph) = self.get_metric_kde_plot(group, 'plotly_white', False)
                         discriminant_r_squared_graph = discriminant_q_squared_graph = \
                             accuracy_graph = roc_auc_graph = None
-                    for file_format in file_formats:
-                        format_dir = os.path.join(plot_dir, file_format)
-                        to_write = {
-                            'quality_metrics': quality_graph,
-                            'scores': score_graph,
-                            'r_squared_Y_kde': r_squared_Y_graph,
-                            'r_squared_X_kde': r_squared_X_graph,
-                            'q_squared_kde': q_squared_graph
-                        }
-                        if is_discrimination:
-                            to_write.update({
-                                'discriminant_r_squared_kde': discriminant_r_squared_graph,
-                                'discriminant_q_squared_kde': discriminant_q_squared_graph,
-                                'accuracy_kde': accuracy_graph,
-                                'roc_auc_kde': roc_auc_graph
-                            })
-                        for graph_name, graph in to_write.items():
-                            filename = os.path.join(format_dir, f'{graph_name}.{file_format}')
-                            self._save_plot(graph, filename)
-            return shutil.make_archive(plot_dir, 'zip', root_dir, f'{base_filename}_plots')
+                    figure_data.update({
+                        f'{group}_quality_metrics': quality_graph.to_plotly_json()['props']['figure'],
+                        f'{group}_scores': score_graph.to_plotly_json()['props']['figure'],
+                        f'{group}_r_squared_Y_kde': r_squared_Y_graph.to_plotly_json()['props']['figure'],
+                        f'{group}_r_squared_X_kde': r_squared_X_graph.to_plotly_json()['props']['figure'],
+                        f'{group}_q_squared_kde': q_squared_graph.to_plotly_json()['props']['figure']
+                    })
+                    if is_discrimination:
+                        figure_data.update({
+                            f'{group}_discriminant_r_squared_kde': discriminant_r_squared_graph.to_plotly_json()['props']['figure'],
+                            f'{group}_discriminant_q_squared_kde': discriminant_q_squared_graph.to_plotly_json()['props']['figure'],
+                            f'{group}_accuracy_kde': accuracy_graph.to_plotly_json()['props']['figure'],
+                            f'{group}_roc_auc_kde': roc_auc_graph.to_plotly_json()['props']['figure']
+                        })
+                    return save_figures.queue(figure_data, file_formats, width, height, units, dpi, plot_dir,
+                                              f'user{current_user.id}', self.redis_prefix)
         raise RuntimeError('Plots not ready!')
 
     def get_results_collection_badges(self) -> List[html.Span]:
@@ -1195,4 +1203,5 @@ class OPLSData(MultivariateAnalysisData):
 
     @staticmethod
     def _save_plot(plot, filename):
+
         pio.write_image(plot.to_plotly_json()['props']['figure'], filename)

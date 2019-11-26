@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 import data_tools as dt
 from data_tools.file_tools.collection_tools import validate_update
-from data_tools.util import DATADIR, UPLOADDIR
+from data_tools.config import DATADIR, UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
 collections_api = Blueprint('collections_api', __name__, url_prefix='/api/collections')

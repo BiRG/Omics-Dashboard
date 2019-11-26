@@ -1,1 +1,1 @@
-from .visualization_dashboard import VisualizationDashboard
+from .dashboard import VisualizationDashboard

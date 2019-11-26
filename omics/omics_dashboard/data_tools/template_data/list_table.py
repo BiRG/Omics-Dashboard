@@ -4,7 +4,8 @@ from dashboards import Dashboard
 from data_tools.access_wrappers.jobserver_control import Job, get_badge_class
 from data_tools.access_wrappers.users import is_write_permitted
 from data_tools.access_wrappers.workflows import WorkflowModule
-from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile
+from data_tools.db_models import Base, OmicsRecordMixin, User, NumericFileRecordMixin, Collection, Sample, ExternalFile, \
+    Notification
 from data_tools.template_data.page import PageData
 from helpers import get_item_link
 
@@ -80,6 +81,16 @@ class FileListTableRow:
             self.values[special_val_heading] = ListTableCell(special_val)
 
 
+class NotificationListTableRow:
+    def __init__(self, record: Notification):
+        self.values = {'Contents': ListTableCell(record.contents),
+                       'Date': ListTableCell(record.updated_on.strftime('%-d %b %Y %H:%M'),
+                                             order_value=record.updated_on.timestamp)}
+        self.color = record.color
+        self.read = record.read
+        self.id = record.id
+
+
 class ListTableData(PageData):
     """
     Stores data passed to the generic list table
@@ -118,8 +129,17 @@ class DashboardListTableData(PageData):
     def __init__(self, current_user: User, dashboards: List[Type[Dashboard]]):
         super(DashboardListTableData, self).__init__(current_user)
         self.rows = [ListTableRow(dashboard) for dashboard in dashboards]
-        self.headings = [key for key in self.rows[0].values.keys()]
+        self.headings = [key for key in self.rows[0].values.keys()] if len(self.rows) else []
         self.title = 'Dashboards'
+        self.special_val_heading = ''
+
+
+class NotificationListTableData(PageData):
+    def __init__(self, current_user: User, notifications: List[Notification]):
+        super().__init__(current_user)
+        self.rows = [NotificationListTableRow(notification) for notification in notifications]
+        self.headings = [key for key in self.rows[0].values.keys()] if len(self.rows) else []
+        self.title = 'Notifications'
         self.special_val_heading = ''
 
 
@@ -127,15 +147,22 @@ class FileListTableData(PageData):
     """
     Store only file metadata, id and name. Editable file metadata is
     """
-    def __init__(self, current_user: User, records: List[Union[Sample, Collection]], title: str, special_vals: List[bool] = None, special_val_heading=None):
+    def __init__(self, current_user: User, records: List[Union[Sample, Collection]], title: str,
+                 special_vals: List[bool] = None, special_val_heading=None):
         super(FileListTableData, self).__init__(current_user)
         self.title = title
         self.special_val_heading = special_val_heading if special_val_heading is not None else ''
         if special_vals is None:
             special_vals = [None for _ in records]
-        self.rows = [FileListTableRow(record, is_write_permitted(current_user, record), special_val, special_val_heading) for record, special_val in zip(records, special_vals)]
+        self.rows = [
+            FileListTableRow(record, is_write_permitted(current_user, record), special_val, special_val_heading)
+            for record, special_val in zip(records, special_vals)
+        ]
         if len(self.rows):
-            self.headings = ['ID'] + [key for key in self.rows[0].values.keys() if key not in {'ID', special_val_heading} and all([key in row.values for row in self.rows])]
+            self.headings = ['ID'] + [
+                key for key in self.rows[0].values.keys()
+                if key not in {'ID', special_val_heading} and all([key in row.values for row in self.rows])
+            ]
             if 'ID' not in self.rows[0].values.keys():
                 self.headings.remove('ID')
         if len(special_vals) and special_vals[0] is not None:

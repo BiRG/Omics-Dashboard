@@ -1,1 +1,1 @@
-from .opls_dashboard import OPLSDashboard
+from .dashboard import OPLSDashboard

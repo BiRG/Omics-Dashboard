@@ -7,7 +7,8 @@ from data_tools.access_wrappers.samples import get_samples
 from data_tools.access_wrappers.user_groups import get_included_groups
 from data_tools.access_wrappers.users import get_users, get_all_read_permitted_records
 from data_tools.db_models import User, Collection, Sample, ExternalFile
-from data_tools.util import DATADIR
+from data_tools.config import DATADIR
+
 
 
 class SelectOption:

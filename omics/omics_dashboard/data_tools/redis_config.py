@@ -9,29 +9,32 @@ If you use this for routes that take JWT authentication, there is no "logout" so
 import os
 from datetime import timedelta
 
-from flask import g
+from flask import g, has_app_context
 from flask_login import current_user
 from redis import Redis
 
 
 def get_redis():
-    r = getattr(g, '_redis', None)
+    r = getattr(g, '_redis', None) if has_app_context() else None
     if r is None:
         redis_host = os.environ.get('REDISSERVER', 'redis')
         redis_port = int(os.environ.get('REDISPORT', 6379))
-        r = g._redis = Redis(host=redis_host, port=redis_port,
-                             db=0)  # responses aren't decoded because everything is msgpack
+        r = Redis(host=redis_host, port=redis_port, db=0)
+        if has_app_context():
+            g._redis = r
     return r
 
 
-def set_value(key, value):
+def set_value(key, value, hash_name=None):
     """
     :param key:
     :param value:
+    :param hash_name:
     :return:
     """
     r = get_redis()
-    hash_name = f'user{current_user.id}'
+    if hash_name is None:
+        hash_name = f'user{current_user.id}'
     if value is None:
         r.hdel(hash_name, key)
     else:

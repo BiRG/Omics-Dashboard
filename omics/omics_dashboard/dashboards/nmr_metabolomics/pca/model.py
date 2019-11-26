@@ -20,10 +20,10 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import davies_bouldin_score, silhouette_score
 
 from data_tools.access_wrappers.collections import upload_collection
-from ..multivariate_analysis_data import MultivariateAnalysisData
+from ..multivariate_analysis_model import MultivariateAnalysisModel
 
 
-class PCAData(MultivariateAnalysisData):
+class PCAModel(MultivariateAnalysisModel):
     _empty_plot_data = {
         'score_plots': [],
         'loading_plots': [],
@@ -216,9 +216,10 @@ class PCAData(MultivariateAnalysisData):
 
         def _save_loadings(name, file_format):
             if file_format == 'csv':
+                print(self._loadings.shape)
                 loadings_df = pd.DataFrame(data=self._loadings,
                                            columns=np.ravel(self._x),
-                                           index=[f'PC{i + 1}' for i in range(self._loadings.shape[1])])
+                                           index=[f'PC{i + 1}' for i in range(self._loadings.shape[0])])
                 loadings_df.to_csv(name)
             else:
                 with h5py.File(name, 'a') as file:
@@ -616,6 +617,7 @@ class PCAData(MultivariateAnalysisData):
             annotations=annotations,
             height=700,
             font={'size': 16},
+            margin={'t': 25, 'l': 25, 'b': 25, 'r': 25},
             template=theme,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
@@ -631,6 +633,7 @@ class PCAData(MultivariateAnalysisData):
             annotations=annotations,
             height=700,
             font={'size': 14},
+            margin={'t': 25, 'l': 25, 'b': 25, 'r': 25},
             template=theme,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
@@ -687,6 +690,7 @@ class PCAData(MultivariateAnalysisData):
                     **axis_line_style
                 },
                 font={'size': 16},
+                margin={'t': 25, 'l': 25, 'b': 25, 'r': 25},
                 template=theme,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
@@ -721,6 +725,7 @@ class PCAData(MultivariateAnalysisData):
                 yaxis=yaxis,
                 template=theme,
                 font={'size': 16},
+                margin={'t': 25, 'l': 25, 'b': 25, 'r': 25},
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
@@ -754,6 +759,7 @@ class PCAData(MultivariateAnalysisData):
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 font={'size': 16},
+                margin={'t': 25, 'l': 25, 'b': 25, 'r': 25},
                 shapes=[
                     {
                         'type': 'line',
@@ -832,9 +838,12 @@ class PCAData(MultivariateAnalysisData):
                        loading_plot_data,
                        variance_plot_data,
                        cumulative_variance_plot_data,
-                       file_formats=None) -> str:
+                       file_formats,
+                       width,
+                       height,
+                       units,
+                       dpi) -> str:
         file_formats = file_formats or []
-        pio.orca.config.use_xvfb = True
         if len(self._loaded_collection_ids) > 1:
             base_filename = 'pca_collections_' + '_'.join([str(collection_id)
                                                            for collection_id in self._loaded_collection_ids])
@@ -853,6 +862,7 @@ class PCAData(MultivariateAnalysisData):
             for plot_info in score_plot_data:
                 plot = self.get_score_plot(plot_info['ordinate'],
                                            plot_info['abscissa'],
+                                           plot_info['applicate'],
                                            plot_info['color_by'],
                                            False,
                                            plot_info['label_by'],
@@ -864,21 +874,25 @@ class PCAData(MultivariateAnalysisData):
                 if plot_info['color_by']:
                     filename += '_by_' + ','.join(plot_info['color_by'])
                 filename = os.path.join(format_dir, f'{filename}.{file_format}')
-                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+                self.save_figure(plot.to_plotly_json()['props']['figure'], file_format, width, height, units, dpi,
+                                 filename)
             for plot_info in loading_plot_data:
                 plot = self.get_loading_plot(plot_info['indices'])
                 components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_loadings_{components}.{file_format}"
-                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+                self.save_figure(plot.to_plotly_json()['props']['figure'], file_format,
+                                 width, height, units, dpi, filename)
             for plot_info in variance_plot_data:
                 plot = self.get_variance_plot(plot_info['scale_y'], plot_info['indices'])
                 components = self.component_list(plot_info['indices']).replace('–', '-')
                 filename = f"{format_dir}/{base_filename}_variance_{components}.{file_format}"
-                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+                self.save_figure(plot.to_plotly_json()['props']['figure'], file_format, width, height, units, dpi,
+                                 filename)
             for plot_info in cumulative_variance_plot_data:
                 plot = self.get_cumulative_variance_plot(plot_info['threshold'])
                 filename = f'{format_dir}/{base_filename}_cumulative_variance_{plot_info["threshold"]}.{file_format}'
-                pio.write_image(plot.to_plotly_json()['props']['figure'], filename)
+                self.save_figure(plot.to_plotly_json()['props']['figure'], file_format, width, height, units, dpi,
+                                 filename)
         return shutil.make_archive(plot_dir, 'zip', root_dir, f"{base_filename}_plots")
 
     def get_pc_options(self) -> List[Dict[str, Union[str, int]]]:

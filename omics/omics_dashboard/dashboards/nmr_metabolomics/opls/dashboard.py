@@ -4,11 +4,14 @@ import traceback
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from flask import url_for
+from rq.job import Job
 
 from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from helpers import log_internal_exception
 from .layouts import get_layout
-from .opls_data import OPLSData
+from .model import OPLSModel
+import data_tools.redis_config as rds
 
 
 class OPLSDashboard(Dashboard):
@@ -21,14 +24,16 @@ class OPLSDashboard(Dashboard):
     def _on_label_key_select(label_keys, op='=='):
         OPLSDashboard.check_dropdown(label_keys)
         label_keys = sorted(label_keys)
-        opls_data = OPLSData()
+        opls_data = OPLSModel()
         unique_values = [opls_data.unique_vals[val] for val in label_keys]
         option_pairs = list(itertools.product(*unique_values))
         queries = ['index'] + [' & '.join([f'{key}{op}"{value}"' for key, value in zip(label_keys, option_pair)])
                                for option_pair in option_pairs]
         query_labels = ['All Records'] + [','.join([f'{key}={value}' for key, value in zip(label_keys, option_pair)])
                                           for option_pair in option_pairs]
-        return [[{'label': query_label, 'value': query} for query_label, query in zip(query_labels, queries)]]
+        return [[{'label': query_label, 'value': query}
+                 for query_label, query in zip(query_labels, queries)
+                 if opls_data.query_exists(query)]]
 
     @staticmethod
     def _register_callbacks(app):
@@ -75,7 +80,7 @@ class OPLSDashboard(Dashboard):
         )
         def get_collections(n_clicks, value):
             OPLSDashboard.check_clicks(n_clicks)
-            opls_data = OPLSData()
+            opls_data = OPLSModel()
             opls_data.get_collections(value)
             label_data = opls_data.get_label_data()
             label_data_with_type = opls_data.get_label_data(with_type=True)
@@ -97,7 +102,7 @@ class OPLSDashboard(Dashboard):
         )
         def load_results(n_clicks, results_collection_id):
             OPLSDashboard.check_clicks(n_clicks)
-            opls_data = OPLSData()
+            opls_data = OPLSModel()
             opls_data.get_results_collection(results_collection_id)
             return opls_data.get_results_collection_badges()
 
@@ -143,7 +148,7 @@ class OPLSDashboard(Dashboard):
             pair_on = pair_on if pair_on and len(pair_on) else None
             pair_with = ' | '.join(pair_with_queries) if pair_with_queries and len(
                 pair_with_queries) and pair_on else None
-            opls_data = OPLSData()
+            opls_data = OPLSModel()
             try:
                 if target is None:
                     raise ValueError('Please select a target variable (y).')
@@ -179,7 +184,7 @@ class OPLSDashboard(Dashboard):
                       [Input('results-tabs', 'active_tab')])
         def switch_results_tab(at):
             try:
-                opls_data = OPLSData()
+                opls_data = OPLSModel()
                 theme = get_plot_theme()
                 if at == 'summary-tab':
                     return [dbc.Card(dbc.CardBody(opls_data.get_summary_tables(theme)))]
@@ -194,6 +199,93 @@ class OPLSDashboard(Dashboard):
             except Exception as e:
                 log_internal_exception(e)
                 return [dbc.Card(dbc.CardBody([html.H6('Error occurred.'), html.Code(traceback.format_exc())]))]
+
+        @app.callback(
+            [Output('width-input', 'value'),
+             Output('height-input', 'value'),
+             Output('units-history', 'children'),
+             Output('dpi-history', 'children')],
+            [Input('units-select', 'value'),
+             Input('dpi-input', 'value')],
+            [State('width-input', 'value'),
+             State('height-input', 'value'),
+             State('units-history', 'children'),
+             State('dpi-history', 'children')]
+        )
+        def update_units(units, dpi, width, height, prev_units, prev_dpi):
+            return Dashboard.convert_image_size_units(units, dpi, width, height, prev_units, prev_dpi)
+
+        @app.callback(
+            [Output('results-tabs', 'active_tab')],
+            [Input('tabs', 'active_tab')],
+            [State('results-tabs', 'active_tab')]
+        )
+        def activate_current_tab(current_main_tab, current_results_tab):
+            # A kludge to force rendering of current plot tab when switching to plots tab.
+            return [current_results_tab]
+
+        @app.callback(
+            [Output('progress-interval', 'interval')],
+            [Input('plot-download-button', 'n_clicks')],
+            [State('plot-file-format-select', 'value'),
+             State('width-input', 'value'),
+             State('height-input', 'value'),
+             State('units-history', 'children'),
+             State('dpi-history', 'children')]
+        )
+        def prepare_plots_file(n_clicks, file_format_values, width, height, units, dpi):
+            opls_data = OPLSModel()
+            OPLSDashboard.check_clicks(n_clicks)
+            if not opls_data.results_file_ready:
+                return 3600000
+            job = opls_data.download_plots(file_format_values, width, height, units, dpi)
+            print(f'Started ')
+            rds.set_value(f'{OPLSModel.redis_prefix}_job_id', job.id)
+            return [500]
+
+        @app.callback(
+            [Output('progress', 'value'),
+             Output('progress', 'animated'),
+             Output('progress-badge', 'children'),
+             Output('progress-label', 'children'),
+             Output('plot-download-link', 'href'),
+             Output('plot-download-link', 'className'),
+             Output('plot-download-message', 'children')],
+            [Input('progress-interval', 'n_intervals')]
+        )
+        def update_progress(n_intervals):
+            progress = rds.get_value(f'{OPLSModel.redis_prefix}_image_save_progress')
+            progress_fraction = rds.get_value(f'{OPLSModel.redis_prefix}_image_save_progress_fraction')
+            label_text = rds.get_value(f'{OPLSModel.redis_prefix}_image_save_label')
+            job_id = rds.get_value(f'{OPLSModel.redis_prefix}_job_id').decode('utf-8')
+            job = Job.fetch(job_id, rds.get_redis())
+            job_status = job.get_status()
+            if isinstance(label_text, bytes):
+                label_text = label_text.decode('utf-8')
+            if isinstance(progress, bytes):
+                progress = int(float(progress))
+            if isinstance(progress_fraction, bytes):
+                progress_fraction = progress_fraction.decode('utf-8')
+
+            if job_status == 'finished':
+                message = dbc.Alert(f'Prepared plots file as {job.result}.', color='success', dismissable=True)
+                class_name = 'btn btn-success'
+                path = job.result
+                progress_label = dbc.FormText(label_text, color='success')
+                animated = False
+            elif job.get_status() == 'failed':
+                message = dbc.Alert([f'Error occurred.', html.Pre(job.exc_info)], color='danger', dismissable=True)
+                class_name = 'btn btn-secondary disabled'
+                path = ''
+                progress_label = dbc.FormText(label_text, color='danger')
+                animated = False
+            else:
+                message = []
+                class_name = 'btn btn-secondary disabled'
+                path = ''
+                progress_label = dbc.FormText(label_text)
+                animated = True
+            return progress, animated, progress_fraction, progress_label, url_for('api.download_temporary_file', path=path), class_name, message
 
     @staticmethod
     def _register_layout(app):

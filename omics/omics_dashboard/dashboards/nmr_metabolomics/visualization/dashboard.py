@@ -10,7 +10,7 @@ from flask import url_for
 from dashboards import Dashboard
 from dashboards.dashboard import get_plot_theme, StyledDash
 from .layouts import get_layout
-from .visualization_data import VisualizationData
+from .model import VisualizationModel
 
 
 class VisualizationDashboard(Dashboard):
@@ -24,7 +24,7 @@ class VisualizationDashboard(Dashboard):
         if not label_keys or None in label_keys:
             raise PreventUpdate('Callback triggered without action!')
         label_keys = sorted(label_keys)
-        viz_data = VisualizationData()
+        viz_data = VisualizationModel()
         unique_values = [viz_data.unique_vals[val] for val in label_keys]
         option_pairs = list(itertools.product(*unique_values))
         queries = [' & '.join([f'{key}{op}"{value}"' for key, value in zip(label_keys, option_pair)])
@@ -47,7 +47,7 @@ class VisualizationDashboard(Dashboard):
             VisualizationDashboard.check_clicks(n_clicks)
             if not value:
                 raise PreventUpdate('Nothing to load.')
-            viz_data = VisualizationData()
+            viz_data = VisualizationModel()
             viz_data.get_collections(value)
             label_data = viz_data.get_label_data()
             return (
@@ -64,15 +64,22 @@ class VisualizationDashboard(Dashboard):
         @app.callback([Output('main-plot', 'figure')],
                       [Input('plot-button', 'n_clicks')],
                       [State('group-by-value', 'value'),
+                       State('group-by', 'value'),
                        State('label-by', 'value'),
                        State('bin-collection', 'value'),
-                       State('legend-style-select', 'value')])
-        def update_plot(n_clicks, queries, labels, bin_collection_id, legend_style):
+                       State('legend-style-select', 'value'),
+                       State('background-color-select', 'value')]
+        )
+        def update_plot(n_clicks, queries, group_by, labels, bin_collection_id, legend_style, background_color):
             VisualizationDashboard.check_clicks(n_clicks)
+            print(background_color)
             if not queries:
                 raise PreventUpdate('Nothing to plot!')
-            viz_data = VisualizationData(True)
-            return [viz_data.get_plot(queries, labels, get_plot_theme(), bin_collection_id, legend_style)]
+            viz_data = VisualizationModel(True)
+            return [
+                viz_data.get_plot(queries, group_by, labels, get_plot_theme(), bin_collection_id, legend_style,
+                                  background_color)
+            ]
 
         @app.callback(
             [Output('summary-table-wrapper', 'children')],
@@ -86,7 +93,7 @@ class VisualizationDashboard(Dashboard):
                     val1, val2 = relayout_data['xaxis.range[0]'], relayout_data['xaxis.range[1]']
                     x_min = min(val1, val2)
                     x_max = max(val1, val2)
-                    viz_data = VisualizationData(True)
+                    viz_data = VisualizationModel(True)
                     return [viz_data.get_summary(queries, labels, x_min, x_max, get_plot_theme())]
             return ['']
 
@@ -96,13 +103,17 @@ class VisualizationDashboard(Dashboard):
              Output('download-message', 'children')],
             [Input('download-button', 'n_clicks')],
             [State('main-plot', 'figure'),
-             State('file-format-select', 'value')]
+             State('file-format-select', 'value'),
+             State('width-input', 'value'),
+             State('height-input', 'value'),
+             State('units-history', 'children'),
+             State('dpi-history', 'children')]
         )
-        def prepare_plot(n_clicks, figure, file_format):
+        def prepare_plot(n_clicks, figure, file_format, width, height, units, dpi):
             VisualizationDashboard.check_clicks(n_clicks)
-            viz_data = VisualizationData(False)
+            viz_data = VisualizationModel(False)
             try:
-                path = viz_data.save_figure(figure, file_format)
+                path = viz_data.save_figure(figure, file_format, width, height, units, dpi)
                 message = dbc.Alert(f'Prepared plots file as {path}.', color='success', dismissable=True)
                 class_name = 'btn btn-success'
             except Exception as e:
@@ -113,6 +124,21 @@ class VisualizationDashboard(Dashboard):
                                     color='danger', dismissable=True)
                 class_name = 'btn btn-secondary disabled'
             return url_for('api.download_temporary_file', path=path), class_name, message
+
+        @app.callback(
+            [Output('width-input', 'value'),
+             Output('height-input', 'value'),
+             Output('units-history', 'children'),
+             Output('dpi-history', 'children')],
+            [Input('units-select', 'value'),
+             Input('dpi-input', 'value')],
+            [State('width-input', 'value'),
+             State('height-input', 'value'),
+             State('units-history', 'children'),
+             State('dpi-history', 'children')]
+        )
+        def update_units(units, dpi, width, height, prev_units, prev_dpi):
+            return Dashboard.convert_image_size_units(units, dpi, width, height, prev_units, prev_dpi)
 
     @staticmethod
     def _register_layout(app):
@@ -130,8 +156,7 @@ class VisualizationDashboard(Dashboard):
         app = StyledDash(__name__,
                          server=server,
                          routes_pathname_prefix=VisualizationDashboard.prefix,
-                         requests_pathname_prefix='/omics' + VisualizationDashboard.prefix,
-                         external_stylesheets=['https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
+                         requests_pathname_prefix='/omics' + VisualizationDashboard.prefix)
         # noinspection PyTypeChecker
         VisualizationDashboard._register_dash_app(app)
         return app
