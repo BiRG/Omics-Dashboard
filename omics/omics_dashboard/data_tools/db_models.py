@@ -64,7 +64,7 @@ class Base(Model):
         raise NotImplementedError('write_permitted not implemented in base model.')
 
 
-db = SQLAlchemy(model_class=Base)
+db = SQLAlchemy(model_class=Base, session_options={'autoflush': False})
 
 # Tables that represent relations only
 user_group_membership = db.Table('user_group_membership', db.Model.metadata,

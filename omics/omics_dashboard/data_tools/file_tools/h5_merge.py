@@ -1,9 +1,10 @@
 import os
-from typing import List, Set, Tuple, Callable
-
-import h5py
+import shutil
+import tempfile
 import numpy as np
+import h5py
 from scipy.interpolate import interp1d
+from typing import List, Set, Tuple, Callable
 
 
 def get_paths(group: h5py.Group, path: str) -> Set[str]:
@@ -56,20 +57,21 @@ def make_2d(arr, dim_ind):
 
 
 # noinspection PyUnresolvedReferences
-def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert', reserved_paths: List[str] = None,
+def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'vert', reserved_paths: List[str] = None,
              sort_by: str = 'base_sample_id', align_at: str = None, merge_attributes: bool = False) -> None:
     """
     Merge a list of hdf5 files into a single file
-    :param infilenames: A list of filenames to merge
-    :param outfilename: Location of output file
+    :param in_filenames: A list of filenames to merge
+    :param out_filename: Location of output file
     :param orientation: Whether to concatenate vertically ("vert") or horizontally ("horiz")
     :param reserved_paths: Paths that are assumed identical between collections
     :param sort_by: the name of the field in the final collection to sort columns/rows by
     :param align_at: the name of the label field to sort records by
+    :param merge_attributes: Whether to create new datasets by concatenating common attributes
     """
     if reserved_paths is None:
         reserved_paths = []
-    files = [h5py.File(filename, "r", driver="core") for filename in infilenames]
+    files = [h5py.File(filename, "r", driver="core") for filename in in_filenames]
 
     # collect all common paths between the files
     concat_fn = np.vstack if orientation == 'vert' else np.hstack
@@ -77,7 +79,7 @@ def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert'
 
     # if we concat vertically, labels are 1 column
     # if we concat horizontally, labels are 1 row
-    label_shape = (len(infilenames), 1) if orientation == 'vert' else (1, len(infilenames))
+    label_shape = (len(in_filenames), 1) if orientation == 'vert' else (1, len(in_filenames))
     label_maxshape = (None, 1) if orientation == 'vert' else (1, None)
 
     paths = set()
@@ -104,8 +106,8 @@ def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert'
     )
     if align_at in merge_paths:
         merge_paths.remove(align_at)
-
-    with h5py.File(outfilename, "w", driver="core") as outfile:
+    _, temp_filename = tempfile.mkstemp('.h5')
+    with h5py.File(temp_filename, "w", driver="core") as outfile:
         # handle alignment of vectors
         if align_at is not None:
             for path in alignment_paths:
@@ -146,7 +148,7 @@ def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert'
 
         if merge_attributes:
             base_sample_ids = np.array(
-                [[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in infilenames]])
+                [[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in in_filenames]])
             # unicode datasets are not supported by all software using hdf5
             base_sample_names = np.array([[file.attrs['name'].encode('ascii')
                                            if isinstance(file.attrs['name'], str) else file.attrs['name'] for file in
@@ -172,3 +174,5 @@ def h5_merge(infilenames: List[str], outfilename: str, orientation: str = 'vert'
 
     for file in files:
         file.close()
+
+    shutil.move(temp_filename, out_filename)

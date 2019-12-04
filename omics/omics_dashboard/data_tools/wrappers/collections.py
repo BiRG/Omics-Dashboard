@@ -92,10 +92,11 @@ def get_collection_copy(user: User, collection_id: int) -> Collection:
     tempdir = tempfile.mkdtemp()
     new_filename = os.path.join(tempdir, os.path.basename(collection.filename))
     shutil.copy(collection.filename, new_filename)
-    collection.id = None  # if we add to db, will get new id, but we shouldn't do this if we still have tmp filename
-    collection.filename = new_filename
-    collection.is_temp = True
-    return collection
+    with db.session.no_autoflush:
+        collection.id = None  # if we add to db, will get new id, but we shouldn't do this if we still have tmp filename
+        collection.filename = new_filename
+        collection.is_temp = True
+        return collection
 
 
 def update_collection(user: User, collection: Collection, new_data: Dict[str, Any], filename: str = None) -> Collection:

@@ -10,6 +10,7 @@ from data_tools.template_models.list_table import DashboardListTableData, Notifi
 from data_tools.util import LoginError
 from helpers import get_current_user, handle_exception_browser
 from login_manager import authenticate_user
+from config import redis_config
 
 browser = Blueprint('browser', __name__)
 
@@ -59,7 +60,7 @@ def browser_login(msg=None, error=None):
 @browser.route('/logout', methods=['GET'])
 @login_required
 def browser_logout():
-    config.redis_config.clear_user_hash(get_current_user().id)
+    redis_config.clear_user_hash(get_current_user().id)
     logout_user()
     return redirect(url_for('browser.browser_login'))
 

@@ -1,6 +1,7 @@
 import pathlib
 import shutil
 import tempfile
+import traceback
 from typing import Union, List, Dict
 
 from flask_login import current_user
@@ -107,13 +108,23 @@ class DashboardModel:
             shutil.rmtree(data_dir)
         if not isinstance(collection_ids, list):
             collection_ids = [collection_ids]
-        collections = [get_collection_copy(current_user, collection_id) for collection_id in collection_ids]
-        if len(collections) > 1:
-            collections[0].merge(collections[1:])
-            collection = collections[0]
-        elif len(collections) == 1:
-            collection = collections[0]
-        else:
+        try:
+            collections = [get_collection_copy(current_user, collection_id) for collection_id in collection_ids]
+            if len(collections) > 1:
+                for collection_id, collection in zip(collection_ids, collections):
+                    collection_size = collection.get_dataset('/Y').shape[0]
+                    # original_collection_id is now a label for the merged dataset
+                    collection.set_dataset('/original_collection_id',
+                                           np.repeat(collection_id, collection_size).reshape(-1, 1))
+                collections[0].merge(collections[1:])
+                collection = collections[0]
+            elif len(collections) == 1:
+                collection = collections[0]
+            else:
+                collection = None
+        except Exception as e:
+            traceback.print_exc()
+            self._loaded_collection_ids = []
             collection = None
         if collection is not None:
             x = collection.get_dataset('x')
