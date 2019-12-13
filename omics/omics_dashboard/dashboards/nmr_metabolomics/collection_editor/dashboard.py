@@ -94,7 +94,7 @@ class CollectionEditorDashboard(Dashboard):
                       [State('join-on', 'value')])
         def filter_by_changed(filter_by, join_on):
             editor_data = CollectionEditorModel()
-            filter_by_query = ' & '.join([f'({condition})' for condition in filter_by])
+            filter_by_query = ' | '.join([f'({condition})' for condition in filter_by])
             name = editor_data.proposed_name(filter_by_query, join_on)
             return [dbc.Input(value=name, id='name-input')]
 
@@ -103,7 +103,7 @@ class CollectionEditorDashboard(Dashboard):
                       [State('filter-by-value', 'value')])
         def filter_by_changed(join_on, filter_by):
             editor_data = CollectionEditorModel()
-            filter_by_query = ' & '.join([f'({condition})' for condition in filter_by])
+            filter_by_query = ' | '.join([f'({condition})' for condition in filter_by])
             name = editor_data.proposed_name(filter_by_query, join_on)
             return [
                 html.Div(
@@ -123,7 +123,7 @@ class CollectionEditorDashboard(Dashboard):
                        State('analysis-select', 'value')])
         def post_collection(n_clicks, filter_by, ignore_by, join_on, left_collection_id, name, analysis_ids):
             CollectionEditorDashboard.check_clicks(n_clicks)
-            filter_by_query = ' & '.join(filter_by) if filter_by is not None else None
+            filter_by_query = ' | '.join(filter_by) if filter_by is not None else None
             ignore_by_query = ' & '.join(ignore_by) if ignore_by is not None else None
             try:
                 editor_data = CollectionEditorModel(True)
