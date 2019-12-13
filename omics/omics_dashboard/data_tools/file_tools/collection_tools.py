@@ -22,6 +22,18 @@ def convert_strings(arr):
     return arr
 
 
+def create_collection_file(datasets: Dict[str, Any], attrs: Dict[str, Any], filename: str):
+    with h5py.File(filename, 'w') as file:
+        for name, value in datasets.items():
+            if value.dtype != np.number:
+                if isinstance(value, np.ndarray):
+                    value = np.array([','.join([str(v) for v in val]) for val in value]).reshape(-1, 1)
+                file.create_dataset(str(name), data=value.astype(np.string_), dtype=h5py.special_dtype(vlen=bytes))
+            else:
+                file.create_dataset(str(name), data=value)
+        file.attrs.update(attrs)
+
+
 def get_dataframe(filename: str,
                   row_index_key: str = 'base_sample_id',
                   keys: List[str] = None,

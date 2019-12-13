@@ -30,11 +30,7 @@ def parse_txt_xy(filename):
     split_metadata = [s[1:].replace("\n", "").split(':') for s in raw_data if s[0] == '$']
     data = np.asarray(split_numeric).astype(np.double)
     data = np.transpose(data) # vertical in the input, horizontal in output
-    metadata_keys = [line[0] for line in split_metadata]
-    
-    
-    #metadata_values = [process_metadata_value(line) for line in split_metadata]
-    #metadata = dict(zip(metadata_keys, metadata_values))
+
     reserved_keys = {
         'id', 
         'group_can_read',  'group_can_write', 'all_can_read', 'all_can_write',

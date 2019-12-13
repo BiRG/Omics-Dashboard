@@ -144,7 +144,7 @@ class OPLSDashboard(Dashboard):
             OPLSDashboard.check_clicks(n_clicks)
             scale_by = ' | '.join(scale_by_queries) if scale_by_queries and len(scale_by_queries) else None
             model_by = ' | '.join(model_by_queries) if model_by_queries and len(model_by_queries) else None
-            ignore_by = ' | '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
+            ignore_by = ' & '.join(ignore_by_queries) if ignore_by_queries and len(ignore_by_queries) else None
             pair_on = pair_on if pair_on and len(pair_on) else None
             pair_with = ' | '.join(pair_with_queries) if pair_with_queries and len(
                 pair_with_queries) and pair_on else None

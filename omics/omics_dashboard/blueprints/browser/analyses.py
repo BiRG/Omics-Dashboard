@@ -18,7 +18,6 @@ analyses = Blueprint('analyses', __name__, url_prefix='/analyses')
 def render_analysis_list():
     try:
         current_user = get_current_user()
-        send_message(current_user, 'You visited the analysis list page.')
         return render_template('pages/list.html',
                                page_data=ListTableData(current_user, get_analyses(current_user), 'Analyses'))
     except Exception as e:

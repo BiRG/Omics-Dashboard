@@ -18,6 +18,7 @@ from sklearn.utils.multiclass import type_of_target
 
 import config.redis_config as rds
 from config.rq_config import rq
+from data_tools.file_tools.collection_tools import create_collection_file
 from data_tools.wrappers.collections import get_collection_copy
 from config.config import TMPDIR
 
@@ -223,6 +224,16 @@ class DashboardModel:
             for label in self.labels
         }
         return [{'label': f'{label}{types[label]}', 'value': label} for label in self.labels]
+
+    @staticmethod
+    def write_collection(numeric_df, label_df, attrs, filename):
+        datasets = {
+            'x': np.array([float(c) for c in numeric_df.columns]).reshape(1, -1),
+            'Y': numeric_df.values
+        }
+        for column in label_df.columns:
+            datasets[column] = label_df[column].values.reshape(-1, 1)
+        create_collection_file(datasets, attrs, filename)
 
 
 def save_figure(figure, file_format, width, height, units, dpi, filename):

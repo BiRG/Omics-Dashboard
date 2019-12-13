@@ -543,17 +543,17 @@ class PCAModel(MultivariateAnalysisModel):
             if not is_3d:
                 for metric in encircle_by:
                     if metric.endswith('std'):
-                        x_std = np.std(self._scores[inds, abscissa])
-                        y_std = np.std(self._scores[inds, ordinate])
+                        x_std = np.std(self._scores[inds, abscissa], ddof=1)
+                        y_std = np.std(self._scores[inds, ordinate], ddof=1)
                         x_mean = np.mean(self._scores[inds, abscissa])
                         y_mean = np.mean(self._scores[inds, ordinate])
                         x0 = x_mean - x_std * float(metric[0])
                         x1 = x_mean + x_std * float(metric[0])
                         y0 = y_mean - y_std * float(metric[0])
                         y1 = y_mean + y_std * float(metric[0])
-                    if metric.endswith('sem'):
-                        x_sem = stats.sem(self._scores[inds, abscissa])
-                        y_sem = stats.sem(self._scores[inds, ordinate])
+                    elif metric.endswith('sem'):
+                        x_sem = stats.sem(self._scores[inds, abscissa], ddof=1)
+                        y_sem = stats.sem(self._scores[inds, ordinate], ddof=1)
                         x_mean = np.mean(self._scores[inds, abscissa])
                         y_mean = np.mean(self._scores[inds, ordinate])
                         x0 = x_mean - x_sem * float(metric[0])
@@ -579,8 +579,8 @@ class PCAModel(MultivariateAnalysisModel):
                         n = len(self._scores[inds, abscissa])
                         x_mean = np.mean(self._scores[inds, abscissa])
                         y_mean = np.mean(self._scores[inds, ordinate])
-                        x_h = stats.sem(self._scores[inds, abscissa]) * stats.t.ppf((1 + conf) / 2, n - 1)
-                        y_h = stats.sem(self._scores[inds, ordinate]) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        x_h = stats.sem(self._scores[inds, abscissa], ddof=1) * stats.t.ppf((1 + conf) / 2, n - 1)
+                        y_h = stats.sem(self._scores[inds, ordinate], ddof=1) * stats.t.ppf((1 + conf) / 2, n - 1)
                         x0 = x_mean - x_h
                         x1 = x_mean + x_h
                         y0 = y_mean - y_h
