@@ -143,6 +143,7 @@ class CollectionEditorModel(DashboardModel):
             'name': name,
             'description': self.proposed_name(filter_by_query, join_on_labels),
             'analysis_ids': analysis_ids,
+            'parent_collection_id': self.loaded_collection_ids[0],
             'group_can_read': all([collection.group_can_read for collection in collections]),
             'all_can_read': all([collection.all_can_read for collection in collections]),
             'group_can_write': all([collection.group_can_write for collection in collections]),
