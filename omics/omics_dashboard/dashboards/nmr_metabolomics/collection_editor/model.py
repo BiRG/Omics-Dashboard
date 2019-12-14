@@ -128,13 +128,13 @@ class CollectionEditorModel(DashboardModel):
             left_numeric_df = left_numeric_df.groupby(join_on_labels).mean()
             right_numeric_df = right_numeric_df.groupby(join_on_labels).mean()
 
-            numeric_df = left_numeric_df.join(right_numeric_df)
+            numeric_df = left_numeric_df.join(right_numeric_df, how='inner')
             numeric_df.reset_index(inplace=True)
             numeric_df = numeric_df.drop(join_on_labels, axis=1)
 
             left_label_df = left_label_df.groupby(join_on_labels).mean()
             right_label_df = right_label_df.groupby(join_on_labels).mean()
-            label_df = left_label_df.join(right_label_df, lsuffix='_left', rsuffix='_right')
+            label_df = left_label_df.join(right_label_df, how='inner', lsuffix='_left', rsuffix='_right')
             label_df.reset_index(inplace=True)
 
         filename = os.path.join(self.root_dir, 'processed.h5')
