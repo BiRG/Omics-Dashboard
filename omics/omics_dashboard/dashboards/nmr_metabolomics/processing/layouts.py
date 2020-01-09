@@ -162,7 +162,7 @@ def options_form():
                                         dbc.FormGroup(
                                             [
                                                 dbc.Label('Sum', html_for='norm-sum'),
-                                                dbc.Input(value=1000, step=1, min=0, id='norm-sum')
+                                                dbc.Input(value=1000, step=1, min=0, type='number', id='norm-sum')
                                             ]
                                         )
                                     )
@@ -186,11 +186,11 @@ def options_form():
                                         dbc.FormGroup(
                                             [
                                                 dbc.Label('Intensity', html_for='peak-intensity'),
-                                                dbc.Input(value=1000, step=1, min=0, id='peak-intensity')
+                                                dbc.Input(value=100, step=1, min=0, type='number', id='peak-intensity')
                                             ]
                                         )
                                     )
-                                ], id='region-normalization-form'
+                                ], id='region-normalization-form', style={'display': 'none'}
                             ),
                             dbc.Row(
                                 [
