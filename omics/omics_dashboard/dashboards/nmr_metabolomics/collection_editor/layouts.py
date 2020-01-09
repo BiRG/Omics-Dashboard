@@ -3,7 +3,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 from flask_login import current_user
 
-from dashboards.navbar import get_navbar
 from dashboards.nmr_metabolomics.collection_editor.model import CollectionEditorModel
 from data_tools.wrappers.analyses import get_analyses
 from data_tools.wrappers.collections import get_collections
@@ -11,7 +10,6 @@ from data_tools.wrappers.collections import get_collections
 
 def get_options_form():
     try:
-
         collection_options = [
             {'label': f'{collection.id}: {collection.name}', 'value': collection.id}
             for collection in get_collections(current_user, {'kind': 'data'})
@@ -229,7 +227,6 @@ def get_options_form():
 def get_layout():
     return html.Div(
         [
-            get_navbar(),
             html.Br(),
             dbc.Container(
                 [

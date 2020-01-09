@@ -3,7 +3,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 from flask_login import current_user
 
-from dashboards.navbar import get_navbar
 from data_tools.wrappers.analyses import get_analyses
 from data_tools.wrappers.collections import get_collections
 from .model import OPLSModel
@@ -751,7 +750,6 @@ def get_results_form():
 def get_layout():
     return html.Div(
         [
-            get_navbar(),
             html.Br(),
             dbc.Container(
                 [

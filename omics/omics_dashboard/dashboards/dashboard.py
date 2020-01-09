@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from dash import Dash
 from dash.exceptions import PreventUpdate
 from dash_bootstrap_components.themes import FLATLY, DARKLY
+from flask import url_for
 from flask_login import current_user
+import os
+from jinja2 import Template
 
 
 class Dashboard:
@@ -60,6 +65,16 @@ class Dashboard:
 
 class StyledDash(Dash):
     def interpolate_index(self, **kwargs):
+        def url_for_(endpoint, **values):
+            try:
+                return url_for(endpoint, **values)
+            except RuntimeError:
+                return ''
+
+        brand = os.environ['BRAND'] if 'BRAND' in os.environ else ''
+        navbar_template = Path(__file__).parent.parent.joinpath('templates/components/navbar.html')
+        navbar_html = Template(navbar_template.open().read()).render(url_for=url_for_,
+                                                                     current_user=current_user, BRAND=brand)
         style_url = DARKLY if current_user and current_user.theme == 'dark' else FLATLY
         dark_css = '''
         <style>
@@ -83,12 +98,20 @@ class StyledDash(Dash):
                 <title>{kwargs["title"]}</title>
             </head>
             <body>
+                {navbar_html}
                 {kwargs["app_entry"]}
                 {kwargs["config"]}
                 {kwargs["scripts"]}
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
                 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.bundle.min.js" integrity="sha384-zDnhMsjVZfS3hiP7oCBRmfjkQC4fzxVxFhBx8Hkz2aZX8gEvA/jsP3eXRCvzTofP" crossorigin="anonymous"></script>
                 {kwargs["renderer"]}
+                <br>
+                <footer class="footer">
+                  <hr>
+                  <p class="text-center text-muted">
+                    Omics Dashboard by <a href="https://birg.cs.wright.edu">BiRG</a>@<a href="http://www.wright.edu">Wright State University</a>. <a href="https://github.com/BiRG/Omics-Dashboard">Source</a> licensed under <a href="https://opensource.org/licenses/MIT">MIT License</a>.
+                  </p>
+                </footer>
             </body>
         </html>
         '''

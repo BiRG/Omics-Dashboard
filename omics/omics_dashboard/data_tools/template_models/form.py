@@ -217,7 +217,7 @@ class RegisterFormData:
 
 class LoginFormData:
     def __init__(self):
-        self.label = 'Login to Your Account'
+        self.label = 'Log In to Your Account'
         self.entries = [
             FormEntry('emailInput', 'email', 'Email address', 'example@test.net', 'email'),
             FormEntry('passwordInput', 'password', 'Password', 'Password', 'password')

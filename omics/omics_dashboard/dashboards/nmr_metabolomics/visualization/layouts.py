@@ -3,7 +3,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 from flask_login import current_user
 
-from dashboards.navbar import get_navbar
 from dashboards.nmr_metabolomics.visualization.model import VisualizationModel
 from data_tools.wrappers.collections import get_collections
 
@@ -259,7 +258,6 @@ def get_plot_options_form():
 def get_layout():
     return html.Div(
         [
-            get_navbar(),
             html.Br(),
             dbc.Container(
                 [

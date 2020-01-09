@@ -152,13 +152,4 @@ class CollectionEditorModel(DashboardModel):
 
         self.write_collection(numeric_df, label_df, attrs, filename)
         new_collection = upload_collection(current_user, filename, new_data)
-        return [
-            dbc.Alert(
-                [
-                    'Posted results as ',
-                    html.A(f'Collection {new_collection.id}.',
-                           href=url_for('collections.render_collection',
-                                        collection_id=new_collection.id))
-                ],
-                dismissable=True, color='success')
-        ]
+        return new_collection

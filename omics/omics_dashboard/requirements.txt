@@ -57,3 +57,4 @@ Wand
 cairosvg
 ruamel.yaml
 git+git://github.com/BiRG/pyopls.git
+git+git://github.com/BiRG/chemometrics-tools.git

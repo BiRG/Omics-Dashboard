@@ -1,5 +1,7 @@
 import traceback
 
+from flask import url_for
+
 from dashboards import Dashboard
 import itertools
 import dash_bootstrap_components as dbc
@@ -127,8 +129,19 @@ class CollectionEditorDashboard(Dashboard):
             ignore_by_query = ' & '.join(ignore_by) if ignore_by is not None else None
             try:
                 editor_data = CollectionEditorModel(True)
-                return editor_data.post_collection(filter_by_query, ignore_by_query, join_on, left_collection_id,
-                                                   name, analysis_ids)
+                new_collection = editor_data.post_collection(filter_by_query, ignore_by_query, join_on,
+                                                             left_collection_id, name, analysis_ids)
+                return [
+                    dbc.Alert(
+                        [
+                            'Posted results as ',
+                            html.A(f'Collection {new_collection.id}.',
+                                   href=url_for('collections.render_collection',
+                                                collection_id=new_collection.id))
+                        ],
+                        dismissable=True, color='success')
+                ]
+
             except Exception as e:
                 return [dbc.Alert([html.P([html.Strong('Error: '), f'{e}']),
                                    html.Strong('Traceback:'),
