@@ -123,6 +123,7 @@ with h5py.File(output_filename, 'w') as out_file, h5py.File(args.dataframe_filen
 for key in group_keys:
     X, y, description, pos_label, neg_label = load_data(args.dataframe_filename, key)
     feature_labels = np.array([float(c) for c in X.columns])
+    print(description)
     validator = OPLSValidator(args.min_n_components, args.k, False, args.force_regression,
                               args.metric_test_permutations, args.inner_test_permutations, args.outer_test_permutations,
                               args.inner_test_alpha, args.outer_test_alpha)
