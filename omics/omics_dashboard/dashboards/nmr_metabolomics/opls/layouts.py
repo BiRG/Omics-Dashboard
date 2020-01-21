@@ -455,7 +455,7 @@ def get_opls_options_form():
                                                       title='The number of test/train splits for the test to determine '
                                                             'the significance of regression quality metrics.')
                                         ], html_for='cross-val-k'),
-                                    dbc.Input(id='cross-val-k', type='number', value=10, min=-1)
+                                    dbc.Input(id='cross-val-k', type='number', value=-1, min=-1)
                                 ]
                             )
                         ]
