@@ -98,5 +98,5 @@ if (not args.one_v_all) and (not args.one_v_one):
 out_filename = os.path.splitext(os.path.basename(args.dataframe_file))[0] + '_targets.h5'
 h5py.File(out_filename, 'w')  # initialize file so pytables doesn't dump a bunch of bs on it
 serialize_targets(targets_, out_filename)
-with h5py.File(out_filename, 'r+') as out_file, h5py.File(args.dataframe_file) as in_file:
+with h5py.File(out_filename, 'r+') as out_file, h5py.File(args.dataframe_file, 'r') as in_file:
     out_file.attrs.update(in_file.attrs)

@@ -574,7 +574,7 @@ class OPLSModel(MultivariateAnalysisModel):
                 'Negative Value'
             ]
 
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             metric_values = [
                 file[group_key].attrs['n_components'],
                 f"{file[group_key].attrs['r_squared_Y']:.7f}",
@@ -664,7 +664,7 @@ class OPLSModel(MultivariateAnalysisModel):
                 DEFAULT_PLOTLY_COLORS[1],
                 DEFAULT_PLOTLY_COLORS[1]
             ]
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             values = [
                 file[group_key].attrs['r_squared_Y'],
                 file[group_key].attrs['r_squared_X'],
@@ -707,7 +707,7 @@ class OPLSModel(MultivariateAnalysisModel):
             )
         )
 
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             t = np.array(file[group_key]['opls']['x_scores'])
             t_ortho = np.array(file[group_key]['opls']['orthogonal_x_scores'][:, 0])
             target = np.ravel(np.array(file[group_key]['target']))
@@ -795,7 +795,7 @@ class OPLSModel(MultivariateAnalysisModel):
                 'ROC AUC'
             ]
 
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             true_values = [
                 file[group_key].attrs['r_squared_Y'],
                 file[group_key].attrs['r_squared_X'],
@@ -908,7 +908,7 @@ class OPLSModel(MultivariateAnalysisModel):
 
     def get_group_options(self):
         try:
-            with h5py.File(self.results_filename) as file:
+            with h5py.File(self.results_filename, 'r') as file:
                 return [{'label': file[key].attrs['description'], 'value': key} for key in file.keys()]
         except:
             return []
@@ -938,14 +938,14 @@ class OPLSModel(MultivariateAnalysisModel):
         return x, kernel(x), kernel(true_value).item()
 
     def _get_loading_kde(self, group_key, feature_ind):
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             loadings = np.array(file[group_key]['permutation_loadings'][:, feature_ind])
             true_loading = np.ravel(file[group_key]['opls']['x_loadings'])[feature_ind]
         return self._get_kde(loadings, true_loading)
 
     def get_loading_significance_plot(self, group_key, feature_ind, theme=None):
         x, y, true_kde = self._get_loading_kde(group_key, feature_ind)
-        with h5py.File(self.results_filename) as file:
+        with h5py.File(self.results_filename, 'r') as file:
             true_value = np.ravel(file[group_key]['opls']['x_loadings'])[feature_ind]
             p_value = np.ravel(file[group_key]['feature_p_values'])[feature_ind]
             permutation_loadings = np.array(file[group_key]['permutation_loadings'])
@@ -1017,7 +1017,7 @@ class OPLSModel(MultivariateAnalysisModel):
         description = h5py.File(self.results_filename)[group_key].attrs['description']
         if self.results_file_ready:
             theme, style_header, style_cell = self._get_table_styles(theme)
-            with h5py.File(self.results_filename) as file:
+            with h5py.File(self.results_filename, 'r') as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
                 loadings = np.array(file[group_key]['opls']['x_loadings']).ravel()
                 p_values = np.array(file[group_key]['feature_p_values'])

@@ -8,7 +8,7 @@ import h5py
 in_filename = sys.argv[1]
 print(in_filename)
 print([attr for attr in h5py.File(in_filename, 'r').attrs])
-with h5py.File(in_filename) as file:
+with h5py.File(in_filename, 'r') as file:
     collection_id = file.attrs['collection_id'] if 'collection_id' in file.attrs else None
 
 out_filename = f'{collection_id}.h5' if collection_id is not None else f'{os.path.basename(in_filename)}_dataframes.h5'

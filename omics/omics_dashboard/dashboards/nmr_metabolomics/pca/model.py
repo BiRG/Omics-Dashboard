@@ -302,7 +302,7 @@ class PCAModel(MultivariateAnalysisModel):
         if 'hdf5' in file_formats:
             os.mkdir(f'{results_dir}/hdf5')
             h5_filename = f'{results_dir}/hdf5/{filename}.h5'
-            with h5py.File(h5_filename, 'a') as current_file, h5py.File(self._results_filename) as results_file:
+            with h5py.File(h5_filename, 'a') as current_file, h5py.File(self._results_filename, 'r') as results_file:
                 for key, value in results_file.attrs.items():
                     current_file.attrs[key] = value
                 current_file.attrs['analysis_type'] = 'pca'

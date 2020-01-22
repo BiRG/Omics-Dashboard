@@ -87,7 +87,7 @@ class MultivariateAnalysisModel(DashboardModel):
         self._label_df = pd.read_hdf(self._dataframe_filename, 'label_df')
         self._processed_label_df = pd.read_hdf(self._dataframe_filename, 'processed_label_df')
         self._numeric_df = pd.read_hdf(self._dataframe_filename, 'numeric_df')
-        with h5py.File(self._dataframe_filename) as file:
+        with h5py.File(self._dataframe_filename, 'r') as file:
             self._x = np.array(file['x']) if 'x' in file else None
             self._x_min = np.array(file['x_min']) if 'x_min' in file else None
             self._x_max = np.array(file['x_max']) if 'x_max' in file else None
