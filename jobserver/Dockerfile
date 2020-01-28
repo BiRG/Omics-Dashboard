@@ -1,4 +1,4 @@
-FROM python:3.7-slim
+FROM wsubirg/omics-dashboard:jobserver-cpu
 ARG MYSQL_PASSWORD
 ARG OMICS_UID
 ARG OMICS_GID

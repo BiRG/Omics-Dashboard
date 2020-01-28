@@ -1,1 +1,1 @@
-from .pca_dashboard import PCADashboard
+from .dashboard import PCADashboard

@@ -1,9 +1,9 @@
 from flask import render_template, Blueprint
 from flask_login import login_required
 
-from data_tools.access_wrappers.users import get_users, get_user
-from data_tools.template_data.entry_page import UserPageData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.wrappers.users import get_users, get_user, get_mailto_all
+from data_tools.template_models.entry_page import UserPageData
+from data_tools.template_models.list_table import UserListTableData
 from helpers import get_current_user, handle_exception_browser
 
 users = Blueprint('users', __name__, url_prefix='/users')
@@ -14,8 +14,12 @@ users = Blueprint('users', __name__, url_prefix='/users')
 def render_user_list():
     try:
         current_user = get_current_user()
-        return render_template('pages/list.html',
-                               page_data=ListTableData(current_user, get_users(current_user), 'Users'))
+        if current_user.admin:
+            mailto = get_mailto_all()
+        else:
+            mailto = None
+        return render_template('pages/user_list.html',
+                               page_data=UserListTableData(current_user, get_users(current_user), mailto))
     except Exception as e:
         return handle_exception_browser(e)
 

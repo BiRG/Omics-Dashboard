@@ -103,7 +103,7 @@ parser.add_argument('--pair_with', type=str, help='Pandas query describing point
 
 args = parser.parse_args()
 
-with h5py.File(args.dataframe_filename) as file:
+with h5py.File(args.dataframe_filename, 'r') as file:
     collection_id = file.attrs['collection_id'] if 'collection_id' in file.attrs else None
 
 numeric_df_, label_df_, metadata_ = process_data(**vars(args))

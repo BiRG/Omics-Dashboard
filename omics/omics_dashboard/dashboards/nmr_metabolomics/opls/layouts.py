@@ -3,10 +3,9 @@ import dash_core_components as dcc
 import dash_html_components as html
 from flask_login import current_user
 
-from dashboards.navbar import get_navbar
-from data_tools.access_wrappers.analyses import get_analyses
-from data_tools.access_wrappers.collections import get_collections
-from .opls_data import OPLSData
+from data_tools.wrappers.analyses import get_analyses
+from data_tools.wrappers.collections import get_collections
+from .model import OPLSModel
 
 
 def get_load_results_form():
@@ -27,7 +26,7 @@ def get_load_results_form():
     except:
         collection_options = []
     try:
-        opls_data = OPLSData(load_data=True)
+        opls_data = OPLSModel(load_data=True)
         loaded_badges = opls_data.get_results_collection_badges()
     except:
         loaded_badges = [html.Span([dbc.Badge('None', className='badge-pill')])]
@@ -118,7 +117,7 @@ def get_load_results_form():
                                     dbc.Label('Assemble results', html_for='download-button-group'),
                                     dbc.FormGroup(
                                         [
-                                            dbc.Button([html.I(className='fas fa-cogs'), ' Prepare'],
+                                            dbc.Button([html.I(className='fas fa-cogs')],
                                                        id='download-button',
                                                        className='btn btn-info')
                                         ], id='download-button-group'
@@ -144,7 +143,8 @@ def get_load_results_form():
                     )
                 ], className='form-row'
             ),
-            dcc.Loading(html.Small('', id='download-message', className='form-text')),
+            html.Div(html.Small('', id='download-message', className='form-text')),
+            # dcc.Loading(html.Small('', id='download-message', className='form-text')),
             # will inject link when results posted
             html.H5('Save Plots'),
             dbc.Row(
@@ -153,27 +153,68 @@ def get_load_results_form():
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label(['File Format',
-                                               html.Abbr('\uFE56',
-                                                         title='For publication-quality images, save as SVG and use an '
-                                                               'image editor to export a TIFF file at the requested DPI')],
-                                              html_for='plot-file-format-select'),
-                                    dcc.Dropdown(id='plot-file-format-select',
-                                                 multi=True,
-                                                 options=[
-                                                     {'label': 'PNG', 'value': 'png'},
-                                                     {'label': 'JPEG', 'value': 'jpg'},
-                                                     {'label': 'SVG', 'value': 'svg'},
-                                                 ])
+                                    dbc.Label('Width', html_for='width-input'),
+                                    dbc.Input(type='number', min=0, step=0.25, value=6.5, id='width-input')
                                 ]
                             )
-                        ]
+                        ], className='col-2'
                     ),
                     dbc.Col(
                         [
                             dbc.FormGroup(
                                 [
-                                    dbc.Label('Assemble plots', html_for='plot-download-button-group'),
+                                    dbc.Label('Height', html_for='height-input'),
+                                    dbc.Input(type='number', min=0, step=0.25, value=4, id='height-input')
+                                ]
+                            )
+                        ], className='col-2'
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Units', html_for='units-select'),
+                                    dcc.Dropdown(options=[
+                                        {'label': 'in', 'value': 'in'},
+                                        {'label': 'cm', 'value': 'cm'},
+                                        {'label': 'px', 'value': 'px'}
+                                    ], value='in', clearable=False, id='units-select')
+                                ]
+                            )
+                        ], className='col-1'
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('DPI', html_for='dpi-select'),
+                                    dbc.Input(type='number', min=50, step=25, value=100, id='dpi-input')
+                                ]
+                            )
+                        ], className='col-2'
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('File Formats', html_for='plot-file-format-select'),
+                                    dcc.Dropdown(options=[
+                                        {'label': 'SVG', 'value': 'svg'},
+                                        {'label': 'PNG', 'value': 'png'},
+                                        {'label': 'JPEG', 'value': 'jpg'},
+                                        {'label': 'PDF', 'value': 'pdf'},
+                                        {'label': 'TIFF', 'value': 'tif'},
+                                        {'label': 'EPS', 'value': 'eps'}
+                                    ], value=['png'], clearable=False, multi=True, id='plot-file-format-select')
+                                ]
+                            )
+                        ], className='col-2'
+                    ),
+                    dbc.Col(
+                        [
+                            dbc.FormGroup(
+                                [
+                                    dbc.Label('Prepare', html_for='plot-download-button-group'),
                                     dbc.FormGroup(
                                         [
                                             dbc.Button([html.I(className='fas fa-cogs'), ' Prepare'],
@@ -183,7 +224,7 @@ def get_load_results_form():
                                     )
                                 ]
                             )
-                        ]
+                        ], className='col-1'
                     ),
                     dbc.Col(
                         [
@@ -192,18 +233,33 @@ def get_load_results_form():
                                     dbc.Label('Download', html_for='plot-download-link-group'),
                                     dbc.FormGroup(
                                         [
-                                            html.A([html.I(className='fas fa-download'), ' Download'],
-                                                   id='plot-download-link', className='btn btn-secondary disabled')
+                                        #dcc.Loading(
+                                        html.Div(
+                                                html.A([html.I(className='fas fa-download'), ' Download'],
+                                                       id='plot-download-link',
+                                                       className='btn btn-secondary disabled')
+                                            )
                                         ], id='plot-download-link-group'
                                     )
                                 ]
                             )
-                        ]
+                        ], className='col-1'
                     )
-                ], className='form-row'
+                ]
             ),
-            dcc.Loading(html.Small('', id='plot-download-message', className='form-text')),
+            dbc.Row(
+                [
+                    dcc.Interval(id='progress-interval', n_intervals=0, interval=3600000),
+                    html.Div(dbc.FormText('Image export progress'), id='progress-label'),
+                    dbc.Progress(html.Div(dbc.Badge('0/0', color='light', pill=True, id='progress-badge')),
+                                 id='progress', striped=True, animated=True, style={'height': '25px'},
+                                 color='info', className='w-100')
+                ],
+                id='progress-div'
+            ),
             # will inject link when results posted
+            # dcc.Loading(html.Small('', id='plot-download-message', className='form-text')),
+            html.Div(html.Small('', id='plot-download-message', className='form-text')),
             html.H5('Post transformed collection'),
             dbc.Row(
                 [
@@ -260,7 +316,7 @@ def get_opls_options_form():
     except:
         collection_options = []
     try:
-        opls_data = OPLSData(load_data=True)
+        opls_data = OPLSModel(load_data=True)
         label_options = [{'label': label, 'value': label} for label in opls_data.labels]
         label_options_with_type = [{'label': label, 'value': label} for label in opls_data.get_label_data(True)]
         loaded_badges = opls_data.get_collection_badges()
@@ -399,7 +455,7 @@ def get_opls_options_form():
                                                       title='The number of test/train splits for the test to determine '
                                                             'the significance of regression quality metrics.')
                                         ], html_for='cross-val-k'),
-                                    dbc.Input(id='cross-val-k', type='number', value=10, min=-1)
+                                    dbc.Input(id='cross-val-k', type='number', value=-1, min=-1)
                                 ]
                             )
                         ]
@@ -694,7 +750,6 @@ def get_results_form():
 def get_layout():
     return html.Div(
         [
-            get_navbar(),
             html.Br(),
             dbc.Container(
                 [
@@ -710,7 +765,9 @@ def get_layout():
                         ], id='tabs'
                     )
                 ]
-            )
+            ),
+            html.Div('in', id='units-history', style={'display': 'none'}),
+            html.Div(100, id='dpi-history', style={'display': 'none'})
         ]
     )
 

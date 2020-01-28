@@ -2,16 +2,18 @@
 {% from 'components/macros.html' import list_table_tab_panel, list_table_tab %}
 {% block headline %}
   {{ super() }}
+    <br>
     {% if page_data.is_member %}
     {% if page_data.is_primary %}
-    <p>
         <button class="btn btn-danger" role="button" id="unmakePrimaryButton"><i class="fas fa-user-minus"></i> Remove as Primary Group</button>
-    </p>
     {% else %}
-    <p>
       <button class="btn btn-success" role="button" id="makePrimaryButton"><i class="fas fa-user-plus"></i> Make My Primary Group</button>
-    </p>
     {% endif %}
+        <br>
+        {% if page_data.mailto is not none %}
+            <a href="{{ page_data.mailto }}" class="btn btn-info"><i class="fas fa-envelope"></i> Email All Members</a>
+        {% endif %}
+        <br>
     {% endif %}
 {% endblock %}
 {% block tabnav %}

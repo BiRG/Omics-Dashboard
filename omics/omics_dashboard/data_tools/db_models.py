@@ -23,8 +23,8 @@ from sqlalchemy.ext.declarative import declared_attr
 import data_tools.file_tools.collection_tools as ct
 import data_tools.file_tools.metadata_tools as mdt
 from data_tools.file_tools.h5_merge import h5_merge
-from data_tools.redis import clear_user_hash
-from data_tools.util import DATADIR
+from config.redis_config import clear_user_hash
+from config.config import DATADIR
 
 
 class Base(Model):
@@ -64,7 +64,7 @@ class Base(Model):
         raise NotImplementedError('write_permitted not implemented in base model.')
 
 
-db = SQLAlchemy(model_class=Base)
+db = SQLAlchemy(model_class=Base, session_options={'autoflush': False})
 
 # Tables that represent relations only
 user_group_membership = db.Table('user_group_membership', db.Model.metadata,
@@ -157,6 +157,7 @@ class User(db.Model, UserMixin):
     group_can_read = True
     all_can_read = db.Column(db.Boolean, default=True)
     theme = db.Column(db.String, default='light')  # can be dark or light
+    notifications = db.relationship('Notification')
 
     admin_keys = {
         'active',
@@ -214,6 +215,18 @@ class User(db.Model, UserMixin):
 
     def write_permitted(self, user):
         return user.admin or user is self
+
+    @property
+    def unread_notifications(self):
+        return Notification.query.filter_by(recipient=self, read=False).all()
+
+    @property
+    def unread_notification_count(self):
+        return len(self.unread_notifications)
+
+    @property
+    def most_recent_notification(self):
+        return Notification.query.filter_by(recipient=self, read=False).order_by(Notification.updated_on.desc()).first()
 
 
 class UserGroup(db.Model):
@@ -913,6 +926,30 @@ class JobserverToken(db.Model):
             'created_on': self.created_on.isoformat(),
             'updated_on': self.updated_on.isoformat()
         }
+
+
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    contents = db.Column(db.String)  # an (html) string containing the message's contents
+    color = db.Column(db.String, default='info')  # a bootstrap color like 'danger' or 'info'
+    read = db.Column(db.Boolean, default=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # the id of the user targeted by this message
+    recipient = db.relationship(User, foreign_keys=[recipient_id], back_populates='notifications')  # the user targeted by this message
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'color': self.color,
+            'read': self.read,
+            'recipient_id': self.recipient_id,
+            'created_on': self.created_on.isoformat(),
+            'updated_on': self.updated_on.isoformat(),
+            'contents': self.contents
+        }
+
+    def mark_read(self):
+        self.read = True
+        return self
 
 
 # Do not register ExternalFile because we don't manage their filenames!

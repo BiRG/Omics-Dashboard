@@ -7,7 +7,7 @@ from flask_login import login_user, logout_user, login_required
 
 import data_tools as dt
 import helpers
-from data_tools.util import TMPDIR
+from config.config import TMPDIR
 from helpers import handle_exception
 from login_manager import authenticate_user
 
@@ -33,7 +33,7 @@ def login():
 @api.route('/logout')
 @login_required
 def logout():
-    dt.redis.clear_user_hash(get_current_user().id)
+    config.redis_config.clear_user_hash(get_current_user().id)
     logout_user()
     return jsonify({'message': 'logged out'}), 200
 

@@ -2,11 +2,11 @@ from flask import render_template, request, redirect, url_for, Blueprint
 from flask_login import login_required
 
 import data_tools as dt
-from data_tools.access_wrappers.collections import get_collections, get_collection, delete_collection
+from data_tools.wrappers.collections import get_collections, get_collection, delete_collection
 from data_tools.db_models import Sample
-from data_tools.template_data.entry_page import CollectionPageData
-from data_tools.template_data.form import CollectionCreateFormData
-from data_tools.template_data.list_table import ListTableData
+from data_tools.template_models.entry_page import CollectionPageData
+from data_tools.template_models.form import CollectionCreateFormData
+from data_tools.template_models.list_table import ListTableData
 from helpers import get_current_user, handle_exception_browser, process_input_dict
 
 collections = Blueprint('collections', __name__, url_prefix='/collections')
@@ -54,8 +54,8 @@ def render_create_collection():
                 del form_data['sample_ids']
             sort_by = form_data['sort_by']
             del form_data['sort_by']
-            collection = dt.access_wrappers.collections.create_collection(current_user, samples, form_data,
-                                                                          sort_by=sort_by)
+            collection = dt.wrappers.collections.create_collection(current_user, samples, form_data,
+                                                                   sort_by=sort_by)
             return redirect(url_for('collections.render_collection', collection_id=collection.id))
         if request.method == 'GET':
             if request.args.get('sample_ids', ''):

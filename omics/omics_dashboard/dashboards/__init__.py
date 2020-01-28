@@ -10,9 +10,13 @@ from dashboards.dashboard import Dashboard
 from dashboards.nmr_metabolomics.opls import OPLSDashboard
 from dashboards.nmr_metabolomics.pca import PCADashboard
 from dashboards.nmr_metabolomics.visualization import VisualizationDashboard
+from dashboards.nmr_metabolomics.collection_editor import CollectionEditorDashboard
+from dashboards.nmr_metabolomics.processing import CollectionProcessingDashboard
 
 dashboard_list: List[Type[Dashboard]] = [
+    VisualizationDashboard,
+    CollectionEditorDashboard,
+    CollectionProcessingDashboard,
     PCADashboard,
     OPLSDashboard,
-    VisualizationDashboard
 ]

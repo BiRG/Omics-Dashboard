@@ -6,7 +6,8 @@ from flask import url_for, request, render_template, redirect, jsonify
 from flask_login import current_user
 
 import data_tools as dt
-from data_tools.util import LoginError, DATADIR
+from data_tools.util import LoginError
+from config.config import DATADIR
 
 log_file_name = f'{DATADIR}/logs/omics.log'
 

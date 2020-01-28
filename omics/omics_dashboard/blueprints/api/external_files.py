@@ -8,7 +8,7 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.util import UPLOADDIR
+from config.config import UPLOADDIR
 from helpers import get_current_user, handle_exception, process_input_dict
 
 external_files_api = Blueprint('external_files_api', __name__, url_prefix='/api/external_files')

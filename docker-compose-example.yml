@@ -68,6 +68,24 @@ services:
     image: redis:alpine
     env_file: common.env
     container_name: omics_redis
+  rq_worker:
+    image: omics_dashboard_rq_worker
+    build:
+      context: omics
+      dockerfile: Dockerfile
+      args:
+        OMICSSERVER: ${OMICSSERVER}
+        OMICS_GID: ${OMICS_GID}
+        OMICS_UID: ${OMICS_UID}
+    env_file: common.env
+    volumes:
+      - data:/data
+      - ${EXTERNALDIR}:/data/external
+      - ${MODULEDIR}:/modules
+      - jobserverexecution:/cromwell-executions
+      - tmp:/tmp
+    container_name: omics_rq_worker
+    entrypoint: /rq_worker_entrypoint.sh
 volumes:
   data:
   tmp:

@@ -13,7 +13,7 @@ print(' '.join(sys.argv))
 
 
 def load_data(filename, group_key):
-    with h5py.File(filename) as file:
+    with h5py.File(filename, 'r') as file:
         description_ = file[group_key].attrs['description']
         try:
             pos_label_ = file[group_key].attrs['pos_label']
@@ -114,7 +114,7 @@ args = parser.parse_args()
 group_keys = [key for key in h5py.File(args.dataframe_filename).keys()]
 output_filename = os.path.splitext(os.path.basename(args.dataframe_filename))[0] + '_results.h5'
 
-with h5py.File(output_filename, 'w') as out_file, h5py.File(args.dataframe_filename) as in_file:
+with h5py.File(output_filename, 'w') as out_file, h5py.File(args.dataframe_filename, 'r') as in_file:
     if 'collection_id' in in_file.attrs:
         out_file.attrs['input_collection_id'] = in_file.attrs['collection_id']
     out_file.attrs.update({key: value for key, value in in_file.attrs.items() if key != 'collection_id'})
@@ -123,6 +123,7 @@ with h5py.File(output_filename, 'w') as out_file, h5py.File(args.dataframe_filen
 for key in group_keys:
     X, y, description, pos_label, neg_label = load_data(args.dataframe_filename, key)
     feature_labels = np.array([float(c) for c in X.columns])
+    print(description)
     validator = OPLSValidator(args.min_n_components, args.k, False, args.force_regression,
                               args.metric_test_permutations, args.inner_test_permutations, args.outer_test_permutations,
                               args.inner_test_alpha, args.outer_test_alpha)

@@ -6,10 +6,10 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 import data_tools as dt
-from data_tools.template_data.entry_page import ExternalFilePageData
-from data_tools.template_data.form import ExternalFileCreateFormData
-from data_tools.template_data.list_table import ListTableData
-from data_tools.util import UPLOADDIR, DATADIR
+from data_tools.template_models.entry_page import ExternalFilePageData
+from data_tools.template_models.form import ExternalFileCreateFormData
+from data_tools.template_models.list_table import ListTableData
+from config.config import UPLOADDIR, DATADIR
 from helpers import get_current_user, handle_exception_browser, process_input_dict
 
 external_files = Blueprint('external_files', __name__, url_prefix='/external_files')

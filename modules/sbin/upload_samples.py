@@ -32,7 +32,7 @@ metadata = json.load(open(metadata_file, 'r'))
 if 'name' in metadata:
     del metadata['name'] # preserve name set up in previous steps
 for output_filename, collection_id in zip(output_filenames, collection_ids):
-    with h5py.File(output_filename) as file:
+    with h5py.File(output_filename, 'r') as file:
         metadata['name'] = file.attrs['name'].decode('ascii')
     url = f'{omics_url}/api/samples/{collection_id}'
     files = {'file': open(output_filename, 'rb')}
