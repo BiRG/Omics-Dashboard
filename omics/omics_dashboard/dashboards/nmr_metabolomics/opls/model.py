@@ -1124,24 +1124,19 @@ class OPLSModel(MultivariateAnalysisModel):
                     quality_graph, score_graph = self.get_quality_plot(group, 'plotly_white', False)
                     if is_discrimination:
                         (
-                            r_squared_Y_graph, r_squared_X_graph, q_squared_graph,
-                            discriminant_r_squared_graph, discriminant_q_squared_graph,
+                            q_squared_graph,
+                            discriminant_q_squared_graph,
                             accuracy_graph, roc_auc_graph) = self.get_metric_kde_plot(group, 'plotly_white', False)
                     else:
-                        (r_squared_Y_graph, r_squared_X_graph,
-                         q_squared_graph) = self.get_metric_kde_plot(group, 'plotly_white', False)
-                        discriminant_r_squared_graph = discriminant_q_squared_graph = \
-                            accuracy_graph = roc_auc_graph = None
+                        q_squared_graph = self.get_metric_kde_plot(group, 'plotly_white', False)
+                        discriminant_q_squared_graph = accuracy_graph = roc_auc_graph = None
                     figure_data.update({
                         f'{group}_quality_metrics': quality_graph.to_plotly_json()['props']['figure'],
                         f'{group}_scores': score_graph.to_plotly_json()['props']['figure'],
-                        f'{group}_r_squared_Y_kde': r_squared_Y_graph.to_plotly_json()['props']['figure'],
-                        f'{group}_r_squared_X_kde': r_squared_X_graph.to_plotly_json()['props']['figure'],
                         f'{group}_q_squared_kde': q_squared_graph.to_plotly_json()['props']['figure']
                     })
                     if is_discrimination:
                         figure_data.update({
-                            f'{group}_discriminant_r_squared_kde': discriminant_r_squared_graph.to_plotly_json()['props']['figure'],
                             f'{group}_discriminant_q_squared_kde': discriminant_q_squared_graph.to_plotly_json()['props']['figure'],
                             f'{group}_accuracy_kde': accuracy_graph.to_plotly_json()['props']['figure'],
                             f'{group}_roc_auc_kde': roc_auc_graph.to_plotly_json()['props']['figure']
