@@ -17,6 +17,7 @@ from flask_login import current_user
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 from pyopls import OPLSValidator, OPLS
 from scipy.stats import gaussian_kde
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.multiclass import type_of_target
 
 import config.redis_config as rds
@@ -111,27 +112,28 @@ class OPLSModel(MultivariateAnalysisModel):
             validator.q_squared_ = group.attrs['q_squared']
             validator.q_squared_p_value_ = group.attrs['q_squared_p_value']
             validator.r_squared_Y_ = group.attrs['r_squared_Y']
-            validator.r_squared_Y_p_value_ = group.attrs['r_squared_Y_p_value']
             validator.r_squared_X_ = group.attrs['r_squared_X']
-            validator.r_squared_X_p_value_ = group.attrs['r_squared_X_p_value']
 
             validator.permutation_q_squared_ = np.array(group['permutation_q_squared'])
-            validator.permutation_r_squared_Y_ = np.array(group['permutation_r_squared_Y'])
-            validator.permutation_r_squared_X_ = np.array(group['permutation_r_squared_X'])
 
-            regressor_group = group['opls']
-            validator.estimator_ = OPLS(validator.n_components_, False)
-            validator.estimator_.r_squared_X_ = np.array(regressor_group.attrs['r_squared_X_'])
-            validator.estimator_.r_squared_Y_ = np.array(regressor_group.attrs['r_squared_Y_'])
-            validator.estimator_.y_weights_ = np.array(regressor_group.attrs['y_weight'])
-            validator.estimator_.orthogonal_x_weights_ = np.array(regressor_group['orthogonal_x_weights'])
-            validator.estimator_.x_weights_ = np.array(regressor_group['x_weights'])
-            validator.estimator_.orthogonal_x_loadings_ = np.array(regressor_group['orthogonal_x_loadings'])
-            validator.estimator_.x_loadings_ = np.array(regressor_group['x_loadings'])
-            validator.estimator_.orthogonal_x_scores_ = np.array(regressor_group['orthogonal_x_scores'])
-            validator.estimator_.x_scores_ = np.array(regressor_group['x_scores'])
-            validator.estimator_.y_scores_ = np.array(regressor_group['y_scores'])
-            validator.estimator_.coef_ = np.array(regressor_group['coef'])
+            opls_group = group['opls']
+            validator.opls_ = OPLS(validator.n_components_, False)
+            validator.opls_.P_ortho_ = np.array(opls_group['P_ortho'])
+            validator.opls_.T_ortho_ = np.array(opls_group['T_ortho'])
+            validator.opls_.W_ortho_ = np.array(opls_group['W_ortho'])
+
+            pls_group = group['pls']
+
+            validator.pls_ = PLSRegression(1)
+            validator.pls_.coef_ = np.array(pls_group['coef'])
+            validator.pls_.n_iter_ = np.array(pls_group['n_iter'])
+            validator.pls_.x_loadings_ = np.array(pls_group['x_loadings'])
+            validator.pls_.x_rotations_ = np.array(pls_group['x_rotations'])
+            validator.pls_.x_scores_ = np.array(pls_group['x_scores'])
+            validator.pls_.x_weights_ = np.array(pls_group['x_weights'])
+            validator.pls_.y_rotations_ = np.array(pls_group['y_rotations'])
+            validator.pls_.y_scores_ = np.array(pls_group['y_scores'])
+            validator.pls_.y_weights_ = np.array(pls_group['y_weights'])
 
             if validator.accuracy_ is not None:
                 pos_label = group.attrs['pos_label']
@@ -149,18 +151,6 @@ class OPLSModel(MultivariateAnalysisModel):
                 validator.permutation_accuracy_ = np.array(group['permutation_accuracy'])
                 validator.permutation_roc_auc_ = np.array(group['permutation_roc_auc'])
                 validator.permutation_discriminator_q_squared_ = np.array(group['permutation_discriminator_q_squared'])
-
-                roc_group = group['roc_curve']
-                fpr_group = roc_group['fpr']
-                tpr_group = roc_group['tpr']
-                threshold_group = roc_group['threshold']
-                fprs = [np.array(dset) for dset in fpr_group.values()]
-                tprs = [np.array(dset) for dset in tpr_group.values()]
-                thresholds = [np.array(dset) for dset in threshold_group.values()]
-                roc_curve = fprs, tprs, thresholds
-            else:
-                roc_curve = None
-                pos_label = None
             description = group.description
 
         return {
@@ -169,8 +159,7 @@ class OPLSModel(MultivariateAnalysisModel):
             'description': description,
             'target': pd.read_hdf(filename, f'/{root_path}/{name}/target'),
             'pos_label': pos_label,
-            'neg_label': neg_label,
-            'roc_curve': roc_curve
+            'neg_label': neg_label
         }
 
     def load_results(self):
@@ -222,7 +211,7 @@ class OPLSModel(MultivariateAnalysisModel):
 
         def _save_coef(name, file_format):
             if file_format == 'csv':
-                df = pd.DataFrame(data=np.hstack([validator['validator'].coef_ for validator in self.validators_]),
+                df = pd.DataFrame(data=np.hstack([validator['validator'].pls_.coef_ for validator in self.validators_]),
                                   index=self._x,
                                   columns=[f'coef_{validator["name"]}' for validator in self.validators_])
                 df.to_csv(name)
@@ -235,13 +224,13 @@ class OPLSModel(MultivariateAnalysisModel):
                             validator_group = file[validator['name']]
                         if 'coef' in validator_group:
                             del validator_group['coef']
-                        validator_group.create_dataset('coef', data=validator['validator'].coef_)
+                        validator_group.create_dataset('coef', data=validator['validator'].pls_.coef_)
 
         def _save_scores(name, file_format):
             if file_format == 'csv':
                 columns = [(f'{validator["name"]}_X_score', f'{validator["name"]}_Y_score')
                            for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([np.hstack([validator.x_scores_, validator.y_scores_])
+                df = pd.DataFrame(data=np.hstack([np.hstack([validator.pls_.x_scores_, validator.pls_.y_scores_])
                                                   for validator in self.validators_]),
                                   columns=[item for sublist in columns for item in sublist])
                 df.to_csv(name)
@@ -256,15 +245,15 @@ class OPLSModel(MultivariateAnalysisModel):
                             del validator_group['y_scores']
                         if 'x_scores' in validator_group:
                             del validator_group['x_scores']
-                        validator_group.create_dataset('y_scores', data=validator['validator'].y_scores_)
-                        validator_group.create_dataset('x_scores', data=validator['validator'].x_scores_)
+                        validator_group.create_dataset('y_scores', data=validator['validator'].pls_.y_scores_)
+                        validator_group.create_dataset('x_scores', data=validator['validator'].pls_.x_scores_)
 
         def _save_orthogonal_scores(name, file_format):
             if file_format == 'csv':
                 columns = [[f'{validator["name"]}_{i}'
-                            for i in range(validator['validator'].orthogonal_x_scores_.shape[1])]
+                            for i in range(validator['validator'].opls_.T_ortho_.shape[1])]
                            for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator.orthogonal_x_scores_ for validator in self.validators_]),
+                df = pd.DataFrame(data=np.hstack([validator.opls_.T_ortho_ for validator in self.validators_]),
                                   columns=[item for sublist in columns for item in sublist])
                 df.to_csv(name)
             else:
@@ -277,14 +266,13 @@ class OPLSModel(MultivariateAnalysisModel):
                         if 'orthogonal_x_scores' in validator_group:
                             del validator_group['orthogonal_x_scores']
                         validator_group.create_dataset('orthogonal_x_scores',
-                                                       data=validator['validator'].orthogonal_x_scores_)
+                                                       data=validator['validator'].opls_.T_ortho_)
 
         def _save_r_squared(name, file_format):
             if file_format == 'csv':
-                columns = ['r_squared_Y', 'r_squared_Y_p_value', 'r_squared_X', 'r_squared_X_p_value',
-                           'q_squared', 'q_squared_p_value']
-                values = [[validator.r_squared_Y_, validator.r_squared_Y_p_value_,
-                           validator.r_squared_X_, validator.r_squared_X_p_value_,
+                columns = ['r_squared_Y', 'r_squared_X', 'q_squared', 'q_squared_p_value']
+                values = [[validator.r_squared_Y_, np.nan,
+                           validator.r_squared_X_, np.nan,
                            validator.q_squared_, validator.q_squared_p_value_]
                           for validator in self.validators_]
                 if len(self.validators_) > 1:
@@ -309,8 +297,6 @@ class OPLSModel(MultivariateAnalysisModel):
                             validator_group = file[validator['name']]
                         validator_group.attrs['r_squared_Y'] = validator['validator'].r_squared_Y_
                         validator_group.attrs['r_squared_X'] = validator['validator'].r_squared_X_
-                        validator_group.attrs['r_squared_Y_p_value'] = validator['validator'].r_squared_Y_p_value_
-                        validator_group.attrs['r_squared_X_p_value'] = validator['validator'].r_squared_X_p_value_
                         validator_group.attrs['q_squared'] = validator['validator'].q_squared_
                         validator_group.attrs['q_squared_p_value'] = validator['validator'].q_squared_p_value_
                         if len(self.validators_) > 1:
@@ -325,7 +311,7 @@ class OPLSModel(MultivariateAnalysisModel):
 
         def _save_loadings(name, file_format):
             if file_format == 'csv':
-                df = pd.DataFrame(data=np.column_stack([validator['validator'].x_loadings_
+                df = pd.DataFrame(data=np.column_stack([validator['validator'].pls_.x_loadings_
                                                         for validator in self.validators_]),
                                   index=[validator['name'] for validator in self.validators_],
                                   columns=self._x)
@@ -337,13 +323,13 @@ class OPLSModel(MultivariateAnalysisModel):
                             validator_group = file.create_group(validator['name'])
                         else:
                             validator_group = file[validator['name']]
-                        validator_group.create_dataset('x_loadings', data=validator['validator'].x_loadings_)
+                        validator_group.create_dataset('x_loadings', data=validator['validator'].pls_.x_loadings_)
 
         def _save_orthogonal_loadings(name, file_format):
             if file_format == 'csv':
                 index = [[f'{validator["name"]}_{i + 1}' for i in range(validator['validator'].n_components)]
                          for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator['validator'].orthogonal_x_loadings_
+                df = pd.DataFrame(data=np.hstack([validator['validator'].opls_.P_ortho_
                                                   for validator in self.validators_]).T,
                                   index=[item for sublist in index for item in sublist],
                                   columns=self._x)
@@ -356,11 +342,11 @@ class OPLSModel(MultivariateAnalysisModel):
                         else:
                             validator_group = file[validator['name']]
                         validator_group.create_dataset('orthogonal_x_loadings',
-                                                       data=validator['validator'].orthogonal_x_loadings_)
+                                                       data=validator['validator'].opls_.P_ortho_)
 
         def _save_weights(name, file_format):
             if file_format == 'csv':
-                df = pd.DataFrame(data=np.hstack([validator['validator'].x_weights_
+                df = pd.DataFrame(data=np.hstack([validator['validator'].pls_.x_weights_
                                                   for validator in self.validators_]).T,
                                   columns=self._x,
                                   index=[validator['name'] for validator in self.validators_])
@@ -373,13 +359,13 @@ class OPLSModel(MultivariateAnalysisModel):
                         else:
                             validator_group = file[validator['name']]
                         validator_group.create_dataset('x_weights',
-                                                       data=validator['validator'].x_weights_)
+                                                       data=validator['validator'].pls_.x_weights_)
 
         def _save_orthogonal_weights(name, file_format):
             if file_format == 'csv':
                 index = [[f'{validator["name"]}_{i + 1}' for i in range(validator['validator'].n_components)]
                          for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator['validator'].orthogonal_x_weights_
+                df = pd.DataFrame(data=np.hstack([validator['validator'].opls_.W_ortho_
                                                   for validator in self.validators_]).T,
                                   columns=self._x,
                                   index=[item for sublist in index for item in sublist])
@@ -392,7 +378,7 @@ class OPLSModel(MultivariateAnalysisModel):
                         else:
                             validator_group = file[validator['name']]
                         validator_group.create_dataset('orthogonal_x_weights',
-                                                       data=validator['validator'].orthogonal_x_weights_)
+                                                       data=validator['validator'].opls_.W_ortho_)
 
         file_formats = file_formats or ['h5']
         self.load_data()
@@ -583,8 +569,8 @@ class OPLSModel(MultivariateAnalysisModel):
             ]
             metric_p_values = [
                 None,
-                f"{file[group_key].attrs['r_squared_Y_p_value']:.7f}",
-                f"{file[group_key].attrs['r_squared_X_p_value']:.7f}",
+                None,
+                None,
                 f"{file[group_key].attrs['q_squared_p_value']:.7f}"
             ]
             if is_discrimination:
@@ -597,7 +583,7 @@ class OPLSModel(MultivariateAnalysisModel):
                     file[group_key].attrs['neg_label']
                 ]
                 metric_p_values += [
-                    f"{file[group_key].attrs['discriminant_r_squared_p_value']:.7f}",
+                    None,
                     f"{file[group_key].attrs['discriminant_q_squared_p_value']:.7f}",
                     f"{file[group_key].attrs['accuracy_p_value']:.7f}",
                     f"{file[group_key].attrs['roc_auc_p_value']:.7f}",
@@ -708,8 +694,8 @@ class OPLSModel(MultivariateAnalysisModel):
         )
 
         with h5py.File(self.results_filename, 'r') as file:
-            t = np.array(file[group_key]['opls']['x_scores'])
-            t_ortho = np.array(file[group_key]['opls']['orthogonal_x_scores'][:, 0])
+            t = np.array(file[group_key]['pls']['x_scores'])
+            t_ortho = np.array(file[group_key]['opls']['T_ortho'][:, 0])
             target = np.ravel(np.array(file[group_key]['target']))
             if np.issubdtype(target.dtype, np.object_):
                 target = target.astype(str)
@@ -782,8 +768,6 @@ class OPLSModel(MultivariateAnalysisModel):
         description = h5py.File(self.results_filename)[group_key].attrs['description']
 
         labels = [
-            'R\u00B2Y',
-            'R\u00B2X',
             'Q\u00B2Y',
         ]
 
@@ -797,35 +781,26 @@ class OPLSModel(MultivariateAnalysisModel):
 
         with h5py.File(self.results_filename, 'r') as file:
             true_values = [
-                file[group_key].attrs['r_squared_Y'],
-                file[group_key].attrs['r_squared_X'],
                 file[group_key].attrs['q_squared']
             ]
             p_values = [
-                file[group_key].attrs['r_squared_Y_p_value'],
-                file[group_key].attrs['r_squared_X_p_value'],
                 file[group_key].attrs['q_squared_p_value']
             ]
             permutation_values = [
-                np.array(file[group_key]['permutation_r_squared_Y']),
-                np.array(file[group_key]['permutation_r_squared_X']),
                 np.array(file[group_key]['permutation_q_squared'])
             ]
             if is_discrimination:
                 true_values += [
-                    file[group_key].attrs['discriminant_r_squared'],
                     file[group_key].attrs['discriminant_q_squared'],
                     file[group_key].attrs['accuracy'],
                     file[group_key].attrs['roc_auc']
                 ]
                 p_values += [
-                    file[group_key].attrs['discriminant_r_squared_p_value'],
                     file[group_key].attrs['discriminant_q_squared_p_value'],
                     file[group_key].attrs['accuracy_p_value'],
                     file[group_key].attrs['roc_auc_p_value']
                 ]
                 permutation_values += [
-                    np.array(file[group_key]['permutation_discriminant_r_squared']),
                     np.array(file[group_key]['permutation_discriminant_q_squared']),
                     np.array(file[group_key]['permutation_accuracy']),
                     np.array(file[group_key]['permutation_roc_auc'])
@@ -855,6 +830,7 @@ class OPLSModel(MultivariateAnalysisModel):
                     'symbol': 'cross'
                 }
             )
+
             kde_plot = go.Scatter(
                 x=x,
                 y=y,
@@ -1019,7 +995,7 @@ class OPLSModel(MultivariateAnalysisModel):
             theme, style_header, style_cell = self._get_table_styles(theme)
             with h5py.File(self.results_filename, 'r') as file:
                 feature_labels = np.array(file[group_key]['feature_labels'])
-                loadings = np.array(file[group_key]['opls']['x_loadings']).ravel()
+                loadings = np.array(file[group_key]['pls']['x_loadings']).ravel()
                 p_values = np.array(file[group_key]['feature_p_values'])
                 alpha = file[group_key].attrs['outer_alpha']
                 base_collection_id = file.attrs['input_collection_id'] if 'input_collection_id' in file.attrs else None
