@@ -27,8 +27,9 @@ def load_data(filename, group_key):
             description_, pos_label_, neg_label_)
 
 
-def serialize_opls(filename, validator_: OPLSValidator, name, description_, pos_label_, neg_label_, target, feature_labels):
-    significant_features = feature_labels[validator_.feature_significance_]
+def serialize_opls(filename, validator_: OPLSValidator, name, description_, pos_label_, neg_label_, target,
+                   feature_labels_):
+    significant_features = feature_labels_[validator_.feature_significance_]
     with h5py.File(filename, 'a') as file:
         group = file.create_group(name)
         group.attrs['description'] = description_
@@ -44,34 +45,34 @@ def serialize_opls(filename, validator_: OPLSValidator, name, description_, pos_
         group.attrs['q_squared'] = validator_.q_squared_
         group.attrs['q_squared_p_value'] = validator_.q_squared_p_value_
         group.attrs['r_squared_Y'] = validator_.r_squared_Y_
-        group.attrs['r_squared_Y_p_value'] = validator_.r_squared_Y_p_value_
         group.attrs['r_squared_X'] = validator_.r_squared_X_
-        group.attrs['r_squared_X_p_value'] = validator_.r_squared_X_p_value_
 
         group.create_dataset('permutation_q_squared', data=validator_.permutation_q_squared_)
-        group.create_dataset('permutation_r_squared_Y', data=validator_.permutation_r_squared_Y_)
-        group.create_dataset('permutation_r_squared_X', data=validator_.permutation_r_squared_X_)
         group.create_dataset('permutation_loadings', data=validator_.permutation_loadings_)
         group.create_dataset('feature_p_values', data=validator_.feature_p_values_)
 
         target_dtype = h5py.special_dtype(vlen=bytes) if target.dtype.type is np.object_ else target.dtype
         group.create_dataset('target', data=target.to_numpy(), dtype=target_dtype)
         group.create_dataset('index', data=target.index.to_numpy())
-        group.create_dataset('feature_labels', data=feature_labels)
+        group.create_dataset('feature_labels', data=feature_labels_)
         group.create_dataset('significant_features', data=significant_features)
 
-        regressor_group = group.create_group('opls')
-        regressor_group.attrs['r_squared_X_'] = validator_.estimator_.r_squared_X_
-        regressor_group.attrs['r_squared_Y_'] = validator_.estimator_.r_squared_Y_
-        regressor_group.attrs['y_weight'] = validator_.estimator_.y_weights_
-        regressor_group.create_dataset('orthogonal_x_weights', data=validator_.estimator_.orthogonal_x_weights_)
-        regressor_group.create_dataset('x_weights', data=validator_.estimator_.x_weights_)
-        regressor_group.create_dataset('orthogonal_x_loadings', data=validator_.estimator_.orthogonal_x_loadings_)
-        regressor_group.create_dataset('x_loadings', data=validator_.estimator_.x_loadings_)
-        regressor_group.create_dataset('orthogonal_x_scores', data=validator_.estimator_.orthogonal_x_scores_)
-        regressor_group.create_dataset('x_scores', data=validator_.estimator_.x_scores_)
-        regressor_group.create_dataset('y_scores', data=validator_.estimator_.y_scores_)
-        regressor_group.create_dataset('coef', data=validator_.estimator_.coef_)
+        opls_group = group.create_group('opls')
+        opls_group.create_dataset('W_ortho', data=validator_.opls_.W_ortho_)
+        opls_group.create_dataset('P_ortho', data=validator_.opls_.P_ortho_)
+        opls_group.create_dataset('T_ortho', data=validator_.opls_.T_ortho_)
+
+        pls_group = group.create_group('pls')
+        pls_group.create_dataset('x_weights', data=validator_.pls_.x_weights_)
+        pls_group.create_dataset('y_weights', data=validator_.pls_.y_weights_)
+        pls_group.create_dataset('x_loadings', data=validator_.pls_.x_loadings_)
+        pls_group.create_dataset('x_scores', data=validator_.pls_.x_scores_)
+        pls_group.create_dataset('y_scores', data=validator_.pls_.y_scores_)
+        pls_group.create_dataset('x_rotations', data=validator_.pls_.x_rotations_)
+        pls_group.create_dataset('y_rotations', data=validator_.pls_.y_rotations_)
+        pls_group.create_dataset('coef', data=validator_.pls_.coef_)
+        pls_group.create_dataset('n_iter', data=validator.pls_.n_iter_)
+
         if validator_.accuracy_ is not None:
             group['transformed_target'] = validator_.binarizer_.transform(target)
             group.attrs['accuracy'] = validator_.accuracy_
@@ -81,14 +82,11 @@ def serialize_opls(filename, validator_: OPLSValidator, name, description_, pos_
             group.attrs['discriminant_q_squared'] = validator_.discriminant_q_squared_
             group.attrs['discriminant_q_squared_p_value'] = validator_.discriminant_q_squared_p_value_
             group.attrs['discriminant_r_squared'] = validator_.discriminant_r_squared_
-            group.attrs['discriminant_r_squared_p_value'] = validator_.discriminant_r_squared_p_value_
 
             group.create_dataset('permutation_accuracy', data=validator_.permutation_accuracy_)
             group.create_dataset('permutation_roc_auc', data=validator_.permutation_roc_auc_)
             group.create_dataset('permutation_discriminant_q_squared',
                                  data=validator_.permutation_discriminant_q_squared_)
-            group.create_dataset('permutation_discriminant_r_squared',
-                                 data=validator_.permutation_discriminant_r_squared_)
 
 
 parser = argparse.ArgumentParser(description='Perform Orthogonal Projection to Latent Structures')
