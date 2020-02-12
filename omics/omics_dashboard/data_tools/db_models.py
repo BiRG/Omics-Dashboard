@@ -422,6 +422,12 @@ class FileRecordMixin(OmicsRecordMixin):
                 return json.load(open(self.filename, 'r'))
         return {}
 
+    def get_group_attributes(self):
+        if self.filename is not None and self.file_type == 'hdf5':
+            return mdt.get_all_group_attributes(self.filename)
+        else:
+            return self.get_file_attributes()
+
     def get_attribute_types(self):
         if self.file_type == 'hdf5':
             return mdt.get_file_attribute_dtypes(self.filename)

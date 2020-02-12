@@ -10,7 +10,7 @@ from data_tools.wrappers.workflows import WorkflowModule
 from data_tools.db_models import User, OmicsRecordMixin, Sample, Collection, SampleGroup, Analysis, Workflow, UserGroup, \
     ExternalFile
 from data_tools.template_models.attribute_table import AttributeTableData, FileAttributeTableData, \
-    WorkflowModuleAttributeTableData, DatasetSummaryTableData
+    WorkflowModuleAttributeTableData, DatasetSummaryTableData, FileGroupAttributeTableData
 from data_tools.template_models.form import ProfileUpdateFormData, PasswordResetFormData, SelectOption, FormEntry
 from data_tools.template_models.label_column_table import LabelColumnTableData
 from data_tools.template_models.list_table import ListTableData, FileListTableData
@@ -40,6 +40,7 @@ class FileEntryPageData(EntryPageData):
                  record_type: str):
         super(FileEntryPageData, self).__init__(current_user, record, record_type)
         self.file_attribute_table_data = FileAttributeTableData(current_user, record)
+        self.file_group_attribute_table_data = FileGroupAttributeTableData(current_user, record)
         self.dataset_summary_table_data = DatasetSummaryTableData(current_user, record)
         self.download_url = get_download_url(record)
 

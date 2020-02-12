@@ -64,6 +64,7 @@ app.jinja_env.filters['make_tag_from_name'] = make_tag_from_name
 app.jinja_env.globals.update(int=int)
 app.jinja_env.globals.update(str=str)
 app.jinja_env.globals.update(bool=bool)
+app.jinja_env.globals.update(len=len)
 app.jinja_env.globals.update(isinstance=isinstance)
 app.jinja_env.globals.update(BRAND=os.environ['BRAND'] if 'BRAND' in os.environ else '')
 app.jinja_env.globals.update(session=session)

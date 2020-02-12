@@ -1,7 +1,7 @@
-{% macro file_label_column_editor_tab() %}
+{% macro file_label_column_editor_tab(title='Labels') %}
     <li class="nav-item">
         <a class="nav-link" id="file-coluimn-editor-tab" data-toggle="tab" href="#file-column-editor-tab-pane"
-           role="tab" aria-controls="file-column-editor-tab-pane" aria-selected="false">Labels</a>
+           role="tab" aria-controls="file-column-editor-tab-pane" aria-selected="false">{{ title }}</a>
     </li>
 {% endmacro %}
 
