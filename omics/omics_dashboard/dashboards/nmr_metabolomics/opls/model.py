@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 from typing import List, Union
@@ -595,10 +596,11 @@ class OPLSModel(MultivariateAnalysisModel):
         df['Metric'] = index
         df['Value'] = metric_values
         df['p Value'] = metric_p_values
+        tag_id = re.sub(r'[^a-zA-Z\d]', '', group_key.lower()) + '-summary'
         return html.Div([
             dbc.Row(html.H5(description)),
             dbc.Row(
-                dash_table.DataTable(id=f'{group_key}-summary',
+                dash_table.DataTable(id=tag_id,
                                      columns=[{'name': i, 'id': i} for i in df.columns],
                                      data=df.to_dict('records'),
                                      style_header=style_header,
@@ -610,7 +612,8 @@ class OPLSModel(MultivariateAnalysisModel):
                                              'font-family': 'sans'
                                          } for c in ['Metric']
                                      ]),
-                className='container text-center'
+                className='container text-center',
+                id=group_key
             ),
             html.Br()
         ])
@@ -1106,7 +1109,6 @@ class OPLSModel(MultivariateAnalysisModel):
                 groups = h5py.File(self.results_filename).keys()
                 figure_data = {}
                 for group in groups:
-                    print(group)
                     is_discrimination = 'accuracy' in h5py.File(self.results_filename)[group].attrs
                     quality_graph, score_graph = self.get_quality_plot(group, 'plotly_white', False)
                     if is_discrimination:
