@@ -843,7 +843,10 @@ class OPLSModel(MultivariateAnalysisModel):
             'gridcolor': '#95A5A6'  # flatly secondary
         }
         for label, true_value, permutation_value, p_value in zip(labels, true_values, permutation_values, p_values):
-            x, y, true_kde = self._get_kde(permutation_value, true_value)
+            try:
+                x, y, true_kde = self._get_kde(permutation_value, true_value)
+            except np.linalg.LinAlgError:
+                x = y = true_kde = None
             point_plot = go.Scatter(
                 x=np.ravel(permutation_value),
                 y=[0 for _ in range(permutation_value.size)],
@@ -858,17 +861,21 @@ class OPLSModel(MultivariateAnalysisModel):
                     'symbol': 'cross'
                 }
             )
-            kde_plot = go.Scatter(
-                x=x,
-                y=y,
-                mode='lines',
-                name='KDE'
-            )
-
+            if x is None:
+                kde_plot = go.Scatter(
+                    x=x,
+                    y=y,
+                    mode='lines',
+                    name='KDE'
+                )
+                plot_data=[point_plot, kde_plot]
+            else:
+                plot_data = [point_plot]
+            
             annotations = [
                 {
                     'x': true_value,
-                    'y': true_kde,
+                    'y': true_kde if true_kde is not None else 0,
                     'xref': 'x',
                     'yref': 'y',
                     'text': f'{true_value:.4f}',
@@ -881,6 +888,8 @@ class OPLSModel(MultivariateAnalysisModel):
                     'font': {'size': 16}
                 }
             ]
+
+
             layout = go.Layout(
                 height=700,
                 template=theme,
@@ -897,7 +906,7 @@ class OPLSModel(MultivariateAnalysisModel):
                 },
                 annotations=annotations
             )
-            graphs.append(dcc.Graph(figure=go.Figure(data=[point_plot, kde_plot], layout=layout)))
+            graphs.append(dcc.Graph(figure=go.Figure(data=plot_data, layout=layout)))
         if wrap:
             return html.Div([html.H4(description)] + graphs)
         else:
