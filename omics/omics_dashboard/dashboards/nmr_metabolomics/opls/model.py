@@ -818,7 +818,10 @@ class OPLSModel(MultivariateAnalysisModel):
             'gridcolor': '#95A5A6'  # flatly secondary
         }
         for label, true_value, permutation_value, p_value in zip(labels, true_values, permutation_values, p_values):
-            x, y, true_kde = self._get_kde(permutation_value, true_value)
+            try:    
+                x, y, true_kde = self._get_kde(permutation_value, true_value)
+            except np.linalg.LinAlgError:
+                x = y = true_kde = None
             point_plot = go.Scatter(
                 x=np.ravel(permutation_value),
                 y=[0 for _ in range(permutation_value.size)],
@@ -833,30 +836,35 @@ class OPLSModel(MultivariateAnalysisModel):
                     'symbol': 'cross'
                 }
             )
+            
+            if true_kde is not None:
+                kde_plot = go.Scatter(
+                    x=x,
+                    y=y,
+                    mode='lines',
+                    name='KDE'
+                )
 
-            kde_plot = go.Scatter(
-                x=x,
-                y=y,
-                mode='lines',
-                name='KDE'
-            )
+                annotations = [
+                    {
+                        'x': true_value,
+                        'y': true_kde,
+                        'xref': 'x',
+                        'yref': 'y',
+                        'text': f'{true_value:.4f}',
+                        'showarrow': True,
+                        'arrowhead': 5,
+                        'arrowsize': 2,
+                        'arrowwidth': 1,
+                        'arrowcolor': 'red',
+                        'textangle': 0,
+                        'font': {'size': 16}
+                    }
+                ]
+            else:
+                kde_plot = go.Scatter()
+                annotations = []
 
-            annotations = [
-                {
-                    'x': true_value,
-                    'y': true_kde,
-                    'xref': 'x',
-                    'yref': 'y',
-                    'text': f'{true_value:.4f}',
-                    'showarrow': True,
-                    'arrowhead': 5,
-                    'arrowsize': 2,
-                    'arrowwidth': 1,
-                    'arrowcolor': 'red',
-                    'textangle': 0,
-                    'font': {'size': 16}
-                }
-            ]
             layout = go.Layout(
                 height=700,
                 template=theme,
@@ -923,7 +931,10 @@ class OPLSModel(MultivariateAnalysisModel):
         return self._get_kde(loadings, true_loading)
 
     def get_loading_significance_plot(self, group_key, feature_ind, theme=None):
-        x, y, true_kde = self._get_loading_kde(group_key, feature_ind)
+        try:
+            x, y, true_kde = self._get_loading_kde(group_key, feature_ind)
+        except np.linalg.LinAlgError:
+            x = y = true_kde = None
         with h5py.File(self.results_filename, 'r') as file:
             true_value = np.ravel(file[group_key]['opls']['x_loadings'])[feature_ind]
             p_value = np.ravel(file[group_key]['feature_p_values'])[feature_ind]
