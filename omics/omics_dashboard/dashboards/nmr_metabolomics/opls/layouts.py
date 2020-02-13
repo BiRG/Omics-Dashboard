@@ -81,15 +81,10 @@ def get_load_results_form():
                                     dcc.Dropdown(id='results-select',
                                                  multi=True,
                                                  options=[
-                                                     {'label': 'Feature P-Values', 'value': 'feature_p_values'},
-                                                     {'label': 'Regression coefficients', 'value': 'coef'},
-                                                     {'label': 'Scores', 'value': 'scores'},  # t and t_ortho
-                                                     {'label': 'Orthogonal Scores', 'value': 'orthogonal_scores'},
-                                                     {'label': 'R-squared/Q-squared', 'value': 'r_squared'},
-                                                     {'label': 'Loadings', 'value': 'loadings'},
-                                                     {'label': 'Orthogonal Loadings', 'value': 'orthogonal_loadings'},
-                                                     {'label': 'Weights', 'value': 'weights'},
-                                                     {'label': 'Orthogonal Weights', 'value': 'orthogonal_weights'},
+                                                     {'label': 'Metrics', 'value': 'metrics'},
+                                                     {'label': 'Loadings + p-Values', 'value': 'loadings'},
+                                                     {'label': 'Scores', 'value': 'scores'},
+                                                     {'label': 'Weights', 'value': 'weights'}
                                                  ])
                                 ]
                             )
@@ -101,10 +96,9 @@ def get_load_results_form():
                                 [
                                     dbc.Label('File Format', html_for='file-format-select'),
                                     dcc.Dropdown(id='file-format-select',
-                                                 multi=True,
+                                                 multi=False,
                                                  options=[
-                                                     {'label': 'CSV', 'value': 'csv'},
-                                                     {'label': 'HDF5', 'value': 'hdf5'}
+                                                     {'label': 'CSV', 'value': 'csv'}
                                                  ])
                                 ]
                             )

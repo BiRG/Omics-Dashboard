@@ -153,11 +153,13 @@ class OPLSModel(MultivariateAnalysisModel):
                 validator.permutation_roc_auc_ = np.array(group['permutation_roc_auc'])
                 validator.permutation_discriminator_q_squared_ = np.array(group['permutation_discriminator_q_squared'])
             description = group.description
+            index = group['index']
 
         return {
             'validator': validator,
             'name': name,
             'description': description,
+            'index': index,
             'target': pd.read_hdf(filename, f'/{root_path}/{name}/target'),
             'pos_label': pos_label,
             'neg_label': neg_label
@@ -180,271 +182,137 @@ class OPLSModel(MultivariateAnalysisModel):
         self.load_dataframes()
 
     def download_results(self,
-                         include_feature_p_values=True,
-                         include_coef=True,
-                         include_scores=True,
-                         include_orthogonal_scores=True,
-                         include_r_squared=True,
+                         include_metrics=True,
                          include_loadings=True,
-                         include_orthogonal_loadings=True,
+                         include_scores=True,
                          include_weights=True,
-                         include_orthogonal_weights=True,
-                         file_formats=None):
+                         file_format=None):
+        with h5py.File(self.results_filename) as results_file:
+            make_archive = len(results_file.keys()) > 1
 
-        def _save_feature_p_values(name, file_format):
+        file_format = file_format or 'csv'
+        def _save_metrics(group_key, name):
+            with h5py.File(self.results_filename, 'r') as results_file:
+                group = results_file[group_key]
+                index = ['r_squared_Y', 'r_squared_X', 'q_squared']
+                if 'accuracy' in group.attrs:
+                    index += ['discriminant_q_squared', 'accuracy', 'roc_auc']
+                metrics = [group.attrs[metric] for metric in index]
+                p_values = [group.attrs[f'{metric}_p_value'] if f'{metric}_p_value' in group.attrs else None for metric in index]
+            df = pd.DataFrame(np.column_stack([metrics, p_values]), index=index, columns=['value', 'p_value'])
+            df.index.name = 'metric'
             if file_format == 'csv':
-                df = pd.DataFrame(data=np.column_stack([validator['validator'].feature_p_values_
-                                                        for validator in self.validators_]),
-                                  columns=[validator['name'] for validator in self.validators_],
-                                  index=self._x)
                 df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        if 'feature_p_values' in validator_group:
-                            del validator_group['feature_p_values']
-                        validator_group.create_dataset('feature_p_values',
-                                                       data=validator['validator'].feature_p_values_)
 
-        def _save_coef(name, file_format):
+        def _save_loadings(group_key, name):
+            with h5py.File(self.results_filename, 'r') as results_file:
+                group = results_file[group_key]
+                values = [
+                    np.array(group['pls']['x_loadings']),
+                    np.array(group['feature_p_values']),
+                    np.array(group['opls']['P_ortho'])
+                ]
+                columns = ['x_loadings', 'p_value'] + [f'P_ortho[{i}]' for i in range(values[2].shape[1])]
+                input_collection_id = results_file.attrs['input_collection_id'] if 'input_collection_id' in results_file.attrs else None
+            if input_collection_id is not None:
+                try:
+                    input_collection = get_collection(current_user, input_collection_id)
+                    x = input_collection.get_dataset('x')
+                    try:
+                        x_min = input_collection.get_dataset('x_min')
+                        x_max = input_collection.get_dataset('x_max')
+                    except:
+                        x_min = x_max = None
+                except:
+                    x_min = x_max = x = None
+            else:
+                x_min = x_max = x = None
+            df = pd.DataFrame(np.column_stack(values), columns=columns)
+            if x is not None and len(x) == len(df):
+                df.index = x
+                df.index.name = 'x'
+            if x_min is not None and len(x_min) == len(df):
+                df['x_min'] = x_min
+                df['x_max'] = x_max
+                df = df[['x_min', 'x_max'] + columns]
             if file_format == 'csv':
-                df = pd.DataFrame(data=np.hstack([validator['validator'].pls_.coef_ for validator in self.validators_]),
-                                  index=self._x,
-                                  columns=[f'coef_{validator["name"]}' for validator in self.validators_])
                 df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        if 'coef' in validator_group:
-                            del validator_group['coef']
-                        validator_group.create_dataset('coef', data=validator['validator'].pls_.coef_)
 
-        def _save_scores(name, file_format):
+        def _save_scores(group_key, name):
+            with h5py.File(self.results_filename, 'r') as results_file:
+                group = results_file[group_key]
+                values = [np.array(group['pls']['x_scores']), np.array(group['opls']['T_ortho'])]
+                index = np.array(group['index'])
+            columns = ['t'] + [f'T_ortho[{i}]' for i in range(values[1].shape[1])]
+            df = pd.DataFrame(np.column_stack(values), columns=columns, index=index)
             if file_format == 'csv':
-                columns = [(f'{validator["name"]}_X_score', f'{validator["name"]}_Y_score')
-                           for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([np.hstack([validator.pls_.x_scores_, validator.pls_.y_scores_])
-                                                  for validator in self.validators_]),
-                                  columns=[item for sublist in columns for item in sublist])
                 df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        if 'y_scores' in validator_group:
-                            del validator_group['y_scores']
-                        if 'x_scores' in validator_group:
-                            del validator_group['x_scores']
-                        validator_group.create_dataset('y_scores', data=validator['validator'].pls_.y_scores_)
-                        validator_group.create_dataset('x_scores', data=validator['validator'].pls_.x_scores_)
 
-        def _save_orthogonal_scores(name, file_format):
+        def _save_weights(group_key: OPLSValidator, name):
+            with h5py.File(self.results_filename, 'r') as results_file:
+                group = results_file[group_key]
+                values = [np.array(group['pls']['x_weights']), np.array(group['opls']['W_ortho'])]
+                input_collection_id = results_file.attrs['input_collection_id'] if 'input_collection_id' in results_file.attrs else None
+            columns = ['w'] + [f'W_ortho[{i}]' for i in range(values[1].shape[1])]
+            df = pd.DataFrame(np.column_stack(values), columns=columns)
+            if input_collection_id is not None:
+                try:
+                    input_collection = get_collection(current_user, input_collection_id)
+                    x = input_collection.get_dataset('x')
+                    try:
+                        x_min = input_collection.get_dataset('x_min')
+                        x_max = input_collection.get_dataset('x_max')
+                    except:
+                        x_min = x_max = None
+                except:
+                    x_min = x_max = x = None
+            else:
+                x_min = x_max = x = None
+            if x is not None and len(x) == len(df):
+                df.index = x
+                df.index.name = 'x'
+            if x_min is not None and len(x_min) == len(df):
+                df['x_min'] = x_min
+                df['x_max'] = x_max
+                df = df[['x_min', 'x_max'] + columns]
             if file_format == 'csv':
-                columns = [[f'{validator["name"]}_{i}'
-                            for i in range(validator['validator'].opls_.T_ortho_.shape[1])]
-                           for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator.opls_.T_ortho_ for validator in self.validators_]),
-                                  columns=[item for sublist in columns for item in sublist])
                 df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        if 'orthogonal_x_scores' in validator_group:
-                            del validator_group['orthogonal_x_scores']
-                        validator_group.create_dataset('orthogonal_x_scores',
-                                                       data=validator['validator'].opls_.T_ortho_)
 
-        def _save_r_squared(name, file_format):
-            if file_format == 'csv':
-                columns = ['r_squared_Y', 'r_squared_X', 'q_squared', 'q_squared_p_value']
-                values = [[validator.r_squared_Y_, np.nan,
-                           validator.r_squared_X_, np.nan,
-                           validator.q_squared_, validator.q_squared_p_value_]
-                          for validator in self.validators_]
-                if len(self.validators_) > 1:
-                    columns += ['accuracy', 'accuracy_p_value',
-                                'roc_auc', 'roc_auc_p_value',
-                                'dq_squared', 'dq_squared_p_value']
-                    values = [row + [validator['validator'].accuracy_, validator['validator'].accuracy_p_value_,
-                                     validator['validator'].roc_auc_, validator['validator'].roc_auc_p_value_,
-                                     validator['validator'].discriminator_q_squared_,
-                                     validator['validator'].discriminator_q_squared_p_value_]
-                              for row, validator in zip(values, self.validators_)]
-                df = pd.DataFrame(data=values,
-                                  index=[validator['name'] for validator in self.validators_],
-                                  columns=['value', 'p_value'])
-                df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        validator_group.attrs['r_squared_Y'] = validator['validator'].r_squared_Y_
-                        validator_group.attrs['r_squared_X'] = validator['validator'].r_squared_X_
-                        validator_group.attrs['q_squared'] = validator['validator'].q_squared_
-                        validator_group.attrs['q_squared_p_value'] = validator['validator'].q_squared_p_value_
-                        if len(self.validators_) > 1:
-                            validator_group.attrs['accuracy'] = validator['validator'].accuracy_
-                            validator_group.attrs['accuracy_p_value'] = validator['validator'].accuracy_p_value_
-                            validator_group.attrs['roc_auc'] = validator['validator'].roc_auc_
-                            validator_group.attrs['roc_auc_p_value'] = validator['validator'].roc_auc_p_value_
-                            validator_group.attrs['discriminator_q_squared'] = validator[
-                                'validator'].discriminator_q_squared_
-                            validator_group.attrs['discriminator_q_squared_p_value'] = validator[
-                                'validator'].discriminator_q_squared_p_value_
-
-        def _save_loadings(name, file_format):
-            if file_format == 'csv':
-                df = pd.DataFrame(data=np.column_stack([validator['validator'].pls_.x_loadings_
-                                                        for validator in self.validators_]),
-                                  index=[validator['name'] for validator in self.validators_],
-                                  columns=self._x)
-                df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        validator_group.create_dataset('x_loadings', data=validator['validator'].pls_.x_loadings_)
-
-        def _save_orthogonal_loadings(name, file_format):
-            if file_format == 'csv':
-                index = [[f'{validator["name"]}_{i + 1}' for i in range(validator['validator'].n_components)]
-                         for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator['validator'].opls_.P_ortho_
-                                                  for validator in self.validators_]).T,
-                                  index=[item for sublist in index for item in sublist],
-                                  columns=self._x)
-                df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        validator_group.create_dataset('orthogonal_x_loadings',
-                                                       data=validator['validator'].opls_.P_ortho_)
-
-        def _save_weights(name, file_format):
-            if file_format == 'csv':
-                df = pd.DataFrame(data=np.hstack([validator['validator'].pls_.x_weights_
-                                                  for validator in self.validators_]).T,
-                                  columns=self._x,
-                                  index=[validator['name'] for validator in self.validators_])
-                df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        validator_group.create_dataset('x_weights',
-                                                       data=validator['validator'].pls_.x_weights_)
-
-        def _save_orthogonal_weights(name, file_format):
-            if file_format == 'csv':
-                index = [[f'{validator["name"]}_{i + 1}' for i in range(validator['validator'].n_components)]
-                         for validator in self.validators_]
-                df = pd.DataFrame(data=np.hstack([validator['validator'].opls_.W_ortho_
-                                                  for validator in self.validators_]).T,
-                                  columns=self._x,
-                                  index=[item for sublist in index for item in sublist])
-                df.to_csv(name)
-            else:
-                with h5py.File(name, 'a') as file:
-                    for validator in self.validators_:
-                        if validator['name'] not in file:
-                            validator_group = file.create_group(validator['name'])
-                        else:
-                            validator_group = file[validator['name']]
-                        validator_group.create_dataset('orthogonal_x_weights',
-                                                       data=validator['validator'].opls_.W_ortho_)
-
-        file_formats = file_formats or ['h5']
-        self.load_data()
-        multiple_results = [
-                               include_feature_p_values,
-                               include_coef,
-                               include_scores,
-                               include_orthogonal_scores,
-                               include_r_squared,
-                               include_loadings,
-                               include_orthogonal_loadings,
-                               include_weights,
-                               include_orthogonal_weights,
-                           ].count(True) > 1
-        create_archive = len(file_formats) > 1 or (multiple_results and 'csv' in file_formats)
-        if len(self._loaded_collection_ids) > 1:
-            root_filename = f'opls_collections_{"_".join([str(i) for i in self._loaded_collection_ids])}'
-        else:
-            root_filename = f'opls_collections_{self._loaded_collection_ids[0]}'
-        root_dir = os.path.dirname(self.results_filename)
+        multiple_results = [include_scores, include_metrics, include_loadings, include_weights].count(True) > 1
+        make_archive = make_archive or multiple_results
+        base_dir = f'opls_{self.results_collection_id}'
+        root_dir = tempfile.mkdtemp()
+        root_filename = os.path.join(root_dir, base_dir)
         results_dir = os.path.join(root_dir, root_filename)
         if os.path.isdir(results_dir):
             shutil.rmtree(results_dir)
         elif os.path.isfile(results_dir):
             os.remove(results_dir)
         os.mkdir(results_dir)
-        filenames = [os.path.join(results_dir, f'{root_filename}.{file_format}') for file_format in file_formats]
-        for filename, file_format in zip(filenames, file_formats):
-            if include_feature_p_values:
-                _save_feature_p_values(filename, file_format)
-                if not create_archive:
-                    return filename
-            if include_coef:
-                _save_coef(filename, file_format)
-                if not create_archive:
-                    return filename
+        with h5py.File(self.results_filename, 'r') as results_file_:
+            group_keys = [key for key in results_file_.keys()]
+        for key in group_keys:
             if include_scores:
-                _save_scores(filename, file_format)
-                if not create_archive:
-                    return filename
-            if include_orthogonal_scores:
-                _save_orthogonal_scores(filename, file_format)
-                if not create_archive:
-                    return filename
-            if include_r_squared:
-                _save_r_squared(filename, file_format)
-                if not create_archive:
+                filename = os.path.join(results_dir, f'{key}_scores.{file_format}')
+                _save_scores(key, filename)
+                if not make_archive:
                     return filename
             if include_loadings:
-                _save_loadings(filename, file_format)
-                if not create_archive:
+                filename = os.path.join(results_dir, f'{key}_loadings.{file_format}')
+                _save_loadings(key, filename)
+                if not make_archive:
                     return filename
-            if include_orthogonal_loadings:
-                _save_orthogonal_loadings(filename, file_format)
-                if not create_archive:
+            if include_metrics:
+                filename = os.path.join(results_dir, f'{key}_metrics.{file_format}')
+                _save_metrics(key, filename)
+                if not make_archive:
                     return filename
             if include_weights:
-                _save_weights(filename, file_format)
-                if not create_archive:
+                filename = os.path.join(results_dir, f'{key}_weights.{file_format}')
+                _save_weights(key, filename)
+                if not make_archive:
                     return filename
-            if include_orthogonal_weights:
-                _save_orthogonal_weights(filename, file_format)
-                if not create_archive:
-                    return filename
-        return shutil.make_archive(results_dir, 'zip', root_dir, root_filename)
+        return shutil.make_archive(results_dir, 'zip', root_dir, base_dir)
 
     def post_results(self, name, analysis_ids):
         raise NotImplementedError()
