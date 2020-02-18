@@ -78,6 +78,9 @@ services:
         OMICS_GID: ${OMICS_GID}
         OMICS_UID: ${OMICS_UID}
     env_file: common.env
+    deploy:
+      mode: replicated
+      replicas: 4
     volumes:
       - data:/data
       - ${EXTERNALDIR}:/data/external

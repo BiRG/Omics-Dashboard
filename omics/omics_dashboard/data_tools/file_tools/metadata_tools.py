@@ -12,6 +12,16 @@ def get_file_attributes(filename: str) -> Dict[str, Any]:
                 for key, value in infile.attrs.items()}
 
 
+def get_all_group_attributes(filename: str) -> Dict[str, Any]:
+    """All attributes of all groups of the file"""
+    with h5py.File(filename, 'r') as infile:
+        attrs = [get_group_attrs(infile[key]) for key in infile.keys() if isinstance(infile[key], h5py.Group)]
+    all_attrs = {}
+    for attr in attrs:
+        all_attrs.update(attr)
+    return all_attrs
+
+
 def get_file_attribute_dtypes(filename: str) -> Dict[str, str]:
     with h5py.File(filename, 'r') as infile:
         return {key: type(value).__name__ for key, value in infile.attrs.items()}
@@ -85,6 +95,20 @@ def get_group_info(group: h5py.Group) -> Dict[str, Any]:
         'groups': [get_group_info(group[key]) for key in group.keys() if isinstance(group[key], h5py.Group)],
         'datasets': [get_dataset_info(group[key]) for key in group.keys() if isinstance(group[key], h5py.Dataset)]
     }
+
+
+def get_group_attrs(group: h5py.Group) -> Dict[str, Any]:
+
+    def process_value(value):
+        value = getattr(value, "tolist", lambda x=value: x)()
+        return value.decode('utf-8', errors='ignore') if isinstance(value, bytes) else value
+
+    main_attrs = {f'{group.name}/{key}': process_value(value) for key, value in group.attrs.items()}
+    child_attrs = [get_group_attrs(group[key]) for key in group.keys() if isinstance(group[key], h5py.Group)]
+    all_attrs = main_attrs
+    for child_attr in child_attrs:
+        all_attrs.update(child_attr)
+    return all_attrs
 
 
 def get_dataset_info(dataset: h5py.Dataset) -> Dict[str, Any]:

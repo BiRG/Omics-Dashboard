@@ -4,6 +4,7 @@ import traceback
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
+from dash.exceptions import PreventUpdate
 from flask import url_for
 from rq.job import Job
 
@@ -286,6 +287,37 @@ class OPLSDashboard(Dashboard):
                 progress_label = dbc.FormText(label_text)
                 animated = True
             return progress, animated, progress_fraction, progress_label, url_for('api.download_temporary_file', path=path), class_name, message
+
+        @app.callback(
+            [Output('download-link', 'href'),
+             Output('download-link', 'className'),
+             Output('download-message', 'children')],
+            [Input('download-button', 'n_clicks')],
+            [State('results-select', 'value'),
+             State('file-format-select', 'value')]
+        )
+        def prepare_results_file(n_clicks, results_values, file_format):
+            opls_data = OPLSModel()
+            if not n_clicks:
+                raise PreventUpdate('Callback triggered with no action.')
+            if not opls_data.results_file_ready:
+                return '#', 'secondary', dbc.Alert('Results do not exist.', color='warning', dismissable=True)
+            try:
+                path = opls_data.download_results('metrics' in results_values,
+                                                  'loadings' in results_values,
+                                                  'scores' in results_values,
+                                                  'weights' in results_values,
+                                                  file_format)
+                message = dbc.Alert(f'Prepared results file as {path}', color='success', dismissable=True)
+                class_name = 'btn btn-success'
+            except Exception as e:
+                path = '#'
+                message = dbc.Alert([html.P([html.Strong('Error: '), f'{e}']),
+                                     html.Strong('Traceback:'),
+                                     html.P(html.Pre(traceback.format_exc(), className='text-white'))],
+                                    color='danger', dismissable=True)
+                class_name = 'btn btn-secondary disabled'
+            return url_for('api.download_temporary_file', path=path), class_name, message
 
     @staticmethod
     def _register_layout(app):

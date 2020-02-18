@@ -1,5 +1,6 @@
 {% extends 'pages/file_entry.html' %}
 {% from 'components/file_label_column_editor.html' import file_label_column_editor, file_label_column_editor_tab, file_label_column_editor_script with context %}
+{% from 'components/file_metadata_editor.html' import file_metadata_editor, file_metadata_editor_tab with context %}
 {% from 'components/macros.html' import list_table_tab, list_table_tab_panel, download_dropdown with context %}
 {% block headline %}
   {{ super() }}
@@ -11,12 +12,18 @@
 {% endblock %}
 {% block tabnav %}
     {{ super() }}
+    {% if len(page_data.file_group_attribute_table_data.rows) %}
+      {{ file_metadata_editor_tab('Group Attributes', 'group-metadata-editor-tab-pane') }}
+    {% endif %}
     {{ file_label_column_editor_tab() }}
     {{ list_table_tab(page_data.analysis_table_data) }}
     {{ list_table_tab(page_data.child_table_data) }}
 {% endblock %}
 {% block tabpanels %}
   {{ super() }}
+  {% if len(page_data.file_group_attribute_table_data.rows) %}
+    {{ file_metadata_editor(page_data.file_group_attribute_table_data, 'group-metadata-editor-tab-pane', 'groupMetadataTable') }}
+  {% endif %}
   {{ file_label_column_editor(page_data.label_column_table_data) }}
     {{ list_table_tab_panel(page_data.analysis_table_data) }}
     {{ list_table_tab_panel(page_data.child_table_data) }}
@@ -30,5 +37,8 @@
             .then(res => res.json())
             .then(data => window.location = `{{ url_for('collections.render_collection_list') }}${data.id}`)
     }
+    $(document).ready(function() {
+        $('#groupMetadataTable').DataTable({ });
+    });
   </script>
 {% endblock %}

@@ -142,6 +142,17 @@ class FileAttributeTableData(PageData):
                      for key, value in record.get_file_attributes().items()]
 
 
+class FileGroupAttributeTableData(PageData):
+    """
+    A list of noneditable attributes that come from a file's child groups.
+    """
+
+    def __init__(self, current_user: User, record: FileRecordMixin):
+        super(FileGroupAttributeTableData, self).__init__(current_user, is_write_permitted(current_user, record))
+        self.rows = [FileAttributeTableRow(key, value, type(value).__name__)
+                     for key, value in record.get_group_attributes().items()]
+
+
 class DatasetSummaryTableData(PageData):
     """
     A list of non-editable dataset information (path, dtype, size)
