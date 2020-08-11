@@ -149,7 +149,8 @@
                       //use data-sample-id instead
                       const row_ids = this.rows({selected: true}).ids().map(function (x){return x.split('-')[1]});
                       if (row_ids.length > 0) {
-                          window.location.replace('/omics/collections/create?sample_ids="' + row_ids.join() + '"');
+                          window.location.replace('{{ url_for('collections.render_create_collection') }}' + '?sample_ids="' + row_ids.join() + '"');
+		          //window.location.replace('/omics/collections/create?sample_ids="' + row_ids.join() + '"');
                       }
                   },
                   className: 'btn-success'
