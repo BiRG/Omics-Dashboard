@@ -7,6 +7,7 @@ from dash.dependencies import Output, Input, State
 from dash.exceptions import PreventUpdate
 from flask import url_for
 
+from config.config import PATH_PREFIX
 from dashboards import Dashboard
 from dashboards.dashboard import get_plot_theme, StyledDash
 from .layouts import get_layout
@@ -156,7 +157,7 @@ class VisualizationDashboard(Dashboard):
         app = StyledDash(__name__,
                          server=server,
                          routes_pathname_prefix=VisualizationDashboard.prefix,
-                         requests_pathname_prefix='/omics' + VisualizationDashboard.prefix)
+                         requests_pathname_prefix=PATH_PREFIX + VisualizationDashboard.prefix)
         # noinspection PyTypeChecker
         VisualizationDashboard._register_dash_app(app)
         return app

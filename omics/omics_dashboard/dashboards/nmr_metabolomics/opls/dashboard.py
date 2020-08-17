@@ -8,6 +8,7 @@ from dash.exceptions import PreventUpdate
 from flask import url_for
 from rq.job import Job
 
+from config.config import PATH_PREFIX
 from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from helpers import log_internal_exception
 from .layouts import get_layout
@@ -335,7 +336,7 @@ class OPLSDashboard(Dashboard):
         app = StyledDash(__name__,
                          server=server,
                          routes_pathname_prefix=OPLSDashboard.prefix,
-                         requests_pathname_prefix='/omics' + OPLSDashboard.prefix,
+                         requests_pathname_prefix=PATH_PREFIX + OPLSDashboard.prefix,
                          external_stylesheets=['https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
         # noinspection PyTypeChecker
         OPLSDashboard._register_dash_app(app)
