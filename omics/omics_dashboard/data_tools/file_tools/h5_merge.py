@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 from scipy.interpolate import interp1d
 from typing import List, Set, Tuple, Callable
+from .metadata_tools import approximate_dims
 
 
 def get_paths(group: h5py.Group, path: str) -> Set[str]:
@@ -86,6 +87,8 @@ def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'ver
     for file in files:
         paths |= get_paths(file, "")
 
+    row_counts = [max([dataset.shape[0] for dataset in entry if isinstance(dataset, h5py.Dataset)]) for entry in files]
+
     merge_attrs = set(
         item for entry in files for item in entry.attrs.keys() if all(item in entry.attrs for entry in files)
     )
@@ -132,12 +135,14 @@ def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'ver
                                        data=concat_fn([make_2d(file[path], dim_ind) for file in files]),
                                        maxshape=(None, None), dtype=files[0][path].dtype)
         # have to handle some attrs differently
-        ignored_attrs = {'name', 'description', 'createdBy', 'owner', 'allPermissions', 'groupPermissions'}
+        ignored_attrs = {'name', 'description', 'created_by', 'owner', 'all_permissions', 'group_permissions'}
         merge_attrs = {attr for attr in merge_attrs if attr not in ignored_attrs} if merge_attributes else {}
 
         for attr_key in merge_attrs:
-            values = np.array([[file.attrs[attr_key].encode('ascii')
-                                if isinstance(file.attrs[attr_key], str) else file.attrs[attr_key] for file in files]])
+            values = np.array([[np.repeat(file.attrs[attr_key].encode('ascii'), row_count)
+                                if isinstance(file.attrs[attr_key], str) else np.repeat(file.attrs[attr_key], row_count)
+                                for row_count, file in zip(files, row_counts)]])
+
             if len(values):
                 if isinstance(files[0].attrs[attr_key], str):
                     # noinspection PyUnresolvedReferences
