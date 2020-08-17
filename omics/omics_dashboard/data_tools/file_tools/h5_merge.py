@@ -80,14 +80,15 @@ def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'ver
 
     # if we concat vertically, labels are 1 column
     # if we concat horizontally, labels are 1 row
-    label_shape = (len(in_filenames), 1) if orientation == 'vert' else (1, len(in_filenames))
+
+    row_counts = [max([entry[key].shape[0] for key in entry.keys() if isinstance(entry[key], h5py.Dataset)]) for entry in files]
+    label_shape = (sum(row_counts), 1) if orientation == 'vert' else (1, sum(row_counts))
     label_maxshape = (None, 1) if orientation == 'vert' else (1, None)
 
     paths = set()
     for file in files:
         paths |= get_paths(file, "")
 
-    row_counts = [max([dataset.shape[0] for dataset in entry if isinstance(dataset, h5py.Dataset)]) for entry in files]
 
     merge_attrs = set(
         item for entry in files for item in entry.attrs.keys() if all(item in entry.attrs for entry in files)
@@ -139,12 +140,11 @@ def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'ver
         merge_attrs = {attr for attr in merge_attrs if attr not in ignored_attrs} if merge_attributes else {}
 
         for attr_key in merge_attrs:
-            values = np.array([[np.repeat(file.attrs[attr_key].encode('ascii'), row_count)
-                                if isinstance(file.attrs[attr_key], str) else np.repeat(file.attrs[attr_key], row_count)
-                                for row_count, file in zip(files, row_counts)]])
-
+            values = np.concatenate([np.repeat(file.attrs[attr_key].encode('ascii'), row_count)
+                                     if isinstance(file.attrs[attr_key], str) else np.repeat(file.attrs[attr_key], row_count)
+                                     for row_count, file in zip(row_counts, files)])
             if len(values):
-                if isinstance(files[0].attrs[attr_key], str):
+                if isinstance(files[0].attrs[attr_key], str) or isinstance(files[0].attrs[attr_key], bytes):
                     # noinspection PyUnresolvedReferences
                     outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape,
                                            dtype=h5py.special_dtype(vlen=bytes))
@@ -152,12 +152,9 @@ def h5_merge(in_filenames: List[str], out_filename: str, orientation: str = 'ver
                     outfile.create_dataset(attr_key, data=np.reshape(values, label_shape), maxshape=label_maxshape)
 
         if merge_attributes:
-            base_sample_ids = np.array(
-                [[int(os.path.basename(os.path.splitext(infilename)[0])) for infilename in in_filenames]])
+            base_sample_ids = np.concatenate([np.repeat(int(os.path.basename(os.path.splitext(infilename)[0])), row_count) for infilename, row_count in zip(in_filenames, row_counts)])
             # unicode datasets are not supported by all software using hdf5
-            base_sample_names = np.array([[file.attrs['name'].encode('ascii')
-                                           if isinstance(file.attrs['name'], str) else file.attrs['name'] for file in
-                                           files]])
+            base_sample_names = np.concatenate([np.repeat(file.attrs['name'].encode('ascii'), row_count) if isinstance(file.attrs['name'], str) else np.repeat(file.attrs['name'], row_count) for file, row_count in zip(files, row_counts)])
             outfile.create_dataset('base_sample_id', data=np.reshape(base_sample_ids, label_shape),
                                    maxshape=label_maxshape)
             outfile.create_dataset('base_sample_name', data=np.reshape(base_sample_names, label_shape),

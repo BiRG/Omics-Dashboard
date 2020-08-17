@@ -15,8 +15,8 @@ def parse_wide_map(filename):
 
 def parse_paired_text(filename):
     data = np.genfromtxt(filename, delimiter='\t')
-    x = data[:, 0]
-    Y = data[:, 1]
+    x = data[:, 0].reshape(1, -1)
+    Y = data[:, 1].reshape(1, -1)
     return x, Y
 
 

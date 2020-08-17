@@ -20,5 +20,5 @@ outputs:
     type: File[]
     outputBinding:
       glob: '*.h5'
-label: Raman Point Spectrum 
+label: Raman Point Spectra
 doc: Parse a text file in the .txt format, which consists of paired numeric data.
