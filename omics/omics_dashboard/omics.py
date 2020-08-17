@@ -17,7 +17,7 @@ from config.rq_config import rq
 
 app = Flask(__name__)
 app.config['RQ_REDIS_URL'] = REDIS_URL
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URI'] if 'DB_URI' in os.environ else f'sqlite:///{DATADIR}omics.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_URI'] if 'DB_URI' in os.environ else f'sqlite:///{DATADIR}/omics.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 for blueprint in api_blueprints + browser_blueprints:
