@@ -34,7 +34,7 @@ def create_sample_creation_workflow(user: User, input_filenames: List[str], meta
     [os.rename(input_filename, new_filename) for input_filename, new_filename in zip(input_filenames, new_filenames)]
     prefix = new_metadata['name']
     new_metadata['name'] = f'PLACEHOLDER <{prefix}>'
-    placeholder_samples = create_placeholder_samples(user, new_metadata, len(input_filenames))
+    placeholder_samples = create_placeholder_samples(user, new_metadata, len([f for f in input_filenames if not f.endswith('manifest.csv')]))
     del new_metadata['name']
     workflow = {
         'cwlVersion': 'v1.0',

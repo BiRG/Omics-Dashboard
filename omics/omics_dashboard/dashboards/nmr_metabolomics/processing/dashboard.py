@@ -2,6 +2,7 @@ import traceback
 
 from flask import url_for
 
+from config.config import PATH_PREFIX
 from dashboards import Dashboard
 import itertools
 import dash_bootstrap_components as dbc
@@ -284,7 +285,7 @@ class CollectionProcessingDashboard(Dashboard):
         app = StyledDash(__name__,
                          server=server,
                          routes_pathname_prefix=CollectionProcessingDashboard.prefix,
-                         requests_pathname_prefix='/omics' + CollectionProcessingDashboard.prefix)
+                         requests_pathname_prefix=PATH_PREFIX + CollectionProcessingDashboard.prefix)
         # noinspection PyTypeChecker
         CollectionProcessingDashboard._register_dash_app(app)
         return app

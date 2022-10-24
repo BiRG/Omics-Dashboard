@@ -7,6 +7,7 @@ from dash.dependencies import Output, Input, State
 from dash.exceptions import PreventUpdate
 from flask import url_for
 
+from config.config import PATH_PREFIX
 from dashboards.dashboard import Dashboard, StyledDash, get_plot_theme
 from .layouts import get_layout
 from .model import PCAModel
@@ -514,7 +515,7 @@ class PCADashboard(Dashboard):
         app = StyledDash(__name__,
                          server=server,
                          routes_pathname_prefix=PCADashboard.prefix,
-                         requests_pathname_prefix='/omics' + PCADashboard.prefix,
+                         requests_pathname_prefix=PATH_PREFIX + PCADashboard.prefix,
                          external_stylesheets=['https://use.fontawesome.com/releases/v5.8.1/css/all.css'])
         # noinspection PyTypeChecker
         PCADashboard._register_dash_app(app)
