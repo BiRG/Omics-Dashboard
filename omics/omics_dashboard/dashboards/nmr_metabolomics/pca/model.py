@@ -63,7 +63,7 @@ class PCAModel(MultivariateAnalysisModel):
     @property
     def unique_vals(self):
         self.load_labels()
-        return {label: self._label_df[label].unique() for label in self._label_df.columns}
+        return {label: self._label_df[label].unique().tolist() for label in self._label_df.columns}
 
     @property
     def results_exist(self):
@@ -215,7 +215,6 @@ class PCAModel(MultivariateAnalysisModel):
 
         def _save_loadings(name, file_format):
             if file_format == 'csv':
-                print(self._loadings.shape)
                 loadings_df = pd.DataFrame(data=self._loadings,
                                            columns=np.ravel(self._x),
                                            index=[f'PC{i + 1}' for i in range(self._loadings.shape[0])])

@@ -59,7 +59,7 @@ def get_dataframe(filename: str,
             row_count = fp[keys[0]].shape[0]
         else:
             row_count = fp['Y'].shape[0]
-            keys = [key for key in fp.keys() if (fp[key].shape[0] == row_count)] if include_labels else ['Y']
+            keys = [key for key in fp.keys() if (isinstance(fp[key], h5py.Dataset) and fp[key].shape[0] == row_count)] if include_labels else ['Y']
         index = np.asarray(fp[row_index_key]).flatten() if row_index_key in fp else [i for i in range(0, row_count)]
         df = pd.DataFrame(index=index)
         if include_only_labels and 'Y' in keys:

@@ -13,6 +13,7 @@ RUN apt -y update && apt -y install libssl-dev --no-install-recommends && rm -rf
 ARG OMICS_UID
 ARG OMICS_GID
 ADD omics_dashboard/requirements.txt .
+ENV HDF5_DIR="/usr/lib/x86_64-linux-gnu/hdf5/serial"
 RUN pip install -r requirements.txt
 RUN rm requirements.txt
 COPY --from=0 /app/dist/workflow-editor /omics_dashboard/static/workflow_editor/

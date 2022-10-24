@@ -229,7 +229,7 @@ def get_jwt_by_email(email: str, password: str) -> str:
     """
     user_data = validate_login(email, password).to_dict()
     user_data['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
+    return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256')
 
 
 def get_jwt(user: User) -> str:
@@ -240,7 +240,7 @@ def get_jwt(user: User) -> str:
     """
     user_data = user.to_dict()
     user_data['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256').decode('utf-8')
+    return jwt.encode(user_data, os.environ['SECRET'], algorithm='HS256')
 
 
 def user_in_user_group(user: User, group: UserGroup) -> bool:

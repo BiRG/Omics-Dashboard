@@ -30,6 +30,7 @@ class PCADashboard(Dashboard):
                                for option_pair in option_pairs]
         query_labels = ['All Records'] + [','.join([f'{key}={value}' for key, value in zip(label_keys, option_pair)])
                                           for option_pair in option_pairs]
+ 
         return [[{'label': query_label, 'value': query}
                  for query_label, query in zip(query_labels, queries)
                  if pca_data.query_exists(query)]]

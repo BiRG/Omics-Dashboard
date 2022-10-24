@@ -13,6 +13,7 @@ import msgpack
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import numpy as np
 from sklearn.utils.multiclass import type_of_target
 
@@ -58,7 +59,11 @@ class DashboardModel:
 
     def query_exists(self, query):
         self.load_labels()
-        return len(self._label_df.query(query)) > 0
+        # convert all numeric columns to float, since rhs of query will be float as string
+        numeric_columns = [c for c in self._label_df.columns if is_numeric_dtype(self._label_df[c])]
+        df = self._label_df.copy()
+        df[numeric_columns] = df[numeric_columns].astype(float)
+        return len(df.query(query)) > 0
 
     @property
     def root_dir(self):

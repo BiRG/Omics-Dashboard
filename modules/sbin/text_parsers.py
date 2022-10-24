@@ -47,18 +47,33 @@ def parse_txt_xy(filename):
     return {'data': data, 'metadata': metadata}
 
 
+def parse_jcamp(filename):
+    from jcamp import JCAMP_reader
+    reserved_keys = {
+        'id', 
+        'group_can_read',  'group_can_write', 'all_can_read', 'all_can_write',
+        'user_group', 'user_group_id', 'owner', 'owner_id',
+        'creator', 'creator_id', 'last_editor', 'last_editor_id',
+        'created_on', 'updated_on',
+        'x', 'y', 'jcampdx', 'xydata', 'filename', 'data type', 'data class', ''
+    }
+    all_data = JCAMP_reader(filename)
+    metadata = {k: v for k, v in all_data.items() if k not in reserved_keys and not k.startswith('$')}
+    return {'data': np.vstack([all_data['x'], all_data['y']]), 'metadata': metadata}
+
+
 # will save a sample file, assuming that the first row is x and subsequent rows are Y
-# numData is numpy array, metadata is dictionary
-def save_sample_file(filename, numData, metadata):
+# numeric_data is numpy array, metadata is dictionary
+def save_sample_file(filename, numeric_data, metadata):
     # clean metadata of empty entries:
     metadata = {key: value for key, value in metadata.items() if value != ''}
-    with h5py.File(filename, 'w') as outfile:
-        outfile.create_dataset('x', data=numData[0, :].astype(np.double)[None, :])
-        outfile.create_dataset('Y', data=numData[1:, :].astype(np.double))
+    with h5py.File(filename, 'w') as out_file:
+        out_file.create_dataset('x', data=numeric_data[0, :].astype(np.double)[None, :])
+        out_file.create_dataset('Y', data=numeric_data[1:, :].astype(np.double))
         for key, value in metadata.items():
             if isinstance(value, str):
-                outfile.attrs[key] = np.string_(value)
+                out_file.attrs[key] = np.string_(value)
             else:
-                outfile.attrs[key] = value
+                out_file.attrs[key] = value
 
 

@@ -4,6 +4,7 @@ ARG OMICS_UID
 ARG OMICS_GID
 
 ADD requirements.txt .
+ENV HDF5_DIR="/usr/lib/x86_64-linux-gnu/hdf5/serial/"
 RUN pip install -r requirements.txt
 
 ADD cromwell.conf /
